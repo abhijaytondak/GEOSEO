@@ -11,6 +11,7 @@ import {
   Rocket,
   Telescope,
   LayoutDashboard,
+  Boxes,
   type LucideIcon,
 } from "lucide-react";
 
@@ -50,6 +51,7 @@ export const navSections: NavSection[] = [
       { label: "Brand Memory", href: "/brand", icon: BrainCircuit },
       { label: "Content", href: "/content", icon: FileText },
       { label: "Alerts", href: "/alerts", icon: Bell, badge: "5" },
+      { label: "Solutions", href: "/solutions", icon: Boxes },
       { label: "Settings", href: "/settings", icon: Settings },
     ],
   },

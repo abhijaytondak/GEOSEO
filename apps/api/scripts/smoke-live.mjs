@@ -241,6 +241,16 @@ async function main() {
   group("Search");
   await check("GET /search?q=segment", "GET", "/search?q=segment", { expect: (d) => Array.isArray(d.results) });
 
+  group("Solution readiness (Solution Parity PRD)");
+  await check("GET /solutions/readiness", "GET", "/solutions/readiness", {
+    expect: (d) =>
+      Array.isArray(d.solutions) &&
+      d.solutions.length === 3 &&
+      d.solutions.find((s) => s.id === "paid-boost")?.status === "planned" &&
+      d.solutions.find((s) => s.id === "lead-conversion")?.status === "partial" &&
+      typeof d.solutions[0].completeness === "number",
+  });
+
   group("Site theme scan (PRD §7 / §19 SSRF)");
   const theme = await check("POST /site-theme/scan (public URL)", "POST", "/site-theme/scan", {
     body: { url: "https://example.com" },

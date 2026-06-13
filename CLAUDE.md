@@ -58,6 +58,12 @@ Then Phase 4 security/scale foundation (DTO validation, tenant scoping, Clerk JW
 `BearerGuard`, RBAC). The `mode.ts` gate already exists (`GEOSEO_MODE`/`API_AUTH_REQUIRED`).
 
 ## Done recently (don't redo)
+- **Solution Parity PRD — Phase 1 truthful readiness layer (smoke 62/62 + screenshot-verified desktop+mobile):**
+  `SolutionReadiness`/`SolutionCapability` types; `SolutionsController` `GET /solutions/readiness` (hand-curated,
+  honest, completeness % computed from capability statuses) → AI Search **partial 29%**, Lead Conversion **partial
+  57%**, Paid Boost **planned 0%**, each with capability matrix + safe/avoid claims. `api.getSolutionReadiness()`.
+  New `/solutions` page (`SolutionsView`) + nav link (`Boxes` icon under Workspace). Purpose: stop sales/marketing
+  overclaiming. **Update capability statuses in `solutions.controller.ts` as features ship.**
 - **Leads PRD — frontend lead detail drawer (Gap 2, build+lint+typecheck clean):** new
   `components/leads/lead-detail-drawer.tsx` (Sheet + Tabs, opened by clicking a lead name in `leads-view.tsx`).
   Surfaces the verified backend: **Overview** (recommended action, fit/intent/engagement/spamRisk bars, "why this
