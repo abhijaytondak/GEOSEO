@@ -9,6 +9,8 @@ import {
   Files,
   Inbox,
   Rocket,
+  Telescope,
+  LayoutDashboard,
   type LucideIcon,
 } from "lucide-react";
 
@@ -35,7 +37,9 @@ export const navSections: NavSection[] = [
   {
     label: "Page Engine",
     items: [
+      { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
       { label: "Onboarding", href: "/onboarding", icon: Rocket },
+      { label: "Opportunity Explorer", href: "/research", icon: Telescope },
       { label: "Pages", href: "/pages", icon: Files },
       { label: "Leads", href: "/leads", icon: Inbox },
     ],

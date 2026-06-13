@@ -45,12 +45,11 @@ A **Codex** agent edits this repo concurrently (the user runs both). To avoid cl
 - **Audit fixes**: auth fail-closed, validation hardening, api-client 4xx-surfacing + auth forwarding, mark-all-read, lint clean.
 
 ## 6. What's NEXT (open tasks, ordered)
-1. **§9.2 Opportunity Explorer depth** — full sort/filter (intent/volume/difficulty/value/confidence), competitor-evidence view, defer, bulk approve+generate. (Backlog has discover+generate today.)
-2. **§9.1 Unified page-engine dashboard** — published/awaiting/leads/conversion + impressions + AI-visibility overview.
-3. **§7.x UI surfacing** — show dedupe flags + quality-check results in opportunity/page UI (API already returns them).
-4. **§10.1/§15.2 Workspace + RBAC + audit log** — header-driven mock (Clerk-swappable): workspace context, role guard on mutations, in-memory audit log.
-5. **Migrate Codex's stores to Supabase** — brand/settings/jobs/alerts (same `db.ts` JSONB pattern + hydrate/write-through). Coordinate (Codex's files).
-6. **Blocked on credentials**: fund DeepSeek (or add OpenAI/Anthropic key) for server AI; **Clerk** auth; **BullMQ/Redis** real queue; **pgvector** embeddings for Brand Memory.
+DONE since last handoff: ✅ §9.2 Opportunity Explorer (`/research`), ✅ §9.1 page-engine Dashboard (`/dashboard`), ✅ dedupe + content-quality-check UI surfacing, ✅ §10.1 **audit log** (`GET /audit`, persisted to `pe_audit`, surfaced as Dashboard "Activity Log"; logs generate/edit/publish/approve/reject/defer/rollback/delete).
+**All unblocked page-engine tasks are now complete.** Remaining is coordination- or credential-blocked:
+1. **RBAC enforcement + tenant isolation** — audit log records `workspaceId`/`actor` (currently `ws-default`/`you`); real per-workspace isolation + role guard need **Clerk** (the dev-permissive guard + global-guard collision with Codex's routes make a mock version low-value).
+2. **Migrate Codex's stores to Supabase** — brand/settings/jobs/alerts (reuse `db.ts` JSONB + hydrate/write-through). Coordinate (Codex's files).
+3. **Blocked on credentials**: fund DeepSeek (or add OpenAI/Anthropic key) for server AI; **Clerk** auth; **BullMQ/Redis** real queue; **pgvector** embeddings for Brand Memory.
 
 ## 7. Git
 **Nothing committed yet** — entire repo untracked, two agents editing. A checkpoint commit is overdue. Do NOT push without the user's explicit OK (and end commit messages with the required Co-Authored-By line). `.gitignore` covers `.env`.

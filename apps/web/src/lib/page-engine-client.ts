@@ -7,6 +7,7 @@
  */
 import { pageEngine } from "@geoseo/mock";
 import type {
+  AuditEntry,
   BrandProfile,
   GeneratedPage,
   KeywordOpportunity,
@@ -130,6 +131,8 @@ export const pageEngineApi = {
     send<KeywordOpportunity>("POST", `/opportunities/${id}/approve`),
   rejectOpportunity: (id: string) =>
     send<KeywordOpportunity>("POST", `/opportunities/${id}/reject`),
+  deferOpportunity: (id: string) =>
+    send<KeywordOpportunity>("POST", `/opportunities/${id}/defer`),
   approveBlueprint: (id: string) =>
     send<PageBlueprint>("POST", `/page-blueprints/${id}/approve`),
 
@@ -151,6 +154,8 @@ export const pageEngineApi = {
     get<{ recommendations: RefreshRec[] }>("/recommendations/refresh", () => ({
       recommendations: [],
     })).then((d) => d.recommendations),
+  getAudit: () =>
+    get<{ audit: AuditEntry[] }>("/audit", () => ({ audit: [] })).then((d) => d.audit),
 
   // leads ops
   syncLead: (id: string) => send<Lead>("POST", `/leads/${id}/sync`),

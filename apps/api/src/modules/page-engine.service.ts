@@ -8,6 +8,7 @@ const T = {
   pages: "pe_pages",
   versions: "pe_versions",
   leads: "pe_leads",
+  audit: "pe_audit",
 } as const;
 import {
   generatedPages as seedPages,
@@ -16,6 +17,7 @@ import {
   pageBlueprints as seedBlueprints,
 } from "@geoseo/mock";
 import type {
+  AuditEntry,
   GeneratedPage,
   KeywordOpportunity,
   Lead,
@@ -68,7 +70,9 @@ export class PageEngineStore implements OnModuleInit {
   private leads: Lead[] = clone(seedLeads);
   private seq = 0;
   private vseq = 0;
+  private aseq = 0;
   private pageVersions: Record<string, PageVersion[]> = {};
+  private audit: AuditEntry[] = [];
 
   // fixed clock — keeps generated timestamps deterministic across reloads
   private now = "2026-06-12T00:00:00.000Z";
@@ -123,8 +127,10 @@ export class PageEngineStore implements OnModuleInit {
         for (const id of Object.keys(this.pageVersions)) {
           this.pageVersions[id].sort((a, b) => b.version - a.version);
         }
+        this.audit = await loadAll<AuditEntry>(T.audit);
         this.seq = 100_000;
         this.vseq = versions.length + 10_000;
+        this.aseq = this.audit.length + 10_000;
       } else {
         // first boot: seed Supabase from the in-memory fixtures
         await Promise.all([
@@ -160,6 +166,25 @@ export class PageEngineStore implements OnModuleInit {
     void removeRow(table, id).catch(() => {});
   }
 
+  /* audit trail (PRD §10.1/§15.2) */
+  private logAudit(action: AuditEntry["action"], entity: AuditEntry["entity"], entityId: string) {
+    this.aseq += 1;
+    const entry: AuditEntry = {
+      id: `aud-${this.aseq}`,
+      action,
+      entity,
+      entityId,
+      actor: "you",
+      workspaceId: "ws-default",
+      at: this.now,
+    };
+    this.audit.unshift(entry);
+    this.save(T.audit, entry.id, entry);
+  }
+  listAudit(limit = 100): AuditEntry[] {
+    return this.audit.slice(0, limit);
+  }
+
   /* opportunities */
   listOpportunities() {
     return this.opportunities;
@@ -172,6 +197,9 @@ export class PageEngineStore implements OnModuleInit {
     if (o) {
       o.status = status;
       this.save(T.opps, o.id, o);
+      if (status === "approved" || status === "rejected" || status === "deferred") {
+        this.logAudit(status === "approved" ? "approve" : status === "rejected" ? "reject" : "defer", "opportunity", o.id);
+      }
     }
     return o;
   }
@@ -257,6 +285,7 @@ export class PageEngineStore implements OnModuleInit {
     opp.status = "approved";
     this.save(T.pages, page.id, page);
     this.save(T.opps, opp.id, opp);
+    this.logAudit("generate", "page", page.id);
     return page;
   }
 
@@ -312,6 +341,7 @@ export class PageEngineStore implements OnModuleInit {
       p.publishedAt = this.now;
       p.lastRefreshedAt = this.now;
       this.snapshot(p, "Published", "system");
+      this.logAudit("publish", "page", p.id);
     }
     this.save(T.pages, p.id, p);
     return p;
@@ -334,6 +364,7 @@ export class PageEngineStore implements OnModuleInit {
     if (p.status === "published") p.status = "needs-refresh";
     this.snapshot(p, "Manual edit", "human");
     this.save(T.pages, p.id, p);
+    this.logAudit("edit", "page", p.id);
     return p;
   }
 
@@ -357,6 +388,7 @@ export class PageEngineStore implements OnModuleInit {
     p.updatedAt = this.now;
     this.snapshot(p, `Rolled back to v${v.version}`, "human");
     this.save(T.pages, p.id, p);
+    this.logAudit("rollback", "page", p.id);
     return p;
   }
 
@@ -433,6 +465,7 @@ export class PageEngineStore implements OnModuleInit {
     if (i < 0) return false;
     this.leads.splice(i, 1);
     this.drop(T.leads, id);
+    this.logAudit("delete", "lead", id);
     return true;
   }
   exportLeadsCsv(): string {

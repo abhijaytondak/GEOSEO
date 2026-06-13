@@ -48,6 +48,13 @@ export class OpportunitiesController {
     return o;
   }
 
+  @Post(":id/defer")
+  defer(@Param("id") id: string) {
+    const o = this.store.setOpportunityStatus(id, "deferred");
+    if (!o) throw new NotFoundException(`Opportunity ${id} not found`);
+    return o;
+  }
+
   @Post("discover")
   discover(@Body() body: { seeds?: string[]; intent?: string }) {
     const seeds = Array.isArray(body?.seeds) ? body.seeds.filter((s) => typeof s === "string") : [];
@@ -237,6 +244,11 @@ export class MonitoringController {
   @Get("recommendations/refresh")
   refreshRecs() {
     return { recommendations: this.store.refreshRecommendations() };
+  }
+
+  @Get("audit")
+  audit() {
+    return { audit: this.store.listAudit() };
   }
 
   @Get("monitoring/pages/:pageId")

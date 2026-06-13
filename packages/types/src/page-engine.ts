@@ -187,6 +187,17 @@ export interface Lead {
   createdAt: ISODate;
 }
 
+/** Audit trail entry for sensitive actions (PRD §10.1/§15.2). */
+export interface AuditEntry {
+  id: string;
+  action: "generate" | "edit" | "publish" | "approve" | "reject" | "defer" | "rollback" | "delete";
+  entity: "page" | "opportunity" | "blueprint" | "lead";
+  entityId: string;
+  actor: string;
+  workspaceId: string;
+  at: ISODate;
+}
+
 /* ----------------------------------------------- Provider seam */
 
 /** Page-engine data source — mock today; real research/LLM/CMS behind this later. */

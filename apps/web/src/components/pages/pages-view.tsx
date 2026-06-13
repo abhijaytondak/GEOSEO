@@ -453,6 +453,19 @@ export function PagesView({
                       </div>
                     ))}
                   </div>
+                  {(current.qualityChecks ?? []).length > 0 && (
+                    <>
+                      <h3 className="mt-4 text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">Content quality</h3>
+                      <div className="mt-2 grid grid-cols-1 gap-1.5 sm:grid-cols-2">
+                        {(current.qualityChecks ?? []).map((c) => (
+                          <div key={c.label} className="flex items-center gap-1.5 text-[12.5px]">
+                            {c.pass ? <Check className="size-3.5 text-positive" /> : <X className="size-3.5 text-negative" />}
+                            <span className={c.pass ? "text-muted-foreground" : "text-foreground"}>{c.label}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  )}
                 </section>
 
                 {/* metadata — editable (PRD §9.4 page editor) */}
