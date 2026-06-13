@@ -5,6 +5,9 @@ import type {
   BrandProfileSource,
 } from "@geoseo/types";
 import { BRAND_SOURCE } from "../seo/seo.module";
+import { DocStore } from "../db/db";
+
+type BrandState = { versions: BrandMemoryVersion[]; seq: number };
 
 /**
  * In-memory versioned Brand Memory. Seeds v1 from the bound BrandProfileSource
@@ -18,12 +21,17 @@ export class BrandMemoryStore implements OnModuleInit {
   private seq = 0;
   // Deterministic clock: the mock data is anchored to this date.
   private now = "2026-06-12T00:00:00.000Z";
+  private db = new DocStore<BrandState>("cx_brand");
 
   constructor(@Inject(BRAND_SOURCE) private readonly source: BrandProfileSource) {}
 
   async onModuleInit() {
     const seed = await this.source.getBrandProfile();
     this.commit(seed, "Onboarding", "Initial brand capture from website + onboarding form");
+    await this.db.init({ versions: this.versions, seq: this.seq }, (loaded) => {
+      this.versions = loaded.versions;
+      this.seq = loaded.seq;
+    });
   }
 
   private commit(profile: BrandProfile, author: string, note: string): BrandMemoryVersion {
@@ -37,6 +45,7 @@ export class BrandMemoryStore implements OnModuleInit {
       note,
     };
     this.versions.unshift(version); // newest first
+    this.db.save({ versions: this.versions, seq: this.seq });
     return version;
   }
 

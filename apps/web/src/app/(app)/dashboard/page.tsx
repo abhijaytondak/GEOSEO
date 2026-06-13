@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Rocket, Eye, Inbox, Target, Telescope, TrendingUp, ArrowRight, RefreshCw } from "lucide-react";
 import { pageEngineApi } from "@/lib/page-engine-client";
-import { seoProvider } from "@geoseo/mock";
+import { api } from "@/lib/api-client";
 import { PageHeader } from "@/components/shell/page-header";
 import { Panel } from "@/components/dashboard/panel";
 import { AlertsList } from "@/components/dashboard/alerts-panel";
@@ -17,8 +17,8 @@ export default async function PageEngineDashboard() {
     pageEngineApi.getLeads(),
     pageEngineApi.getOpportunities(),
     pageEngineApi.getRefreshRecommendations(),
-    seoProvider.getAiVisibility(),
-    seoProvider.getAlerts(),
+    api.getAiVisibility(),
+    api.getAlerts(),
     pageEngineApi.getAudit(),
   ]);
 

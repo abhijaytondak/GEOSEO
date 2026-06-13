@@ -1,9 +1,7 @@
 import { BrainCircuit } from "lucide-react";
 import { api } from "@/lib/api-client";
 import { PageHeader } from "@/components/shell/page-header";
-import { Panel } from "@/components/dashboard/panel";
-import { BrandMemoryEditor } from "@/components/brand/brand-memory-editor";
-import { VersionHistory } from "@/components/brand/version-history";
+import { BrandWorkspace } from "@/components/brand/brand-workspace";
 
 export const dynamic = "force-dynamic";
 
@@ -18,7 +16,7 @@ export default async function BrandMemoryPage() {
       <PageHeader
         eyebrow="Workspace"
         title="Brand Memory"
-        description="Your brand's single source of truth — captured once, injected into every outreach and content agent so output always sounds like you."
+        description="Your brand's single source of truth, captured once and injected into every outreach, page, content, analytics, and AI-search workflow."
         actions={
           <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1.5 text-[12.5px] font-medium text-muted-foreground">
             <BrainCircuit className="size-4 text-brand" />
@@ -28,11 +26,7 @@ export default async function BrandMemoryPage() {
       />
 
       <div className="space-y-5 p-6 sm:p-8">
-        <BrandMemoryEditor initial={memory.profile} />
-
-        <Panel title="Version History" description="Every edit is snapshotted — restore any point in time.">
-          <VersionHistory versions={versions} />
-        </Panel>
+        <BrandWorkspace profile={memory.profile} completeness={memory.completeness} versions={versions} />
       </div>
     </>
   );

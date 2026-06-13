@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { animate, useInView } from "motion/react";
+import { animate, useInView, useReducedMotion } from "motion/react";
 import type { KpiMetric } from "@geoseo/types";
 import { DeltaChip } from "./delta-chip";
 import { Sparkline } from "./sparkline";
@@ -13,25 +13,29 @@ const ACCENT: Record<string, string> = {
   "ai-visibility": "var(--chart-4)",
 };
 
-function useCountUp(target: number, decimals: number, play: boolean) {
+function useCountUp(target: number, decimals: number, play: boolean, reduce: boolean) {
   const [val, setVal] = useState(0);
   useEffect(() => {
-    if (!play) return;
+    // Reduced-motion (render target directly) or not-yet-in-view → no animation,
+    // so no synchronous setState in the effect body.
+    if (!play || reduce) return;
     const controls = animate(0, target, {
       duration: 1.1,
       ease: [0.16, 1, 0.3, 1],
       onUpdate: (v) => setVal(v),
     });
     return () => controls.stop();
-  }, [target, play]);
-  return val.toFixed(decimals);
+  }, [target, play, reduce]);
+  // prefers-reduced-motion jumps straight to the final value.
+  return (reduce ? target : val).toFixed(decimals);
 }
 
 export function KpiCard({ kpi, index = 0 }: { kpi: KpiMetric; index?: number }) {
   const ref = useRef<HTMLDivElement>(null);
   const inView = useInView(ref, { once: true, margin: "-40px" });
+  const reduce = useReducedMotion();
   const decimals = kpi.value % 1 !== 0 ? 1 : 0;
-  const display = useCountUp(kpi.value, decimals, inView);
+  const display = useCountUp(kpi.value, decimals, inView, !!reduce);
   const color = ACCENT[kpi.id] ?? "var(--brand)";
 
   return (

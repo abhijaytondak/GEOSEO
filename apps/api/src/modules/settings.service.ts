@@ -1,8 +1,18 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
+import { Injectable, NotFoundException, OnModuleInit } from "@nestjs/common";
 import type { TeamMember, WorkspaceIntegration, WorkspaceSettings } from "@geoseo/types";
+import { DocStore } from "../db/db";
 
 @Injectable()
-export class SettingsStore {
+export class SettingsStore implements OnModuleInit {
+  private db = new DocStore<WorkspaceSettings>("cx_settings");
+
+  async onModuleInit() {
+    await this.db.init(this.settings, (loaded) => {
+      // Backfill fields added after this doc was first persisted.
+      this.settings = { ...this.settings, ...loaded, publishing: loaded.publishing ?? this.settings.publishing };
+    });
+  }
+
   private settings: WorkspaceSettings = {
     profile: {
       workspaceName: "Northwind Labs",
@@ -42,6 +52,7 @@ export class SettingsStore {
       { id: "tm-2", name: "Ari Patel", email: "ari@northwindlabs.io", role: "marketer" },
     ],
     billing: { plan: "Grow", status: "trial", seatsUsed: 2, seatsLimit: 5 },
+    publishing: { requireApproval: true, autoSitemap: true, autoLlms: true },
   };
 
   get() {
@@ -57,7 +68,9 @@ export class SettingsStore {
       integrations: update.integrations ?? this.settings.integrations,
       team: update.team ?? this.settings.team,
       billing: { ...this.settings.billing, ...(update.billing ?? {}) },
+      publishing: { ...this.settings.publishing, ...(update.publishing ?? {}) },
     };
+    this.db.save(this.settings);
     return this.settings;
   }
 
@@ -73,6 +86,7 @@ export class SettingsStore {
       };
     });
     if (!found) throw new NotFoundException(`Integration ${id} not found`);
+    this.db.save(this.settings);
     return this.settings.integrations.find((integration) => integration.id === id)!;
   }
 
@@ -80,6 +94,7 @@ export class SettingsStore {
     const next: TeamMember = { id: `tm-${Date.now()}`, ...member };
     this.settings.team = [...this.settings.team, next];
     this.settings.billing = { ...this.settings.billing, seatsUsed: this.settings.team.length };
+    this.db.save(this.settings);
     return next;
   }
 
@@ -88,6 +103,7 @@ export class SettingsStore {
     this.settings.team = this.settings.team.filter((member) => member.id !== id);
     if (this.settings.team.length === before) throw new NotFoundException(`Team member ${id} not found`);
     this.settings.billing = { ...this.settings.billing, seatsUsed: this.settings.team.length };
+    this.db.save(this.settings);
     return { id, removed: true };
   }
 }

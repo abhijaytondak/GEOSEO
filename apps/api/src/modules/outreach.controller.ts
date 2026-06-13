@@ -18,6 +18,7 @@ import type {
 } from "@geoseo/types";
 import { SEO_PROVIDER, BRAND_SOURCE, OUTREACH_DRAFTER } from "../seo/seo.module";
 import { OutreachStore } from "./outreach.service";
+import { OpportunitiesStore } from "./opportunities.service";
 
 const VARIANTS = ["cold", "follow-up", "value-offer", "content-swap"] as const;
 type Variant = (typeof VARIANTS)[number];
@@ -30,10 +31,14 @@ export class OutreachController {
     @Inject(BRAND_SOURCE) private readonly brand: BrandProfileSource,
     @Inject(OUTREACH_DRAFTER) private readonly drafter: OutreachDrafter,
     @Inject(OutreachStore) private readonly store: OutreachStore,
+    @Inject(OpportunitiesStore) private readonly opps: OpportunitiesStore,
   ) {}
 
   private async draftFor(prospectId: string): Promise<OutreachTemplate[]> {
-    const prospect = (await this.seo.getProspects()).find((p) => p.id === prospectId);
+    // Resolve through OpportunitiesStore so newly *discovered* prospects (which
+    // live there, not in the seo mock) also draft correctly.
+    const base = await this.seo.getProspects();
+    const prospect = this.opps.list(base).find((p) => p.id === prospectId);
     if (!prospect) throw new NotFoundException(`No backlink opportunity '${prospectId}'`);
     const brand = await this.brand.getBrandProfile();
     const variants = await this.drafter.draft(prospect, brand);

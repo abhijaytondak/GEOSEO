@@ -39,7 +39,7 @@ const inputCls =
   "h-10 w-full rounded-lg border border-border bg-surface-sunken px-3 text-sm outline-none focus:border-ring focus:bg-card";
 
 export function SettingsView({ initial }: { initial: WorkspaceSettings }) {
-  const { notify, trackJob } = useAppFeedback();
+  const { notify, trackJob, confirm } = useAppFeedback();
   const [tab, setTab] = useState<Tab>("profile");
   const [settings, setSettings] = useState(initial);
   const [saving, setSaving] = useState(false);
@@ -125,7 +125,13 @@ export function SettingsView({ initial }: { initial: WorkspaceSettings }) {
       notify({ kind: "error", title: "Owner cannot be removed in the prototype" });
       return;
     }
-    if (!window.confirm(`Remove ${member.name} from this workspace?`)) return;
+    const ok = await confirm({
+      title: `Remove ${member.name}?`,
+      message: `${member.name} will lose access to this workspace.`,
+      confirmLabel: "Remove",
+      tone: "danger",
+    });
+    if (!ok) return;
     const previous = settings;
     setSettings((current) => ({ ...current, team: current.team.filter((item) => item.id !== member.id) }));
     try {

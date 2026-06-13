@@ -1,7 +1,17 @@
 "use client";
 
-import { useState } from "react";
-import { ArrowUp, ArrowDown, Minus, ExternalLink, MousePointerClick } from "lucide-react";
+import { useMemo, useState } from "react";
+import Link from "next/link";
+import {
+  ArrowUp,
+  ArrowDown,
+  Minus,
+  ExternalLink,
+  MousePointerClick,
+  RefreshCw,
+  Workflow,
+  AlertTriangle,
+} from "lucide-react";
 import type { TrackedPage } from "@geoseo/types";
 import { compact } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -44,13 +54,84 @@ function RankMove({ current, prev }: { current: number; prev: number }) {
   );
 }
 
+type PageStatus = "gaining" | "stable" | "slipping" | "needs-refresh";
+
+function pageStatus(p: TrackedPage): PageStatus {
+  const change = p.prevRank - p.currentRank; // positive = improved (moved up)
+  if (change >= 1) return "gaining";
+  if (change <= -3) return "needs-refresh";
+  if (change < 0) return "slipping";
+  return "stable";
+}
+
+const STATUS_BADGE: Record<PageStatus, { label: string; cls: string }> = {
+  gaining: { label: "Gaining", cls: "bg-positive/12 text-positive" },
+  stable: { label: "Stable", cls: "bg-muted text-muted-foreground" },
+  slipping: { label: "Slipping", cls: "bg-warning/15 text-warning" },
+  "needs-refresh": { label: "Needs refresh", cls: "bg-negative/12 text-negative" },
+};
+
+type Filter = "all" | PageStatus;
+const FILTERS: Filter[] = ["all", "gaining", "slipping", "needs-refresh"];
+const FILTER_LABEL: Record<Filter, string> = {
+  all: "All",
+  gaining: "Gaining",
+  stable: "Stable",
+  slipping: "Slipping",
+  "needs-refresh": "Needs refresh",
+};
+
 export function TrackedPagesTable({ pages }: { pages: TrackedPage[] }) {
   const [selected, setSelected] = useState<TrackedPage | null>(null);
+  const [filter, setFilter] = useState<Filter>("all");
   const open = selected !== null;
+
+  const counts = useMemo(() => {
+    const m: Record<string, number> = { all: pages.length };
+    for (const p of pages) {
+      const s = pageStatus(p);
+      m[s] = (m[s] ?? 0) + 1;
+    }
+    return m;
+  }, [pages]);
+
+  const filtered = useMemo(
+    () => (filter === "all" ? pages : pages.filter((p) => pageStatus(p) === filter)),
+    [pages, filter],
+  );
 
   return (
     <>
-      <div className="overflow-hidden">
+      {/* status filters (§12) */}
+      <div className="mb-2 flex flex-wrap items-center gap-1.5 px-1.5">
+        {FILTERS.map((f) => (
+          <button
+            key={f}
+            onClick={() => setFilter(f)}
+            className={cn(
+              "inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-[12px] font-medium transition-colors",
+              filter === f ? "bg-foreground text-background" : "text-muted-foreground hover:bg-muted hover:text-foreground",
+            )}
+          >
+            {FILTER_LABEL[f]}
+            <span className={cn("tnum text-[10.5px]", filter === f ? "text-background/70" : "text-muted-foreground/60")}>
+              {counts[f] ?? 0}
+            </span>
+          </button>
+        ))}
+      </div>
+
+      {filtered.length === 0 && (
+        <div className="py-12 text-center text-[13px] text-muted-foreground">
+          No tracked pages match this filter.{" "}
+          <button onClick={() => setFilter("all")} className="font-medium text-brand hover:underline">
+            Reset
+          </button>
+        </div>
+      )}
+
+      {/* desktop table */}
+      <div className="hidden overflow-hidden md:block">
         <table className="w-full border-collapse text-left">
           <thead>
             <tr className="border-b border-border">
@@ -68,7 +149,7 @@ export function TrackedPagesTable({ pages }: { pages: TrackedPage[] }) {
             </tr>
           </thead>
           <tbody>
-            {pages.map((p) => (
+            {filtered.map((p) => (
               <tr
                 key={p.id}
                 onClick={() => setSelected(p)}
@@ -108,12 +189,47 @@ export function TrackedPagesTable({ pages }: { pages: TrackedPage[] }) {
         </table>
       </div>
 
+      {/* mobile cards — same drilldown on tap */}
+      <div className="space-y-2.5 p-1.5 md:hidden">
+        {filtered.map((p) => (
+          <button
+            key={p.id}
+            onClick={() => setSelected(p)}
+            className="w-full rounded-xl border border-border bg-card p-3.5 text-left transition-colors hover:bg-muted/60"
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <div className="truncate text-[13.5px] font-medium text-foreground">{p.title}</div>
+                <div className="truncate font-mono text-[11.5px] text-muted-foreground">{p.path}</div>
+              </div>
+              <div className="flex shrink-0 items-center gap-1.5">
+                <span className="tnum text-[15px] font-semibold text-foreground">#{p.currentRank}</span>
+                <RankMove current={p.currentRank} prev={p.prevRank} />
+              </div>
+            </div>
+            <div className="mt-3 flex items-center gap-4 text-[12px] text-muted-foreground">
+              <span className="tnum">{compact(p.impressions)} impressions</span>
+              <span className="tnum">{compact(p.clicks)} clicks</span>
+              <span className="ml-auto inline-flex items-center gap-1 font-medium text-brand">
+                Drilldown
+                <MousePointerClick className="size-3.5" />
+              </span>
+            </div>
+          </button>
+        ))}
+      </div>
+
       <Sheet open={open} onOpenChange={(o) => !o && setSelected(null)}>
         <SheetContent className="w-full gap-0 overflow-y-auto p-0 sm:max-w-xl">
           {selected && (
             <>
               <SheetHeader className="border-b border-border bg-surface-sunken p-5">
-                <SheetTitle className="text-base leading-snug">
+                <div className="flex items-center gap-2">
+                  <span className={cn("rounded-full px-2 py-0.5 text-[10.5px] font-semibold", STATUS_BADGE[pageStatus(selected)].cls)}>
+                    {STATUS_BADGE[pageStatus(selected)].label}
+                  </span>
+                </div>
+                <SheetTitle className="mt-1 text-base leading-snug">
                   {selected.title}
                 </SheetTitle>
                 <SheetDescription className="font-mono text-[12px]">
@@ -168,15 +284,48 @@ export function TrackedPagesTable({ pages }: { pages: TrackedPage[] }) {
                   <TrafficChart data={selected.impressionsSeries} />
                 </section>
 
-                <a
-                  href={`https://example.com${selected.path}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="flex items-center justify-center gap-1.5 rounded-xl border border-border bg-card py-2.5 text-[13px] font-semibold text-foreground transition-colors hover:bg-muted"
-                >
-                  <ExternalLink className="size-4" />
-                  Open page
-                </a>
+                {/* recommended actions (§13) */}
+                <section>
+                  <h4 className="mb-2 text-[13px] font-semibold text-foreground">Recommended actions</h4>
+                  <div className="space-y-2">
+                    <Link
+                      href="/content"
+                      className="flex items-center gap-2.5 rounded-xl border border-border bg-card p-3 text-[13px] font-medium text-foreground transition-colors hover:border-brand/40 hover:bg-surface-sunken"
+                    >
+                      <RefreshCw className="size-4 text-brand" />
+                      Refresh content
+                      <span className="ml-auto text-[11.5px] text-muted-foreground">Counter content decay</span>
+                    </Link>
+                    <Link
+                      href="/content"
+                      className="flex items-center gap-2.5 rounded-xl border border-border bg-card p-3 text-[13px] font-medium text-foreground transition-colors hover:border-brand/40 hover:bg-surface-sunken"
+                    >
+                      <Workflow className="size-4 text-brand" />
+                      Apply internal links
+                      <span className="ml-auto text-[11.5px] text-muted-foreground">Pass authority to this page</span>
+                    </Link>
+                    {(pageStatus(selected) === "slipping" || pageStatus(selected) === "needs-refresh") && (
+                      <Link
+                        href="/alerts"
+                        className="flex items-center gap-2.5 rounded-xl border border-border bg-card p-3 text-[13px] font-medium text-foreground transition-colors hover:border-brand/40 hover:bg-surface-sunken"
+                      >
+                        <AlertTriangle className="size-4 text-warning" />
+                        Investigate rank drop
+                        <span className="ml-auto text-[11.5px] text-muted-foreground">Check related alerts</span>
+                      </Link>
+                    )}
+                    <a
+                      href={`https://example.com${selected.path}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="flex items-center gap-2.5 rounded-xl border border-border bg-card p-3 text-[13px] font-medium text-foreground transition-colors hover:border-brand/40 hover:bg-surface-sunken"
+                    >
+                      <ExternalLink className="size-4 text-muted-foreground" />
+                      Open page
+                      <span className="ml-auto text-[11.5px] text-muted-foreground">View live</span>
+                    </a>
+                  </div>
+                </section>
               </div>
             </>
           )}

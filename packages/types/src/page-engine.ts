@@ -190,8 +190,12 @@ export interface Lead {
 /** Audit trail entry for sensitive actions (PRD §10.1/§15.2). */
 export interface AuditEntry {
   id: string;
-  action: "generate" | "edit" | "publish" | "approve" | "reject" | "defer" | "rollback" | "delete";
-  entity: "page" | "opportunity" | "blueprint" | "lead";
+  /** Page-engine actions plus the core-workflow actions (PRD §10 audit logging). */
+  action:
+    | "generate" | "edit" | "publish" | "approve" | "reject" | "defer" | "rollback" | "delete"
+    | "create" | "update" | "discover" | "archive" | "restore" | "resolve" | "snooze"
+    | "export" | "integration" | "bulk";
+  entity: "page" | "opportunity" | "blueprint" | "lead" | "prospect" | "alert" | "settings" | "job" | "brand" | "content";
   entityId: string;
   actor: string;
   workspaceId: string;

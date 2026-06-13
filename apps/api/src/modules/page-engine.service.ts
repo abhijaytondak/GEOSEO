@@ -220,6 +220,27 @@ export class PageEngineStore implements OnModuleInit {
     }
     return b;
   }
+  /** Edit a blueprint's content fields before approval (PRD §10.2 PUT). */
+  updateBlueprint(id: string, edit: Partial<PageBlueprint>) {
+    const b = this.getBlueprint(id);
+    if (!b) return undefined;
+    const editable: (keyof PageBlueprint)[] = [
+      "title",
+      "slug",
+      "targetKeywords",
+      "intentSummary",
+      "outline",
+      "ctaPlan",
+      "internalLinkPlan",
+      "schemaPlan",
+    ];
+    const rec = b as unknown as Record<string, unknown>;
+    for (const k of editable) {
+      if (edit[k] !== undefined) rec[k] = edit[k];
+    }
+    this.save(T.blueprints, b.id, b);
+    return b;
+  }
 
   /* pages */
   listPages() {

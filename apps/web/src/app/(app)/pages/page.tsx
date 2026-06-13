@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Sparkles } from "lucide-react";
 import { pageEngineApi } from "@/lib/page-engine-client";
 import { PageHeader } from "@/components/shell/page-header";
@@ -24,10 +25,12 @@ export default async function PagesPage() {
         actions={
           <>
             <PublishingSettings />
-            <Button className="h-9 rounded-full px-4">
-              <Sparkles className="size-4" />
-              Discover opportunities
-            </Button>
+            <Link href="/research">
+              <Button className="h-9 rounded-full px-4">
+                <Sparkles className="size-4" />
+                Discover opportunities
+              </Button>
+            </Link>
           </>
         }
       />

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Script from "next/script";
 import { Inter, Geist_Mono } from "next/font/google";
+import { ClerkProvider } from "@clerk/nextjs";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import "./globals.css";
 
@@ -35,7 +36,9 @@ export default function RootLayout({
       <body className="min-h-full">
         {/* Puter.js — browser AI (user-pays), used for page content generation */}
         <Script src="https://js.puter.com/v2/" strategy="afterInteractive" />
-        <TooltipProvider delay={150}>{children}</TooltipProvider>
+        <ClerkProvider>
+          <TooltipProvider delay={150}>{children}</TooltipProvider>
+        </ClerkProvider>
       </body>
     </html>
   );

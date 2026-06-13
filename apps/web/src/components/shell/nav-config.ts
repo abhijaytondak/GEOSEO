@@ -31,7 +31,7 @@ export const navSections: NavSection[] = [
     items: [
       { label: "Authority HQ", href: "/", icon: Gauge },
       { label: "Backlink Opportunities", href: "/opportunities", icon: Link2, badge: "15" },
-      { label: "Performance", href: "/performance", icon: LineChart },
+      { label: "Analytics", href: "/analytics", icon: LineChart },
     ],
   },
   {

@@ -1,5 +1,6 @@
 import { Sidebar } from "@/components/shell/sidebar";
 import { Topbar } from "@/components/shell/topbar";
+import { CommandPalette } from "@/components/shell/command-palette";
 import { AppFeedbackProvider } from "@/components/system/app-feedback";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
@@ -12,6 +13,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           <main className="flex-1 overflow-y-auto">{children}</main>
         </div>
       </div>
+      <CommandPalette />
     </AppFeedbackProvider>
   );
 }

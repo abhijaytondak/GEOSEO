@@ -304,10 +304,26 @@ export const domainHealth: DomainHealth = {
   grade: "B",
   delta: delta(4.0, "up"),
   factors: [
-    { label: "Authority", score: 58 },
-    { label: "Backlink Profile", score: 76 },
-    { label: "Technical SEO", score: 84 },
-    { label: "Content Freshness", score: 69 },
+    {
+      label: "Authority",
+      score: 58,
+      explanation: "Aggregate domain strength from referring-domain count and quality. Improve by earning links from high-DA, topically-relevant sites.",
+    },
+    {
+      label: "Backlink Profile",
+      score: 76,
+      explanation: "Health of your live links vs. lost/broken ones. Reclaim broken backlinks and convert pending outreach to lift this.",
+    },
+    {
+      label: "Technical SEO",
+      score: 84,
+      explanation: "Crawlability, Core Web Vitals, structured data, and index coverage. Fix crawl errors and slow pages to raise it.",
+    },
+    {
+      label: "Content Freshness",
+      score: 69,
+      explanation: "How recently key pages were updated. Refresh decaying pages and add internal links to keep this high.",
+    },
   ],
   backlinksAcquired: 342,
   backlinksOpportunities: 480,

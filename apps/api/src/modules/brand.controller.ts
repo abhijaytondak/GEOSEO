@@ -11,6 +11,7 @@ import {
 import { ApiTags } from "@nestjs/swagger";
 import type { BrandProfile } from "@geoseo/types";
 import { BrandMemoryStore } from "./brand.service";
+import { safeFetchText } from "../common/ssrf";
 
 /** Weighted Brand-Memory completeness (0–100) — drives the UI meter. */
 export function completeness(p: BrandProfile): number {
@@ -111,29 +112,71 @@ export class BrandController {
     return { version, completeness: completeness(version.profile) };
   }
 
-  /** Mock site crawl → draft Brand Memory (PRD §7.1 / §8.1). Returns a draft
-   *  for review; does not persist until the user saves via PUT. */
+  /** Real site crawl → draft Brand Memory (PRD §7.1 / §8.1). Fetches the
+   *  homepage and parses <title>, meta description/og tags, and H1/H2 headings.
+   *  Falls back to a domain-derived stub if the fetch fails. Returns a draft for
+   *  review; does not persist until the user saves via PUT. */
   @Post("extract-from-site")
-  extract(@Body() body: { url?: string }) {
-    const url = (body?.url ?? "").trim();
-    if (!url) throw new BadRequestException("url is required");
-    const domain = url.replace(/^https?:\/\//, "").replace(/\/.*$/, "");
-    const name = (domain.split(".")[0] || "Company").replace(/\b\w/g, (c) => c.toUpperCase());
+  async extract(@Body() body: { url?: string }) {
+    const raw = (body?.url ?? "").trim();
+    if (!raw) throw new BadRequestException("url is required");
+    const normalized = /^https?:\/\//.test(raw) ? raw : `https://${raw}`;
+    const domain = normalized.replace(/^https?:\/\//, "").replace(/\/.*$/, "");
+    const fallbackName = (domain.split(".")[0] || "Company").replace(/\b\w/g, (c) => c.toUpperCase());
+
+    let title = "";
+    let description = "";
+    let siteName = "";
+    const headings: string[] = [];
+    let crawled = false;
+
+    try {
+      // SSRF-guarded fetch (PRD §19): rejects localhost/private/metadata hosts (→ 400),
+      // manual redirect, size + time capped. Network failures fall back gracefully below.
+      const { html } = await safeFetchText(raw, { maxBytes: 500_000, timeoutMs: 8000 });
+      if (html) {
+        const grab = (re: RegExp) => (html.match(re)?.[1] ?? "").trim();
+        title = grab(/<title[^>]*>([^<]+)<\/title>/i);
+        description =
+          grab(/<meta[^>]+name=["']description["'][^>]+content=["']([^"']+)["']/i) ||
+          grab(/<meta[^>]+property=["']og:description["'][^>]+content=["']([^"']+)["']/i);
+        siteName = grab(/<meta[^>]+property=["']og:site_name["'][^>]+content=["']([^"']+)["']/i);
+        for (const m of html.matchAll(/<h[12][^>]*>([\s\S]*?)<\/h[12]>/gi)) {
+          const text = m[1].replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim();
+          if (text && text.length <= 60 && !headings.includes(text)) headings.push(text);
+          if (headings.length >= 6) break;
+        }
+        crawled = true;
+      }
+    } catch (err) {
+      // SSRF / invalid-URL rejections must surface; network/timeout falls back to the stub.
+      if (err instanceof BadRequestException) throw err;
+    }
+
+    const company = siteName || title.split(/[|\-–·:]/)[0].trim() || fallbackName;
     const draft: BrandProfile = {
-      company: name,
+      company,
       domain,
-      url: url.startsWith("http") ? url : `https://${domain}`,
-      industry: "Detected from site",
-      valueProp: `${name} — extracted draft value proposition. Review and refine before saving.`,
-      topics: ["overview", "product", "pricing"],
+      url: normalized,
+      industry: "Detected from site — refine in review.",
+      valueProp: description || `${company} — add your value proposition.`,
+      topics: headings.length
+        ? [...new Set(headings.map((h) => h.toLowerCase()))].slice(0, 6)
+        : ["overview", "product", "pricing"],
       tone: "professional",
       contactName: "",
       contactEmail: `hello@${domain}`,
       audience: "Detected audience segment — refine in review.",
-      differentiators: ["Differentiator extracted from homepage", "Second differentiator"],
+      differentiators: headings.slice(0, 3),
       competitors: [],
       keywords: [],
     };
-    return { draft, completeness: completeness(draft), context: compiledContext(draft), source: domain };
+    return {
+      draft,
+      completeness: completeness(draft),
+      context: compiledContext(draft),
+      source: domain,
+      crawled,
+    };
   }
 }

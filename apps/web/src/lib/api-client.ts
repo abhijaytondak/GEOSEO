@@ -13,7 +13,11 @@ import type {
   ActivityEvent,
   AiVisibilitySignal,
   Alert,
+  AuditEntry,
+  AuthorityOverview,
   Backlink,
+  SiteThemeProfile,
+  SolutionReadiness,
   BacklinkProspect,
   BrandMemoryVersion,
   BrandProfile,
@@ -25,8 +29,10 @@ import type {
   JobType,
   KpiMetric,
   OutreachTemplate,
+  PerformanceOverview,
   ProspectUpdate,
   RankPoint,
+  SearchResponse,
   TrackedPage,
   WorkspaceSettings,
 } from "@geoseo/types";
@@ -61,6 +67,21 @@ function authHeaders(): Record<string, string> {
   return {};
 }
 
+/** During `next build` the API isn't running, so every prerender probe fails and
+ *  falls back to mock — that's expected, not an error. Stay quiet then; only warn
+ *  at runtime where an unreachable API is a real signal. */
+const IS_BUILD = process.env.NEXT_PHASE === "phase-production-build";
+
+/** Web runtime mode (PRD §4). The mock fallback is a DEMO-MODE safety net only:
+ *  production/staging must surface real errors (no silent dummy data). Default
+ *  `demo` keeps local dev resilient; set NEXT_PUBLIC_GEOSEO_MODE=production to fail closed. */
+const MODE = (process.env.NEXT_PUBLIC_GEOSEO_MODE ?? "demo").toLowerCase();
+const FALLBACK_ALLOWED = IS_BUILD || MODE === "demo";
+
+function warnFallback(message: string): void {
+  if (!IS_BUILD) console.warn(`[api] ${message}`);
+}
+
 async function get<T>(path: string, fallback: () => Promise<T> | T): Promise<T> {
   let res: Response;
   try {
@@ -69,25 +90,28 @@ async function get<T>(path: string, fallback: () => Promise<T> | T): Promise<T> 
       headers: { accept: "application/json", ...authHeaders() },
     });
   } catch (err) {
-    // Network/transport failure → degrade to mock so the UI never hard-fails.
-    console.warn(`[api] network error for ${path}, using mock fallback`, err);
+    // Network/transport failure. In demo/build, degrade to mock so the UI never
+    // hard-fails; in production/staging, surface the error to the route boundary.
+    if (!FALLBACK_ALLOWED) throw err instanceof Error ? err : new Error(`API unreachable for ${path}`);
+    warnFallback(`${path} unreachable — using mock fallback`);
     return fallback();
   }
 
-  // Client errors (incl. 401/403/404) are real bugs — surface them rather than
-  // masking with believable-but-fake data.
+  // Client errors (incl. 401/403/404) are real bugs — always surface them.
   if (res.status >= 400 && res.status < 500) {
     throw new Error(`API ${res.status} for ${path}`);
   }
-  // Server errors (5xx) → degrade to mock.
+  // Server errors (5xx): demo/build → mock; production/staging → surface.
   if (!res.ok) {
-    console.warn(`[api] ${res.status} for ${path}, using mock fallback`);
+    if (!FALLBACK_ALLOWED) throw new Error(`API ${res.status} for ${path}`);
+    warnFallback(`${res.status} for ${path} — using mock fallback`);
     return fallback();
   }
 
   const body = (await res.json()) as { success: boolean; data: T };
   if (!body.success) {
-    console.warn(`[api] success=false for ${path}, using mock fallback`);
+    if (!FALLBACK_ALLOWED) throw new Error(`API returned success=false for ${path}`);
+    warnFallback(`success=false for ${path} — using mock fallback`);
     return fallback();
   }
   return body.data;
@@ -150,7 +174,80 @@ const fallbackSettings: WorkspaceSettings = {
     { id: "tm-2", name: "Ari Patel", email: "ari@northwindlabs.io", role: "marketer" },
   ],
   billing: { plan: "Grow", status: "trial", seatsUsed: 2, seatsLimit: 5 },
+  publishing: { requireApproval: true, autoSitemap: true, autoLlms: true },
 };
+
+// Mirrors apps/api OverviewController so the UI degrades cleanly when the API is down.
+const BACKLINK_WEIGHT: Record<Backlink["status"], number> = { live: 1, pending: 0.4, lost: 0, broken: 0 };
+const authGrade = (s: number): "A" | "B" | "C" | "D" => (s >= 80 ? "A" : s >= 65 ? "B" : s >= 50 ? "C" : "D");
+
+async function authorityOverviewFallback(): Promise<AuthorityOverview> {
+  const [health, backlinks, alerts, ranks] = await Promise.all([
+    seoProvider.getDomainHealth(),
+    seoProvider.getBacklinks(),
+    seoProvider.getAlerts(),
+    seoProvider.getRankSeries(),
+  ]);
+  const breakdown = { live: 0, pending: 0, lost: 0, broken: 0 };
+  for (const b of backlinks) breakdown[b.status] += 1;
+  const totalDA = backlinks.reduce((a, b) => a + b.domainAuthority, 0) || 1;
+  const weightedDA = backlinks.reduce((a, b) => a + b.domainAuthority * BACKLINK_WEIGHT[b.status], 0);
+  const qScore = Math.round((weightedDA / totalDA) * 100);
+  const live = backlinks.filter((b) => b.status === "live");
+  const avgLiveAuthority = live.length ? Math.round(live.reduce((a, b) => a + b.domainAuthority, 0) / live.length) : 0;
+  const open = alerts.filter((a) => !a.resolved);
+  const tail = ranks.slice(-30);
+  const first = tail[0]?.rank ?? 0;
+  const last = tail[tail.length - 1]?.rank ?? 0;
+  const change = first - last;
+  const pct = first ? Math.round((change / first) * 1000) / 10 : 0;
+  const direction = change > 0.5 ? "up" : change < -0.5 ? "down" : "flat";
+  const projectedScore = Math.max(20, Math.min(99, Math.round(health.score + change)));
+  const summary =
+    direction === "up"
+      ? `Rankings improving ${Math.abs(pct)}% — health projected to reach ${projectedScore}/100 in ~30 days.`
+      : direction === "down"
+        ? `Rankings slipping ${Math.abs(pct)}% — health projected at ${projectedScore}/100 in ~30 days without action.`
+        : `Rankings holding steady — health projected near ${projectedScore}/100 in ~30 days.`;
+  return {
+    health,
+    backlinkQuality: { score: qScore, grade: authGrade(qScore), total: backlinks.length, breakdown, avgLiveAuthority },
+    alerts: {
+      open: open.length,
+      critical: open.filter((a) => a.severity === "critical").length,
+      warning: open.filter((a) => a.severity === "warning").length,
+    },
+    momentum: { direction, pct, projectedScore, summary },
+  };
+}
+
+const PERF_RANGE_DAYS: Record<string, number> = { "7d": 7, "30d": 30, "8w": 56, quarter: 90 };
+
+async function performanceOverviewFallback(range: string): Promise<PerformanceOverview> {
+  const days = PERF_RANGE_DAYS[range] ?? 56;
+  const [ranks, impressions, signals, pages] = await Promise.all([
+    seoProvider.getRankSeries(),
+    seoProvider.getImpressionSeries(),
+    seoProvider.getAiVisibility(),
+    seoProvider.getTrackedPages(),
+  ]);
+  const win = ranks.slice(-days);
+  const prior = ranks.slice(-days * 2, -days);
+  const avg = (xs: { rank: number }[]) => (xs.length ? xs.reduce((a, p) => a + p.rank, 0) / xs.length : 0);
+  const avgRank = Math.round(avg(win) * 10) / 10;
+  const rankDelta = prior.length ? Math.round((avg(prior) - avgRank) * 10) / 10 : 0;
+  const impr = impressions.slice(-days);
+  const totalImpr = impr.reduce((a, p) => a + p.impressions, 0);
+  const totalClicks = impr.reduce((a, p) => a + p.clicks, 0);
+  const ctr = totalImpr ? Math.round((totalClicks / totalImpr) * 1000) / 10 : 0;
+  const aiMentions = signals.reduce((a, s) => a + s.mentions, 0);
+  const avgShareOfVoice = signals.length ? Math.round(signals.reduce((a, s) => a + s.shareOfVoice, 0) / signals.length) : 0;
+  const topMovers = [...pages]
+    .map((p) => ({ id: p.id, title: p.title, path: p.path, rankDelta: p.prevRank - p.currentRank }))
+    .sort((a, b) => Math.abs(b.rankDelta) - Math.abs(a.rankDelta))
+    .slice(0, 5);
+  return { range, days, avgRank, rankDelta, impressions: totalImpr, clicks: totalClicks, ctr, aiMentions, avgShareOfVoice, trackedPages: pages.length, topMovers };
+}
 
 export const api = {
   // dashboard / authority hq
@@ -159,6 +256,9 @@ export const api = {
       (d) => (Array.isArray(d) ? d : (d as { kpis: KpiMetric[] }).kpis),
     ),
   getDomainHealth: () => get<DomainHealth>("/performance/domain-health", () => seoProvider.getDomainHealth()),
+  getAuthorityOverview: () => get<AuthorityOverview>("/overview/authority", authorityOverviewFallback),
+  getSolutionReadiness: () =>
+    get<{ solutions: SolutionReadiness[] }>("/solutions/readiness", () => ({ solutions: [] })).then((d) => d.solutions),
   getBacklinks: () =>
     get<{ backlinks: Backlink[] }>("/backlinks", async () => ({ backlinks: await seoProvider.getBacklinks() })).then((d) => d.backlinks),
   getActivity: () =>
@@ -173,6 +273,8 @@ export const api = {
   },
   resolveAlert: (id: string) =>
     send<{ id: string; read: boolean; resolved: boolean }>("POST", `/alerts/${id}/resolve`),
+  snoozeAlert: (id: string, until?: string) =>
+    send<{ id: string; snoozedUntil: string }>("POST", `/alerts/${encodeURIComponent(id)}/snooze`, { until }),
   getAlertThresholds: () =>
     get<{ thresholds: AlertThresholds }>("/alerts/thresholds", () => ({
       thresholds: { rankDrop: 5, trafficDrop: 8, brokenBacklinks: true, aiVisibilityDrop: 10 },
@@ -187,6 +289,37 @@ export const api = {
   }),
   startJob: (type: JobType, description?: string) =>
     send<JobRun>("POST", "/jobs", { type, description }),
+  retryJob: (id: string) => send<JobRun>("POST", `/jobs/${encodeURIComponent(id)}/retry`),
+  cancelJob: (id: string) => send<JobRun>("POST", `/jobs/${encodeURIComponent(id)}/cancel`),
+
+  // audit log (core workflows — PRD §10)
+  getAuditLog: (limit = 100) =>
+    get<{ audit: AuditEntry[] }>(`/audit/log?limit=${limit}`, () => ({ audit: [] })).then((d) => d.audit),
+
+  // site theme profiles (Page Engine theme matching — PRD §7)
+  getSiteThemes: () =>
+    get<{ profiles: SiteThemeProfile[] }>("/site-theme", () => ({ profiles: [] })).then((d) => d.profiles),
+  scanSiteTheme: (url: string) =>
+    send<{ profile: SiteThemeProfile; job: JobRun }>("POST", "/site-theme/scan", { url }),
+  updateSiteTheme: (id: string, patch: Partial<SiteThemeProfile>) =>
+    send<{ profile: SiteThemeProfile }>("PUT", `/site-theme/${encodeURIComponent(id)}`, patch).then((d) => d.profile),
+  confirmSiteTheme: (id: string) =>
+    send<{ profile: SiteThemeProfile }>("POST", `/site-theme/${encodeURIComponent(id)}/confirm`).then((d) => d.profile),
+
+  // global search (PRD — Best-in-Class Global Search)
+  search: (q: string, opts?: { type?: string; limit?: number; offset?: number }) => {
+    const params = new URLSearchParams({ q });
+    if (opts?.type) params.set("type", opts.type);
+    if (opts?.limit) params.set("limit", String(opts.limit));
+    if (opts?.offset) params.set("offset", String(opts.offset));
+    // Empty fallback (never the mock) — search degrades to "no results", not a crash.
+    return get<SearchResponse>(`/search?${params.toString()}`, () => ({
+      results: [],
+      total: 0,
+      facets: [],
+      suggestions: [],
+    }));
+  },
 
   // opportunities
   getProspects: () =>
@@ -206,6 +339,13 @@ export const api = {
       "DELETE",
       `/backlink/opportunities/${encodeURIComponent(id)}`,
     ),
+  restoreProspect: (id: string) =>
+    send<{ opportunity: { id: string; archived: boolean } }>(
+      "POST",
+      `/backlink/opportunities/${encodeURIComponent(id)}/restore`,
+    ).then((d) => d.opportunity),
+  bulkProspects: (ids: string[], action: "archive" | "restore" | "status", status?: BacklinkProspect["status"]) =>
+    send<{ updated: string[] }>("POST", "/backlink/opportunities/bulk", { ids, action, status }),
   getBrandProfile: () =>
     get<BrandMemory>("/brand-profile", async () => ({
       profile: await brandSource.getBrandProfile(),
@@ -245,6 +385,11 @@ export const api = {
     get<{ signals: AiVisibilitySignal[] }>("/performance/ai-visibility", async () => ({ signals: await seoProvider.getAiVisibility() })).then((d) => d.signals),
   getTrackedPages: () =>
     get<{ pages: TrackedPage[] }>("/performance/pages?limit=100", async () => ({ pages: await seoProvider.getTrackedPages() })).then((d) => d.pages),
+  getPerformanceOverview: (range = "8w") =>
+    get<PerformanceOverview>(
+      `/performance/overview?range=${encodeURIComponent(range)}`,
+      () => performanceOverviewFallback(range),
+    ),
 
   // content optimization
   getInternalLinkSuggestions: () =>

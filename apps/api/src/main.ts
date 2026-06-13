@@ -5,19 +5,28 @@ import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 import { AppModule } from "./app.module";
 import { EnvelopeInterceptor } from "./common/envelope.interceptor";
 import { HttpExceptionFilter } from "./common/http-exception.filter";
+import { resolveMode, persistenceKind, authRequired, assertModeConfig } from "./common/mode";
 
 async function bootstrap() {
+  const mode = resolveMode();
+  // Abort a prod/staging boot that's missing required security config (PRD §3.2).
+  assertModeConfig(mode);
+
   const app = await NestFactory.create(AppModule, { cors: false });
 
   app.setGlobalPrefix("api/v1");
   app.useGlobalInterceptors(new EnvelopeInterceptor());
   app.useGlobalFilters(new HttpExceptionFilter());
 
-  // Allow the web app (and its tunnel) to call the API from the browser.
-  app.enableCors({
-    origin: [/localhost:\d+$/, /\.ngrok-free\.dev$/, /\.ngrok-free\.app$/, /\.trycloudflare\.com$/],
-    credentials: true,
-  });
+  // CORS allow-list: localhost + dev tunnels, plus an explicit WEB_ORIGIN if set.
+  const origin: (string | RegExp)[] = [
+    /localhost:\d+$/,
+    /\.ngrok-free\.dev$/,
+    /\.ngrok-free\.app$/,
+    /\.trycloudflare\.com$/,
+  ];
+  if (process.env.WEB_ORIGIN) origin.push(process.env.WEB_ORIGIN);
+  app.enableCors({ origin, credentials: true });
 
   // OpenAPI / Swagger — /api/docs (UI) + /api/docs-json (spec).
   const config = new DocumentBuilder()

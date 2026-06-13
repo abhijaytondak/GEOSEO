@@ -9,6 +9,7 @@ import { relativeTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { useAppFeedback } from "@/components/system/app-feedback";
 import { pageEngineApi } from "@/lib/page-engine-client";
+import { LeadDetailDrawer } from "./lead-detail-drawer";
 
 const STATUS: Record<LeadStatus, string> = {
   new: "bg-info/12 text-info",
@@ -30,9 +31,16 @@ function scoreColor(s: number) {
 }
 
 export function LeadsView({ leads }: { leads: Lead[] }) {
-  const { notify } = useAppFeedback();
+  const { notify, confirm } = useAppFeedback();
   const [filter, setFilter] = useState<Filter>("all");
   const [rows, setRows] = useState(leads);
+  const [selected, setSelected] = useState<Lead | null>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
+
+  function openDetail(lead: Lead) {
+    setSelected(lead);
+    setDetailOpen(true);
+  }
 
   async function setStatus(id: string, status: LeadStatus) {
     const prev = rows;
@@ -56,7 +64,13 @@ export function LeadsView({ leads }: { leads: Lead[] }) {
   }
 
   async function deleteLead(id: string) {
-    if (!window.confirm("Delete this lead? This cannot be undone.")) return;
+    const ok = await confirm({
+      title: "Delete this lead?",
+      message: "This cannot be undone.",
+      confirmLabel: "Delete",
+      tone: "danger",
+    });
+    if (!ok) return;
     const prev = rows;
     setRows((arr) => arr.filter((l) => l.id !== id));
     try {
@@ -172,8 +186,10 @@ export function LeadsView({ leads }: { leads: Lead[] }) {
               {filtered.map((l) => (
                 <tr key={l.id} className={cn("border-b border-border last:border-0 hover:bg-surface-sunken", l.spamStatus !== "clean" && "opacity-70")}>
                   <td className="px-5 py-3">
-                    <div className="text-[13.5px] font-semibold text-foreground">{l.name}</div>
-                    <div className="text-[12px] text-muted-foreground">{l.email}</div>
+                    <button onClick={() => openDetail(l)} className="text-left transition-colors hover:text-brand">
+                      <div className="text-[13.5px] font-semibold text-foreground hover:text-brand">{l.name}</div>
+                      <div className="text-[12px] text-muted-foreground">{l.email}</div>
+                    </button>
                   </td>
                   <td className="px-3 py-3 text-[13px] text-muted-foreground">{l.company}</td>
                   <td className="px-3 py-3">
@@ -230,6 +246,8 @@ export function LeadsView({ leads }: { leads: Lead[] }) {
         </div>
         {filtered.length === 0 && <div className="py-16 text-center text-sm text-muted-foreground">No leads match this filter.</div>}
       </Panel>
+
+      <LeadDetailDrawer lead={selected} open={detailOpen} onOpenChange={setDetailOpen} />
     </div>
   );
 }

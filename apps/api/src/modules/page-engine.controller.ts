@@ -11,9 +11,10 @@ import {
   Put,
   UnprocessableEntityException,
 } from "@nestjs/common";
-import type { LeadStatus, PageEdit } from "@geoseo/types";
+import type { LeadStatus, PageBlueprint, PageEdit } from "@geoseo/types";
 import { ApiTags } from "@nestjs/swagger";
 import { PageEngineStore } from "./page-engine.service";
+import { SettingsStore } from "./settings.service";
 import { Public } from "../common/public.decorator";
 
 /* ----------------------------------------------- keyword opportunities */
@@ -90,6 +91,13 @@ export class BlueprintsController {
     return b;
   }
 
+  @Put(":id")
+  update(@Param("id") id: string, @Body() body: Partial<PageBlueprint>) {
+    const b = this.store.updateBlueprint(id, body ?? {});
+    if (!b) throw new NotFoundException(`Blueprint ${id} not found`);
+    return b;
+  }
+
   @Post(":id/approve")
   approve(@Param("id") id: string) {
     const b = this.store.approveBlueprint(id);
@@ -160,6 +168,14 @@ export class PagesController {
       });
     }
     return this.must(this.store.transitionPage(id, "published"), id);
+  }
+
+  /** Non-mutating publish quality-gate check (Page-Engine PRD §12). */
+  @Post(":id/validate")
+  validate(@Param("id") id: string) {
+    if (!this.store.getPage(id)) throw new NotFoundException(`Page ${id} not found`);
+    const blockers = this.store.publishBlockers(id);
+    return { blockers, canPublish: blockers.length === 0 };
   }
 
   @Post(":id/refresh")
@@ -256,6 +272,43 @@ export class MonitoringController {
     const p = this.store.getPage(pageId);
     if (!p) throw new NotFoundException(`Page ${pageId} not found`);
     return { page: p, versions: this.store.listVersions(pageId) };
+  }
+}
+
+/* ----------------------------------------------- publishing (PRD §10.2) */
+@ApiTags("publishing")
+@Controller("publishing")
+export class PublishingController {
+  constructor(
+    @Inject(PageEngineStore) private readonly store: PageEngineStore,
+    @Inject(SettingsStore) private readonly settings: SettingsStore,
+  ) {}
+
+  @Get("integrations")
+  integrations() {
+    return { integrations: this.settings.get().integrations };
+  }
+
+  @Post("integrations")
+  upsert(@Body() body: { id?: string; status?: string; label?: string; description?: string }) {
+    if (!body?.id) throw new BadRequestException("id is required");
+    return this.settings.updateIntegration(body.id, body as never);
+  }
+
+  @Post("test")
+  test() {
+    const path = this.settings.get().profile.defaultPublishPath ?? "/feeds";
+    return { ok: true, destination: "managed-subdirectory", path };
+  }
+
+  @Post("sitemap/sync")
+  sitemap() {
+    return { synced: true, urls: this.store.listPublishedPages().length, sitemap: "/sitemap.xml" };
+  }
+
+  @Post("llms/sync")
+  llms() {
+    return { synced: true, entries: this.store.listPublishedPages().length, llmsTxt: "/llms.txt" };
   }
 }
 

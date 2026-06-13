@@ -91,10 +91,13 @@ export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
           <div className="mt-1 text-[11.5px] leading-relaxed text-background/65">
             Let agents acquire links and refresh pages automatically.
           </div>
-          <button className="mt-3 inline-flex items-center gap-1 rounded-full bg-background px-3 py-1.5 text-[12px] font-semibold text-foreground transition-transform hover:scale-[1.02]">
+          <Link
+            href="/settings"
+            className="mt-3 inline-flex items-center gap-1 rounded-full bg-background px-3 py-1.5 text-[12px] font-semibold text-foreground transition-transform hover:scale-[1.02]"
+          >
             Upgrade to Pro
             <ArrowUpRight className="size-3.5" />
-          </button>
+          </Link>
         </div>
         <a
           href="https://developer.puter.com"

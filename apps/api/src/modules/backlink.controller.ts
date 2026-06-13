@@ -1,10 +1,13 @@
-import { Body, Controller, Delete, Get, Inject, NotFoundException, Param, Patch, Post, Query } from "@nestjs/common";
+import { BadRequestException, Body, Controller, Delete, Get, Inject, NotFoundException, Param, Patch, Post, Query } from "@nestjs/common";
 import { ApiTags, ApiQuery } from "@nestjs/swagger";
 import type { SeoDataProvider, ProspectStatus, ProspectUpdate } from "@geoseo/types";
 import { SEO_PROVIDER } from "../seo/seo.module";
 import { paginate } from "../common/pagination";
+import { validateBody } from "../common/validation";
+import { ProspectUpdateSchema, BulkProspectsSchema } from "../common/schemas";
 import { OpportunitiesStore } from "./opportunities.service";
 import { JobsStore } from "./jobs.service";
+import { AuditStore } from "./audit.service";
 
 @ApiTags("backlinks")
 @Controller("backlink/opportunities")
@@ -13,6 +16,7 @@ export class BacklinkController {
     @Inject(SEO_PROVIDER) private readonly seo: SeoDataProvider,
     @Inject(OpportunitiesStore) private readonly opportunities: OpportunitiesStore,
     @Inject(JobsStore) private readonly jobs: JobsStore,
+    @Inject(AuditStore) private readonly audit: AuditStore,
   ) {}
 
   @Get()
@@ -54,17 +58,44 @@ export class BacklinkController {
 
   @Post("discover")
   discover() {
-    return { opportunity: this.opportunities.discover(), job: this.jobs.create("discover") };
+    const opportunity = this.opportunities.discover();
+    this.audit.record("discover", "prospect", opportunity.id);
+    return { opportunity, job: this.jobs.create("discover") };
+  }
+
+  @Post("bulk")
+  async bulk(
+    @Body(validateBody(BulkProspectsSchema))
+    body: { ids: string[]; action: "archive" | "restore" | "status"; status?: ProspectStatus },
+  ) {
+    if (body.ids.length === 0) throw new BadRequestException("`ids` must be a non-empty array");
+    // Cross-field rule the flat schema can't express.
+    if (body.action === "status" && !body.status) {
+      throw new BadRequestException("action 'status' requires a `status`");
+    }
+    const result = this.opportunities.bulk(body.ids, body.action, await this.seo.getProspects(), body.status);
+    result.updated.forEach((id) => this.audit.record("bulk", "prospect", id));
+    return result;
   }
 
   @Patch(":id")
-  async update(@Param("id") id: string, @Body() body: ProspectUpdate) {
+  async update(@Param("id") id: string, @Body(validateBody(ProspectUpdateSchema)) body: ProspectUpdate) {
     const prospect = this.opportunities.update(id, body, await this.seo.getProspects());
+    this.audit.record("update", "prospect", id);
     return { opportunity: prospect };
   }
 
   @Delete(":id")
   async archive(@Param("id") id: string) {
-    return this.opportunities.archive(id, await this.seo.getProspects());
+    const result = await this.opportunities.archive(id, await this.seo.getProspects());
+    this.audit.record("archive", "prospect", id);
+    return result;
+  }
+
+  @Post(":id/restore")
+  restore(@Param("id") id: string) {
+    const result = this.opportunities.restore(id);
+    this.audit.record("restore", "prospect", id);
+    return { opportunity: result };
   }
 }

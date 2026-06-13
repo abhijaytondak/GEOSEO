@@ -12,6 +12,13 @@ import type {
   GeneratedPage,
   KeywordOpportunity,
   Lead,
+  LeadActivity,
+  LeadActivityType,
+  LeadAssignment,
+  LeadJourneyEvent,
+  LeadJourneyEventType,
+  LeadJourneySummary,
+  LeadScore,
   LeadStatus,
   PageBlueprint,
   PageEdit,
@@ -49,6 +56,10 @@ function authHeaders(): Record<string, string> {
   return {};
 }
 
+/** Mock fallback is demo-mode only (PRD §4). Production/staging surfaces errors. */
+const IS_BUILD = process.env.NEXT_PHASE === "phase-production-build";
+const FALLBACK_ALLOWED = IS_BUILD || (process.env.NEXT_PUBLIC_GEOSEO_MODE ?? "demo").toLowerCase() === "demo";
+
 async function get<T>(path: string, fallback: () => Promise<T> | T): Promise<T> {
   let res: Response;
   try {
@@ -56,13 +67,20 @@ async function get<T>(path: string, fallback: () => Promise<T> | T): Promise<T> 
       cache: "no-store",
       headers: { accept: "application/json", ...authHeaders() },
     });
-  } catch {
+  } catch (err) {
+    if (!FALLBACK_ALLOWED) throw err instanceof Error ? err : new Error(`API unreachable for ${path}`);
     return fallback();
   }
   if (res.status >= 400 && res.status < 500) throw new Error(`API ${res.status} for ${path}`);
-  if (!res.ok) return fallback();
+  if (!res.ok) {
+    if (!FALLBACK_ALLOWED) throw new Error(`API ${res.status} for ${path}`);
+    return fallback();
+  }
   const body = (await res.json()) as { success: boolean; data: T };
-  if (!body.success) return fallback();
+  if (!body.success) {
+    if (!FALLBACK_ALLOWED) throw new Error(`API returned success=false for ${path}`);
+    return fallback();
+  }
   return body.data;
 }
 
@@ -127,6 +145,45 @@ export const pageEngineApi = {
   submitPage: (id: string) => send<GeneratedPage>("POST", `/pages/${id}/submit`),
   approvePage: (id: string) => send<GeneratedPage>("POST", `/pages/${id}/approve`),
   publishPage: (id: string) => send<GeneratedPage>("POST", `/pages/${id}/publish`),
+  validatePage: (id: string) =>
+    send<{ blockers: string[]; canPublish: boolean }>("POST", `/pages/${id}/validate`),
+  getLeadActivity: (id: string) =>
+    get<{ activity: LeadActivity[] }>(`/leads/${id}/activity`, () => ({ activity: [] })).then((d) => d.activity),
+  addLeadActivity: (id: string, type: LeadActivityType, body: string) =>
+    send<{ activity: LeadActivity }>("POST", `/leads/${id}/activity`, { type, body }).then((d) => d.activity),
+  getLeadJourney: (id: string) =>
+    get<{ events: LeadJourneyEvent[]; summary: LeadJourneySummary }>(`/leads/${id}/journey`, () => ({
+      events: [],
+      summary: { sessionCount: 0, touchpointCount: 0, topPages: [] },
+    })),
+  linkLeadVisitor: (id: string, visitorId: string) =>
+    send<{ events: LeadJourneyEvent[]; summary: LeadJourneySummary }>("POST", `/leads/${id}/link-visitor`, { visitorId }),
+  recordVisitorEvent: (input: {
+    anonymousVisitorId: string;
+    sessionId: string;
+    type: LeadJourneyEventType;
+    url: string;
+    pageId?: string;
+    title?: string;
+    referrer?: string;
+    durationMs?: number;
+    leadId?: string;
+  }) => send<{ event: LeadJourneyEvent }>("POST", "/public/events", input).then((d) => d.event),
+  assignLead: (id: string, ownerId: string) =>
+    send<{ assignment: LeadAssignment }>("POST", `/leads/${id}/assign`, { ownerId }).then((d) => d.assignment),
+  bulkAssignLeads: (ids: string[], ownerId: string) =>
+    send<{ assignments: LeadAssignment[] }>("POST", "/leads/bulk-assign", { ids, ownerId }).then((d) => d.assignments),
+  getLeadWorkload: () =>
+    get<{ workload: Record<string, number>; assignments: LeadAssignment[] }>("/leads/assign/workload", () => ({
+      workload: {},
+      assignments: [],
+    })),
+  getLeadScore: (id: string) =>
+    get<{ score: LeadScore }>(`/leads/${id}/score`, () => ({
+      score: { total: 0, fit: 0, intent: 0, engagement: 0, spamRisk: 0, confidence: 0, reasons: [], recommendedAction: "" },
+    })).then((d) => d.score),
+  recalculateLeadScore: (id: string) =>
+    send<{ score: LeadScore }>("POST", `/leads/${id}/recalculate-score`).then((d) => d.score),
   approveOpportunity: (id: string) =>
     send<KeywordOpportunity>("POST", `/opportunities/${id}/approve`),
   rejectOpportunity: (id: string) =>

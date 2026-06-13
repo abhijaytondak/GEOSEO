@@ -19,6 +19,8 @@ import {
   RotateCcw,
   Plus,
   Trash2,
+  AlertTriangle,
+  GitCompare,
 } from "lucide-react";
 import type {
   GeneratedPage,
@@ -75,7 +77,7 @@ export function PagesView({
   blueprints: PageBlueprint[];
   recommendations?: RefreshRec[];
 }) {
-  const { notify } = useAppFeedback();
+  const { notify, confirm } = useAppFeedback();
   const [pages, setPages] = useState(initialPages);
   const [opps, setOpps] = useState(opportunities);
   const [blueprints, setBlueprints] = useState(initialBlueprints);
@@ -87,6 +89,8 @@ export function PagesView({
   const [draft, setDraft] = useState<PageEdit>({});
   const [savingEdit, setSavingEdit] = useState(false);
   const [versions, setVersions] = useState<PageVersion[]>([]);
+  const [previewDevice, setPreviewDevice] = useState<"desktop" | "mobile">("desktop");
+  const [diffId, setDiffId] = useState<string | null>(null);
 
   // load version history whenever the drawer opens a page (no sync setState here)
   useEffect(() => {
@@ -162,6 +166,13 @@ export function PagesView({
   }
 
   async function rollback(id: string, versionId: string) {
+    const ok = await confirm({
+      title: "Roll back this page?",
+      message: "The live page will be replaced with this earlier version.",
+      confirmLabel: "Roll back",
+      tone: "danger",
+    });
+    if (!ok) return;
     try {
       const updated = await pageEngineApi.rollbackPage(id, versionId);
       setPages((arr) => arr.map((p) => (p.id === id ? updated : p)));
@@ -217,6 +228,14 @@ export function PagesView({
   }, [pages]);
 
   async function transition(id: string, to: PageStatus, label: string) {
+    if (to === "published") {
+      const ok = await confirm({
+        title: "Publish this page?",
+        message: "It will go live on your domain and become crawlable by search engines and AI answers.",
+        confirmLabel: "Publish",
+      });
+      if (!ok) return;
+    }
     setBusy(id);
     try {
       const updated =
@@ -537,9 +556,31 @@ export function PagesView({
 
                 {/* content preview */}
                 <section>
-                  <h3 className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">
-                    {editing ? "Content (sections & FAQs)" : "Draft preview"}
-                  </h3>
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">
+                      {editing ? "Content (sections & FAQs)" : "Draft preview"}
+                    </h3>
+                    {!editing && (
+                      <div className="flex items-center gap-0.5 rounded-lg border border-border p-0.5">
+                        {(["desktop", "mobile"] as const).map((d) => (
+                          <button
+                            key={d}
+                            onClick={() => setPreviewDevice(d)}
+                            aria-pressed={previewDevice === d}
+                            aria-label={`${d} preview`}
+                            className={
+                              "rounded-md px-2 py-0.5 text-[11px] font-medium capitalize transition-colors " +
+                              (previewDevice === d
+                                ? "bg-brand/10 text-brand"
+                                : "text-muted-foreground hover:text-foreground")
+                            }
+                          >
+                            {d}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                   {editing ? (
                     <div className="mt-2 space-y-3">
                       {/* sections */}
@@ -600,7 +641,12 @@ export function PagesView({
                       </div>
                     </div>
                   ) : (
-                    <div className="mt-2 rounded-xl border border-border p-4">
+                    <div
+                      className={
+                        "mt-2 rounded-xl border border-border p-4 transition-all " +
+                        (previewDevice === "mobile" ? "mx-auto max-w-[360px]" : "")
+                      }
+                    >
                       <p className="text-[15px] font-semibold text-foreground">{current.heroCopy}</p>
                       {(current.sections ?? []).map((sec) => (
                         <div key={sec.heading} className="mt-3">
@@ -670,6 +716,39 @@ export function PagesView({
                             <span key={l} className="rounded-md bg-muted px-1.5 py-0.5 text-[10.5px] font-medium text-muted-foreground">{l}</span>
                           ))}
                         </div>
+                        {/* risk flags (PRD §9.3) */}
+                        {(() => {
+                          const risks: string[] = [];
+                          if (bp.outline.length < 3) risks.push("Thin outline (<3 sections)");
+                          if (!bp.ctaPlan?.trim()) risks.push("No CTA defined");
+                          if (bp.internalLinkPlan.length === 0) risks.push("No internal links planned");
+                          if ((bp.targetKeywords?.length ?? 0) < 2) risks.push("Narrow keyword set");
+                          if (pages.some((p) => p.slug === bp.slug && p.id !== current.id))
+                            risks.push("Slug collision / cannibalization risk");
+                          return (
+                            <div className="border-t border-border pt-2.5">
+                              <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">
+                                Risk flags
+                              </div>
+                              {risks.length === 0 ? (
+                                <div className="mt-1 inline-flex items-center gap-1 text-[12px] font-medium text-positive">
+                                  <Check className="size-3.5" /> No risks detected
+                                </div>
+                              ) : (
+                                <div className="mt-1.5 flex flex-wrap gap-1.5">
+                                  {risks.map((r) => (
+                                    <span
+                                      key={r}
+                                      className="inline-flex items-center gap-1 rounded-md bg-warning/12 px-1.5 py-0.5 text-[10.5px] font-medium text-warning"
+                                    >
+                                      <AlertTriangle className="size-3" /> {r}
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })()}
                       </div>
                     </section>
                   );
@@ -684,27 +763,77 @@ export function PagesView({
                     </h3>
                     <ol className="mt-2 space-y-1.5">
                       {versions.map((v, i) => (
-                        <li key={v.id} className="flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-[12.5px]">
-                          <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-muted text-[10.5px] font-bold text-muted-foreground">
-                            v{v.version}
-                          </span>
-                          <div className="min-w-0 flex-1">
-                            <div className="truncate font-medium text-foreground">{v.changeSummary}</div>
-                            <div className="text-[11px] capitalize text-muted-foreground">{v.authorType}</div>
-                          </div>
-                          {i === 0 ? (
-                            <span className="rounded-full bg-positive/12 px-1.5 py-0.5 text-[10px] font-semibold text-positive">
-                              Current
+                        <li key={v.id} className="rounded-lg border border-border px-3 py-2 text-[12.5px]">
+                          <div className="flex items-center gap-2">
+                            <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-muted text-[10.5px] font-bold text-muted-foreground">
+                              v{v.version}
                             </span>
-                          ) : (
-                            <button
-                              onClick={() => rollback(current.id, v.id)}
-                              className="inline-flex items-center gap-1 text-[11.5px] font-semibold text-brand hover:underline"
-                            >
-                              <RotateCcw className="size-3" />
-                              Restore
-                            </button>
-                          )}
+                            <div className="min-w-0 flex-1">
+                              <div className="truncate font-medium text-foreground">{v.changeSummary}</div>
+                              <div className="text-[11px] capitalize text-muted-foreground">{v.authorType}</div>
+                            </div>
+                            {i === 0 ? (
+                              <span className="rounded-full bg-positive/12 px-1.5 py-0.5 text-[10px] font-semibold text-positive">
+                                Current
+                              </span>
+                            ) : (
+                              <div className="flex items-center gap-2.5">
+                                <button
+                                  onClick={() => setDiffId((id) => (id === v.id ? null : v.id))}
+                                  aria-pressed={diffId === v.id}
+                                  className="inline-flex items-center gap-1 text-[11.5px] font-semibold text-muted-foreground hover:text-foreground"
+                                >
+                                  <GitCompare className="size-3" />
+                                  {diffId === v.id ? "Hide" : "Diff"}
+                                </button>
+                                <button
+                                  onClick={() => rollback(current.id, v.id)}
+                                  className="inline-flex items-center gap-1 text-[11.5px] font-semibold text-brand hover:underline"
+                                >
+                                  <RotateCcw className="size-3" />
+                                  Restore
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                          {/* before→after diff vs current (PRD §8.3) */}
+                          {diffId === v.id &&
+                            (() => {
+                              const rows: { label: string; before: string; after: string }[] = [
+                                { label: "Meta title", before: v.metaTitle, after: current.metaTitle },
+                                { label: "Meta description", before: v.metaDescription, after: current.metaDescription },
+                                { label: "Hero copy", before: v.heroCopy, after: current.heroCopy },
+                                { label: "Sections", before: `${v.sections.length}`, after: `${current.sections?.length ?? 0}` },
+                                { label: "FAQs", before: `${v.faqs.length}`, after: `${current.faqs?.length ?? 0}` },
+                              ];
+                              const changed = rows.filter((r) => r.before !== r.after);
+                              return (
+                                <div className="mt-2 rounded-lg border border-border bg-surface-sunken p-2.5">
+                                  <div className="mb-1.5 text-[10.5px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">
+                                    v{v.version} → current · {changed.length} field{changed.length === 1 ? "" : "s"} changed
+                                  </div>
+                                  {changed.length === 0 ? (
+                                    <div className="text-[11.5px] text-muted-foreground">No content differences.</div>
+                                  ) : (
+                                    <div className="space-y-1.5">
+                                      {changed.map((r) => (
+                                        <div key={r.label} className="grid grid-cols-[64px_1fr] gap-2">
+                                          <div className="pt-0.5 text-[10.5px] font-medium text-muted-foreground">{r.label}</div>
+                                          <div className="space-y-0.5">
+                                            <div className="rounded bg-negative/10 px-1.5 py-0.5 text-[11px] text-negative line-through decoration-negative/40">
+                                              {r.before || "—"}
+                                            </div>
+                                            <div className="rounded bg-positive/10 px-1.5 py-0.5 text-[11px] text-positive">
+                                              {r.after || "—"}
+                                            </div>
+                                          </div>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })()}
                         </li>
                       ))}
                     </ol>
