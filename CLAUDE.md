@@ -22,6 +22,13 @@ in `docs/` (see bottom).
     only after backend Clerk JWT verification lands in `bearer.guard.ts`.
 - **Web (port 3001):** `cd apps/web && PORT=3001 pnpm dev` (3000 is often taken).
 - **Public preview:** ngrok tunnel → `:3001` (Cloudflare quick-tunnels were flaky here).
+- **Vercel deploy (live):** project `geoseo` (team `rajputabhijay1-gmailcoms-projects`), **https://geoseo-tau.vercel.app**.
+  Root Directory = `apps/web` (set via API); `apps/web/vercel.json` installs from the monorepo root
+  (`cd ../.. && pnpm install`); `.vercelignore` keeps the upload small. Deployed in **demo mode**
+  (`NEXT_PUBLIC_GEOSEO_MODE=demo`) → reads use the mock fallback since the NestJS API isn't hosted; **mutations
+  won't persist there**. Clerk pk/sk passed as build+runtime env. Redeploy: `vercel deploy --prod --yes` from repo
+  root (Clerk keys via `--build-env`/`-e` from `apps/web/.env.local`). For a fully-working deploy, host `apps/api`
+  (Railway/Render) and set `API_INTERNAL_URL` on the Vercel project.
 - **Verify before claiming done:** `tsc --noEmit` in the changed app + a real `curl`/screenshot.
   Restart the API after backend edits (no watch in `pnpm start`).
 
