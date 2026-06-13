@@ -1,0 +1,43 @@
+import { CanActivate, ExecutionContext, Inject, Injectable, UnauthorizedException } from "@nestjs/common";
+import { Reflector } from "@nestjs/core";
+import type { Request } from "express";
+import { IS_PUBLIC_KEY } from "./public.decorator";
+
+/**
+ * Bearer-token guard. Dev-permissive by default so the API is curl-able without
+ * setup. Set `API_AUTH_REQUIRED=true` to enforce `Authorization: Bearer <token>`
+ * matching `DEV_API_TOKEN`. In production this is where Clerk JWT verification +
+ * tenant/scope resolution (admin | marketer | analyst) plug in.
+ */
+@Injectable()
+export class BearerGuard implements CanActivate {
+  constructor(@Inject(Reflector) private readonly reflector: Reflector) {}
+
+  canActivate(ctx: ExecutionContext): boolean {
+    const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [
+      ctx.getHandler(),
+      ctx.getClass(),
+    ]);
+    if (isPublic) return true;
+
+    if (process.env.API_AUTH_REQUIRED !== "true") return true; // dev-permissive
+
+    const expected = process.env.DEV_API_TOKEN;
+    // Fail closed: if auth is required but no secret is configured, deny rather
+    // than accept any token. (In production this branch is replaced by Clerk
+    // JWT verification, which has its own keys.)
+    if (!expected) {
+      throw new UnauthorizedException(
+        "Server auth misconfigured: DEV_API_TOKEN is not set",
+      );
+    }
+
+    const req = ctx.switchToHttp().getRequest<Request>();
+    const header = req.headers.authorization ?? "";
+    const token = header.startsWith("Bearer ") ? header.slice(7) : null;
+    if (!token || token !== expected) {
+      throw new UnauthorizedException("Missing or invalid bearer token");
+    }
+    return true;
+  }
+}
