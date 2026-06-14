@@ -21,6 +21,7 @@ import {
   Trash2,
   AlertTriangle,
   GitCompare,
+  Palette,
 } from "lucide-react";
 import type {
   GeneratedPage,
@@ -29,7 +30,9 @@ import type {
   PageEdit,
   PageStatus,
   PageVersion,
+  ThemeFidelity,
 } from "@geoseo/types";
+import { api } from "@/lib/api-client";
 import { Panel } from "@/components/dashboard/panel";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
@@ -66,6 +69,13 @@ function seoScore(p: GeneratedPage): { pass: number; total: number } {
   return { pass: checks.filter((c) => c.pass).length, total: checks.length };
 }
 
+// Theme-fidelity grade → label + chip tones (PRD §13).
+const FIDELITY_GRADE: Record<ThemeFidelity["grade"], { label: string; cls: string; dot: string }> = {
+  "native-fit": { label: "Native fit", cls: "bg-positive/12 text-positive", dot: "bg-positive" },
+  acceptable: { label: "Acceptable", cls: "bg-warning/15 text-warning", dot: "bg-warning" },
+  "needs-review": { label: "Needs review", cls: "bg-destructive/12 text-destructive", dot: "bg-destructive" },
+};
+
 export function PagesView({
   pages: initialPages,
   opportunities,
@@ -91,6 +101,18 @@ export function PagesView({
   const [versions, setVersions] = useState<PageVersion[]>([]);
   const [previewDevice, setPreviewDevice] = useState<"desktop" | "mobile">("desktop");
   const [diffId, setDiffId] = useState<string | null>(null);
+  const [fidelity, setFidelity] = useState<ThemeFidelity | null>(null);
+
+  // Workspace theme-fidelity score — how natively published pages render to the customer site (PRD §13).
+  useEffect(() => {
+    let cancelled = false;
+    api.getThemeFidelity().then((res) => {
+      if (!cancelled) setFidelity(res.fidelity);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // load version history whenever the drawer opens a page (no sync setState here)
   useEffect(() => {
@@ -286,6 +308,22 @@ export function PagesView({
 
   return (
     <div className="space-y-5">
+      {/* Theme-fidelity badge (PRD §13) — how natively published pages match the customer site */}
+      {fidelity && (
+        <a
+          href="/theme"
+          title={fidelity.recommendedAction}
+          className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1.5 text-[12px] font-medium text-foreground transition-colors hover:bg-muted"
+        >
+          <Palette className="size-3.5 text-muted-foreground" />
+          Theme fidelity
+          <span className={cn("inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[11px] font-semibold", FIDELITY_GRADE[fidelity.grade].cls)}>
+            <span className={cn("size-1.5 rounded-full", FIDELITY_GRADE[fidelity.grade].dot)} />
+            <span className="tabular-nums">{fidelity.score}</span> · {FIDELITY_GRADE[fidelity.grade].label}
+          </span>
+        </a>
+      )}
+
       {/* KPI strip */}
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         {[

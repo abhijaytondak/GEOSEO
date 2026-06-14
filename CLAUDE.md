@@ -104,6 +104,13 @@ same shape: env-gated, **return null/[] on any failure → safe fallback**, neve
 Vercel demo runs the real backend (with these seams active) instead of the mock fallback.
 
 ## Done recently (don't redo)
+- **Theme-fidelity badge in the Pages list (PRD §13; finishes the other account's theme-fidelity feature):** the
+  fidelity score (`api.getThemeFidelity()` → confirmed-theme `{score, grade, recommendedAction}`) now renders as a chip
+  in `pages-view.tsx` header (grade tones: native-fit/acceptable/needs-review), linking to `/theme` — previously it was
+  only on the Theme page. Also continued the honesty pass: **Performance page now shows a live-vs-demo data-source badge**
+  (`getPerformanceOverview().source`: "Live · Google Search Console" vs "Demo estimate"). Verified typecheck+lint+smoke
+  95/95 + screenshots. ⚠️ Supabase DB was DNS-unreachable during this session → API boots **degraded/in-memory** (the
+  honesty-pass `/health` correctly reports `persistence:memory, dbReachable:false`); persistence returns when the DB host resolves.
 - **Live-hardening "honesty pass" (audit response; typecheck+lint+build green, smoke 95/95, curl+screenshot-verified; committed `a17e18c` + `278662c`, NOT pushed):**
   An audit found the product was *misreporting* its state. Fixed the code-level honesty bugs (real-integration
   activation is still credential-gated — seams unchanged):
