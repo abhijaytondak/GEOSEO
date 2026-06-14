@@ -37,13 +37,26 @@ Net effect today: behavior is identical (everything is `ws-default`); the seams 
    impossible even on a bug. (Current rows are `id="state"`; per-tenant rows are `id="t:<tenant>"`.)
 5. **RBAC.** Layer role checks (admin / marketer / analyst) from the Clerk session on top of tenant scoping.
 
+## Reference implementation — `conversion-audit` (done)
+
+`ConversionAuditStore` is migrated as the copy-paste pattern:
+
+- Store keeps `private cache = new Map<string, AuditState>()`; a private `state(tenantId)` lazily hydrates
+  via `db.loadForTenant(tenantId)` (falling back to an empty state), and a `commit(tenantId, …)` sets the cache
+  + `db.saveForTenant(tenantId, …)`. Public methods take `tenantId` first: `latest(tenantId)`, `run(tenantId, …)`.
+- Controller reads the tenant once per handler with `resolveTenantId(req)` (`@Req() req: TenantRequest`) and
+  passes it down. No global `onModuleInit` hydration (per-tenant is lazy).
+- Verified: `x-workspace-id: alpha` and `x-workspace-id: beta` get fully isolated audit state; default tenant
+  unaffected. Works in-memory (cache) and persists per-tenant when the DB is reachable.
+
 ## Store adoption checklist (each is an independent PR)
 
-`cx_*` + `pe_*` stores to migrate (current = single `ws-default` doc): page-engine, brand, brand-library,
-settings, workspace, alerts, jobs, opportunities, content, site-theme, audit, search-index, lead-* (activity,
-journey, assignment, score, notification, form, routing, followup), ai-search (mentions, bots),
-conversion-audit, onboarding, cms-publish, images, crm-sync. Start with a low-traffic additive store
-(e.g. `cx_brand_library`) as the reference implementation, then fan out.
+Done: **conversion-audit** (reference). Remaining `cx_*`/`pe_*` stores (current = single `ws-default` doc):
+page-engine, brand, brand-library, settings, workspace, alerts, jobs, opportunities, content, site-theme, audit,
+search-index, lead-* (activity, journey, assignment, score, notification, form, routing, followup), ai-search
+(mentions, bots), onboarding, cms-publish, images, crm-sync. Follow the conversion-audit pattern; do brand-library
+next (note: its `composeBrandContext` consumer in `page-engine.service` should read the page's owning tenant —
+until page-engine is migrated, pass `DEFAULT_TENANT_ID`).
 
 ## Guardrails
 

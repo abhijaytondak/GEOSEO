@@ -105,6 +105,13 @@ same shape: env-gated, **return null/[] on any failure → safe fallback**, neve
 Vercel demo runs the real backend (with these seams active) instead of the mock fallback.
 
 ## Done recently (don't redo)
+- **Multi-tenant: `conversion-audit` migrated as the reference per-tenant store (typecheck+smoke 95/95, isolation-verified):**
+  `ConversionAuditStore` now keys state by tenant — `cache: Map<tenantId, AuditState>`, lazy `state(tenantId)` via
+  `DocStore.loadForTenant`, `commit(tenantId,…)` via `saveForTenant`; `latest(tenantId)`/`run(tenantId,…)` take the tenant
+  first. Controller resolves it with `resolveTenantId(@Req())`. Verified isolation: `x-workspace-id: alpha`→example.com,
+  `beta`→example.net, default→none — independent state via the same endpoints. This is the **copy-paste pattern** for the
+  remaining stores (checklist in `docs/MULTI-TENANCY.md`; do brand-library next — its page-engine consumer passes
+  `DEFAULT_TENANT_ID` until page-engine is migrated).
 - **Multi-tenant isolation — groundwork (additive, behavior-unchanged; typecheck+smoke 95/95, curl-verified):**
   request-side tenant context is now in place so the per-store migration can proceed incrementally (full plan in
   **`docs/MULTI-TENANCY.md`**). `common/tenant.ts` (`DEFAULT_TENANT_ID="ws-default"`, `resolveTenantId(req)` precedence:

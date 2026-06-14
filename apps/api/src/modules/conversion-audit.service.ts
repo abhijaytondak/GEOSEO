@@ -1,4 +1,4 @@
-import { Injectable, OnModuleInit } from "@nestjs/common";
+import { Injectable } from "@nestjs/common";
 import { DocStore } from "../db/db";
 
 export type AuditStatus = "pass" | "warn" | "fail";
@@ -54,29 +54,42 @@ function gradeFor(score: number): ConversionAudit["grade"] {
   return score >= 85 ? "A" : score >= 70 ? "B" : score >= 50 ? "C" : "D";
 }
 
+/**
+ * Per-tenant store (reference implementation of the multi-tenant pattern — see
+ * docs/MULTI-TENANCY.md). State is lazily hydrated per `tenantId` into an in-memory
+ * cache, backed by `DocStore.loadForTenant/saveForTenant`. Controllers pass
+ * `req.tenantId` (set by TenantGuard); `ws-default` maps to the legacy "state" row.
+ */
 @Injectable()
-export class ConversionAuditStore implements OnModuleInit {
-  private last: ConversionAudit | null = null;
+export class ConversionAuditStore {
+  private cache = new Map<string, AuditState>();
   private db = new DocStore<AuditState>("cx_conversion_audit");
 
-  async onModuleInit() {
-    await this.db.init({ last: this.last }, (loaded) => {
-      this.last = loaded.last ?? null;
-    });
+  /** Lazily hydrate a tenant's state from the DB into the cache. */
+  private async state(tenantId: string): Promise<AuditState> {
+    const cached = this.cache.get(tenantId);
+    if (cached) return cached;
+    const loaded = (await this.db.loadForTenant(tenantId)) ?? { last: null };
+    this.cache.set(tenantId, loaded);
+    return loaded;
   }
 
-  latest(): ConversionAudit | null {
-    return this.last;
+  private commit(tenantId: string, audit: ConversionAudit): ConversionAudit {
+    const next: AuditState = { last: audit };
+    this.cache.set(tenantId, next);
+    this.db.saveForTenant(tenantId, next);
+    return audit;
   }
 
-  async run(rawUrl: string, now: string): Promise<ConversionAudit> {
+  async latest(tenantId: string): Promise<ConversionAudit | null> {
+    return (await this.state(tenantId)).last;
+  }
+
+  async run(tenantId: string, rawUrl: string, now: string): Promise<ConversionAudit> {
     const safe = isSafeUrl(rawUrl);
     const url = /^https?:\/\//.test(rawUrl) ? rawUrl : `https://${rawUrl}`;
     if (!safe.ok) {
-      const audit: ConversionAudit = { url, score: 0, grade: "D", findings: [], crawled: false, auditedAt: now, error: safe.reason };
-      this.last = audit;
-      this.db.save({ last: audit });
-      return audit;
+      return this.commit(tenantId, { url, score: 0, grade: "D", findings: [], crawled: false, auditedAt: now, error: safe.reason });
     }
 
     let html = "";
@@ -105,10 +118,7 @@ export class ConversionAuditStore implements OnModuleInit {
     const score = findings.length
       ? Math.round((findings.reduce((a, f) => a + (f.status === "pass" ? 1 : f.status === "warn" ? 0.5 : 0), 0) / findings.length) * 100)
       : 0;
-    const audit: ConversionAudit = { url, score, grade: gradeFor(score), findings, crawled, auditedAt: now, error };
-    this.last = audit;
-    this.db.save({ last: audit });
-    return audit;
+    return this.commit(tenantId, { url, score, grade: gradeFor(score), findings, crawled, auditedAt: now, error });
   }
 }
 
