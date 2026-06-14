@@ -104,6 +104,25 @@ same shape: env-gated, **return null/[] on any failure → safe fallback**, neve
 Vercel demo runs the real backend (with these seams active) instead of the mock fallback.
 
 ## Done recently (don't redo)
+- **Live-hardening "honesty pass" (audit response; typecheck+lint+build green, smoke 95/95, curl+screenshot-verified; committed `a17e18c` + `278662c`, NOT pushed):**
+  An audit found the product was *misreporting* its state. Fixed the code-level honesty bugs (real-integration
+  activation is still credential-gated — seams unchanged):
+  **(1) Honest DB health** — `db.ts` `dbPing()` (real `select 1`); `/health` now reports
+  `persistence: postgres|degraded|memory` from the live probe + `dbReachable` (a configured-but-unreachable
+  Supabase shows **degraded**, not a false `postgres`). Live-verified during a DNS outage → `degraded`.
+  **(2) Settings status = live** — `SettingsController.get()` overlays each seam's real `configured`/`provider`
+  getter (CMS/GSC/HubSpot/DataForSEO/image-gen), so Settings can't claim Webflow `connected` when the CMS seam
+  is `none`. Added `dataforseo` + `image-generation` rows; seed de-branded (Northwind → "Your Workspace").
+  **(3) Leads "Sync to CRM" → real seam** — `leads-view` calls `crmSyncLead` (`/leads/:id/crm-sync`), surfaces
+  synced/skipped/failed honestly (no fake optimistic "Synced"; shows "CRM not connected" when unkeyed).
+  **(4) Visible "Demo data" banner** — `api-client` runtime fallback dispatches `geoseo:degraded`; new
+  `components/system/degraded-banner.tsx` (mounted in `(app)/layout`) shows a persistent banner so mock fallback
+  is never silently passed off as live. **(5)** Fixed React "key spread into JSX"/duplicate-key warnings in
+  `performance/{rank,traffic}-chart` dot callbacks. **(6) GSC-backed charts** — `/performance/rank-series` +
+  `/impression-series` now use real GSC daily data when configured (`source: "gsc"|"heuristic"`), mock fallback
+  otherwise. **Still credential-blocked (user providing keys):** activate HubSpot / DataForSEO / CMS / GSC /
+  image-gen by setting their env vars in `apps/api/.env` (see the integration table above) — no code change.
+
 - **Branded image/infographic generation seam (PRD §14, key-gated, verified):** `ImageGenStore`
   (`modules/image-gen.service.ts`, `cx_images`) + `ImageGenController` — `POST /images/generate` `{subject, kind?}`
   (kind = hero|infographic|illustration|og) builds a **brand + theme-aware prompt** (company/valueProp/tone + confirmed
