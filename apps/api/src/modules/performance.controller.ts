@@ -3,6 +3,7 @@ import { ApiTags, ApiQuery } from "@nestjs/swagger";
 import type { SeoDataProvider, TrackedPage, PerformanceOverview } from "@geoseo/types";
 import { SEO_PROVIDER } from "../seo/seo.module";
 import { paginate } from "../common/pagination";
+import { GscService } from "./gsc.service";
 
 type SortKey = "rankChange" | "impressions" | "clicks" | "rank";
 
@@ -33,7 +34,10 @@ function sortPages(pages: TrackedPage[], key?: SortKey): TrackedPage[] {
 @ApiTags("performance")
 @Controller("performance")
 export class PerformanceController {
-  constructor(@Inject(SEO_PROVIDER) private readonly seo: SeoDataProvider) {}
+  constructor(
+    @Inject(SEO_PROVIDER) private readonly seo: SeoDataProvider,
+    @Inject(GscService) private readonly gsc: GscService,
+  ) {}
 
   @Get("pages")
   @ApiQuery({ name: "limit", required: false })
@@ -64,13 +68,33 @@ export class PerformanceController {
     const window = ranks.slice(-days);
     const prior = ranks.slice(-days * 2, -days);
     const avg = (xs: { rank: number }[]) => (xs.length ? xs.reduce((a, p) => a + p.rank, 0) / xs.length : 0);
-    const avgRank = round(avg(window), 1);
-    const rankDelta = prior.length ? round(avg(prior) - avgRank, 1) : 0; // +ve ⇒ improved
+    let avgRank = round(avg(window), 1);
+    let rankDelta = prior.length ? round(avg(prior) - avgRank, 1) : 0; // +ve ⇒ improved
 
     const impr = impressions.slice(-days);
-    const totalImpr = impr.reduce((a, p) => a + p.impressions, 0);
-    const totalClicks = impr.reduce((a, p) => a + p.clicks, 0);
-    const ctr = totalImpr ? round((totalClicks / totalImpr) * 100, 1) : 0;
+    let totalImpr = impr.reduce((a, p) => a + p.impressions, 0);
+    let totalClicks = impr.reduce((a, p) => a + p.clicks, 0);
+    let ctr = totalImpr ? round((totalClicks / totalImpr) * 100, 1) : 0;
+    let source: "gsc" | "heuristic" = "heuristic";
+
+    // Real Search Console data displaces the heuristic when GSC is connected.
+    const gscRows = await this.gsc.searchAnalytics(range, "date");
+    if (gscRows && gscRows.length) {
+      source = "gsc";
+      const sorted = [...gscRows].sort((a, b) => a.key.localeCompare(b.key));
+      const posAvg = (xs: typeof sorted) => {
+        const ps = xs.map((r) => r.position).filter((p) => p > 0);
+        return ps.length ? ps.reduce((a, b) => a + b, 0) / ps.length : 0;
+      };
+      avgRank = round(posAvg(sorted), 1);
+      const half = Math.max(1, Math.floor(sorted.length / 2));
+      const firstHalf = posAvg(sorted.slice(0, half));
+      const secondHalf = posAvg(sorted.slice(half));
+      rankDelta = firstHalf && secondHalf ? round(firstHalf - secondHalf, 1) : 0; // +ve ⇒ improved
+      totalImpr = sorted.reduce((a, r) => a + r.impressions, 0);
+      totalClicks = sorted.reduce((a, r) => a + r.clicks, 0);
+      ctr = totalImpr ? round((totalClicks / totalImpr) * 100, 1) : 0;
+    }
 
     const aiMentions = signals.reduce((a, s) => a + s.mentions, 0);
     const avgShareOfVoice = signals.length
@@ -94,6 +118,7 @@ export class PerformanceController {
       avgShareOfVoice,
       trackedPages: pages.length,
       topMovers,
+      source,
     };
   }
 

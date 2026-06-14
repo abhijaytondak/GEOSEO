@@ -404,6 +404,8 @@ export interface PerformanceOverview {
   avgShareOfVoice: number;
   trackedPages: number;
   topMovers: { id: string; title: string; path: string; rankDelta: number }[];
+  /** Where the rank/traffic metrics came from — real GSC when connected, else heuristic. */
+  source: "gsc" | "heuristic";
 }
 
 /* ------------------------------------------------------- Backlinks */

@@ -251,7 +251,7 @@ async function performanceOverviewFallback(range: string): Promise<PerformanceOv
     .map((p) => ({ id: p.id, title: p.title, path: p.path, rankDelta: p.prevRank - p.currentRank }))
     .sort((a, b) => Math.abs(b.rankDelta) - Math.abs(a.rankDelta))
     .slice(0, 5);
-  return { range, days, avgRank, rankDelta, impressions: totalImpr, clicks: totalClicks, ctr, aiMentions, avgShareOfVoice, trackedPages: pages.length, topMovers };
+  return { range, days, avgRank, rankDelta, impressions: totalImpr, clicks: totalClicks, ctr, aiMentions, avgShareOfVoice, trackedPages: pages.length, topMovers, source: "heuristic" };
 }
 
 export const api = {
