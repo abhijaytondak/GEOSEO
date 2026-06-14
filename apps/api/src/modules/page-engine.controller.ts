@@ -74,11 +74,11 @@ export class OpportunitiesController {
   }
 
   @Post("discover")
-  discover(@Body() body: { seeds?: string[]; intent?: string }) {
+  async discover(@Body() body: { seeds?: string[]; intent?: string }) {
     const seeds = Array.isArray(body?.seeds) ? body.seeds.filter((s) => typeof s === "string") : [];
     if (seeds.length === 0) throw new BadRequestException("seeds[] is required");
-    const created = this.store.discover({ seeds, intent: body.intent as never });
-    return { created, opportunities: this.store.listOpportunities() };
+    const created = await this.store.discover({ seeds, intent: body.intent as never });
+    return { created, opportunities: this.store.listOpportunities(), source: this.store.researchSource() };
   }
 }
 

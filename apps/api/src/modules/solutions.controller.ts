@@ -12,7 +12,7 @@ const completeness = (caps: SolutionCapability[]): number =>
 
 const AI_SEARCH: SolutionCapability[] = [
   { label: "Brand Memory", status: "partial", note: "Editable/versioned + structured product/persona/proof library, wired into page-generation context (composeBrandContext); pgvector semantic recall pending." },
-  { label: "Buyer-intent research", status: "gap", note: "Seed discovery only — no real Google/AI research yet." },
+  { label: "Buyer-intent research", status: "gap", note: "DataForSEO keyword-research seam wired + verified (env-gated DATAFORSEO_LOGIN/PASSWORD); discover() flips from seed-derived to real volume/difficulty/CPC the moment creds are set. No live data without a key yet." },
   { label: "SERP / AI-answer analysis", status: "gap" },
   { label: "Strategy blueprint", status: "partial" },
   { label: "Page generation", status: "partial" },

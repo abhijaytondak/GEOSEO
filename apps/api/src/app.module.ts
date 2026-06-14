@@ -65,6 +65,7 @@ import {
   PublishingController,
 } from "./modules/page-engine.controller";
 import { PageEngineStore } from "./modules/page-engine.service";
+import { KeywordResearchService } from "./modules/keyword-research.service";
 
 @Module({
   imports: [SeoModule],
@@ -134,6 +135,7 @@ import { PageEngineStore } from "./modules/page-engine.service";
     ConversionAuditStore,
     LeadFollowupStore,
     BrandLibraryStore,
+    KeywordResearchService,
     { provide: APP_GUARD, useClass: BearerGuard },
     { provide: APP_GUARD, useClass: PublicThrottleGuard },
   ],

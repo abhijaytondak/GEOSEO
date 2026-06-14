@@ -54,8 +54,11 @@ in `docs/` (see bottom).
 - **Supabase persistence is intentional** (see `docs/DECISIONS.md` — supersedes the old
   "mock-only prototype" framing). RLS auto-enabled on every table via `db.ts` `ensureTable`.
   No `DATABASE_URL` ⇒ pure in-memory; the prototype still runs DB-less.
-- **DataForSEO** (research) + **GSC/Analytics** (monitoring) are still mock/heuristic — need keys;
-  GSC is moot until pages publish on an owned domain.
+- **DataForSEO** (research) — **seam now wired** (`modules/keyword-research.service.ts`, `KeywordResearchService`):
+  set `DATAFORSEO_LOGIN` + `DATAFORSEO_PASSWORD` (+ optional `DATAFORSEO_BASE_URL`) and `discover()` returns real
+  keyword ideas (volume/difficulty/CPC, DataForSEO Labs); unset ⇒ deterministic seed fallback. Verified live against a
+  mock server + fallback. **GSC/Analytics** (monitoring) still mock/heuristic — need keys; GSC moot until pages publish
+  on an owned domain.
 
 ## ▶ Pick up here — remaining PRD phases
 Three operator PRDs are in flight (full briefs were pasted in chat; summarize from git/docs if needed):
@@ -73,6 +76,15 @@ Then Phase 4 security/scale foundation (DTO validation, tenant scoping, Clerk JW
 `BearerGuard`, RBAC). The `mode.ts` gate already exists (`GEOSEO_MODE`/`API_AUTH_REQUIRED`).
 
 ## Done recently (don't redo)
+- **DataForSEO keyword-research seam (key-gated, verified live + fallback):** `KeywordResearchService`
+  (`modules/keyword-research.service.ts`) — `researchKeywords(seeds)` hits **DataForSEO Labs keyword_ideas** (Basic auth
+  `DATAFORSEO_LOGIN:DATAFORSEO_PASSWORD`, 15s timeout) when configured, returns `[]` on any failure/unconfigured (never
+  throws). `PageEngineStore.discover()` is now async: real ideas → scored opportunities (volume/difficulty/CPC, intent
+  heuristic → page type, "Discovered (DataForSEO)"); else the deterministic seed fallback (unchanged). `/opportunities/discover`
+  now reports `source: "dataforseo"|"mock"`. **To activate: set `DATAFORSEO_LOGIN`/`DATAFORSEO_PASSWORD` (+ optional
+  `DATAFORSEO_BASE_URL`) — no code change.** Verified: unconfigured → source=mock + seed fallback intact; configured (mock
+  server) → source=dataforseo, 3 ideas mapped to real volumes/difficulty/CPC + comparison-intent detection. This is the
+  single biggest AI-Search unlock (flips research from fake→real); same key unblocks competitor tracking + SERP analysis next.
 - **Brand Memory → generation + native theme on published pages (Gushwork-gap buildable-now items; typecheck/lint/build green, unit + screenshot verified):**
   **(1)** `composeBrandContext(brand, library)` (pure, exported from `brand-library.service`) folds the structured
   product/persona/proof library into the page-generation grounding hint; `PageEngineStore` now injects `BrandLibraryStore`

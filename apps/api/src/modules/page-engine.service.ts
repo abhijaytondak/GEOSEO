@@ -3,6 +3,7 @@ import { countRows, dbEnabled, ensureTable, loadAll, removeRow, upsert } from ".
 import { draftPageContent, type DraftContent } from "../llm/deepseek";
 import { BrandMemoryStore } from "./brand.service";
 import { BrandLibraryStore, composeBrandContext } from "./brand-library.service";
+import { KeywordResearchService, type KeywordIdea } from "./keyword-research.service";
 
 const T = {
   opps: "pe_opportunities",
@@ -57,6 +58,23 @@ export interface LeadInput {
 
 const clone = <T>(v: T): T => JSON.parse(JSON.stringify(v));
 
+const clampN = (n: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, Math.round(n)));
+
+const PAGE_TYPE_BY_INTENT: Partial<Record<SearchIntent, PageType>> = {
+  commercial: "landing",
+  transactional: "landing",
+  informational: "guide",
+  comparison: "comparison",
+};
+
+/** Heuristic search-intent from the keyword text (DataForSEO ideas have no intent field). */
+function classifyKwIntent(keyword: string): SearchIntent {
+  const k = keyword.toLowerCase();
+  if (/\b(vs|versus|alternative|alternatives|compare|comparison)\b/.test(k)) return "comparison";
+  if (/\b(how|what|why|guide|tutorial|examples?|ideas?|tips|best way)\b/.test(k)) return "informational";
+  return "commercial";
+}
+
 /**
  * In-memory page-engine state (Research → Blueprint → Page → Leads).
  * Mirrors the existing store pattern; swaps for a DB-backed repo later.
@@ -82,6 +100,7 @@ export class PageEngineStore implements OnModuleInit {
   constructor(
     @Inject(BrandMemoryStore) private readonly brand: BrandMemoryStore,
     @Inject(BrandLibraryStore) private readonly library: BrandLibraryStore,
+    @Inject(KeywordResearchService) private readonly research: KeywordResearchService,
   ) {
     // seed an initial version snapshot per seeded page
     for (const p of this.pages) this.snapshot(p, "Initial draft", "ai");
@@ -446,40 +465,71 @@ export class PageEngineStore implements OnModuleInit {
     return this.pages.find((p) => p.slug === norm && p.status === "published");
   }
 
-  /* research: seed-driven discovery */
-  discover(input: DiscoverInput): KeywordOpportunity[] {
+  /** Which research source produced the last/next discovery (for operator visibility). */
+  researchSource(): "dataforseo" | "mock" {
+    return this.research.source;
+  }
+
+  /* research: real DataForSEO keyword ideas when configured, else deterministic seed discovery */
+  async discover(input: DiscoverInput): Promise<KeywordOpportunity[]> {
     const seeds = (input.seeds ?? []).map((s) => s.trim()).filter(Boolean).slice(0, 6);
-    const intents: SearchIntent[] = ["commercial", "informational", "comparison"];
-    const types: PageType[] = ["landing", "guide", "comparison"];
-    const created: KeywordOpportunity[] = [];
-    seeds.forEach((seed, i) => {
-      this.seq += 1;
-      // deterministic-ish scores derived from the seed string
-      const h = [...seed].reduce((a, c) => a + c.charCodeAt(0), 0);
-      const opp: KeywordOpportunity = {
-        id: `kw-disc-${this.seq}`,
-        query: seed.toLowerCase(),
-        clusterId: "c-discovered",
-        clusterLabel: "Discovered",
-        intent: input.intent ?? intents[h % intents.length],
-        volume: 300 + (h % 9) * 600,
-        difficulty: 25 + (h % 50),
-        commercialValue: 55 + (h % 40),
-        confidence: 70 + (h % 25),
-        recommendedPageType: types[h % types.length],
-        competitorUrls: [],
-        evidence: `Seed-derived opportunity for "${seed}" — validate volume with the research provider.`,
-        status: "new",
-        duplicate: this.pages.some((p) =>
-          p.targetKeywords.some((k) => k.toLowerCase() === seed.toLowerCase()),
-        ),
-        createdAt: this.now,
-      };
-      this.opportunities.unshift(opp);
-      created.push(opp);
-    });
+    const ideas = await this.research.researchKeywords(seeds, { limit: 24 });
+    const created: KeywordOpportunity[] = ideas.length
+      ? ideas.map((idea) => this.oppFromIdea(idea, input.intent))
+      : seeds.map((seed) => this.oppFromSeed(seed, input.intent));
+    for (const opp of created) this.opportunities.unshift(opp);
     created.forEach((o) => this.save(T.opps, o.id, o));
     return created;
+  }
+
+  /** Real DataForSEO keyword idea → scored opportunity. */
+  private oppFromIdea(idea: KeywordIdea, intentOverride?: SearchIntent): KeywordOpportunity {
+    this.seq += 1;
+    const intent = intentOverride ?? classifyKwIntent(idea.keyword);
+    const commercialValue = clampN((idea.cpc > 0 ? Math.min(idea.cpc * 8, 55) : idea.competition * 55) + 25, 1, 99);
+    const confidence = clampN(60 + (idea.searchVolume > 100 ? 15 : 0) + (idea.difficulty < 40 ? 15 : 0), 1, 99);
+    return {
+      id: `kw-disc-${this.seq}`,
+      query: idea.keyword.toLowerCase(),
+      clusterId: "c-discovered",
+      clusterLabel: "Discovered (DataForSEO)",
+      intent,
+      volume: idea.searchVolume,
+      difficulty: idea.difficulty,
+      commercialValue,
+      confidence,
+      recommendedPageType: PAGE_TYPE_BY_INTENT[intent] ?? "landing",
+      competitorUrls: [],
+      evidence: `DataForSEO: ${idea.searchVolume.toLocaleString()} searches/mo · difficulty ${idea.difficulty} · CPC $${idea.cpc.toFixed(2)}.`,
+      status: "new",
+      duplicate: this.pages.some((p) => p.targetKeywords.some((k) => k.toLowerCase() === idea.keyword.toLowerCase())),
+      createdAt: this.now,
+    };
+  }
+
+  /** Deterministic fallback when no research provider is configured (current behavior). */
+  private oppFromSeed(seed: string, intentOverride?: SearchIntent): KeywordOpportunity {
+    this.seq += 1;
+    const intents: SearchIntent[] = ["commercial", "informational", "comparison"];
+    const types: PageType[] = ["landing", "guide", "comparison"];
+    const h = [...seed].reduce((a, c) => a + c.charCodeAt(0), 0);
+    return {
+      id: `kw-disc-${this.seq}`,
+      query: seed.toLowerCase(),
+      clusterId: "c-discovered",
+      clusterLabel: "Discovered",
+      intent: intentOverride ?? intents[h % intents.length],
+      volume: 300 + (h % 9) * 600,
+      difficulty: 25 + (h % 50),
+      commercialValue: 55 + (h % 40),
+      confidence: 70 + (h % 25),
+      recommendedPageType: types[h % types.length],
+      competitorUrls: [],
+      evidence: `Seed-derived opportunity for "${seed}" — validate volume with the research provider.`,
+      status: "new",
+      duplicate: this.pages.some((p) => p.targetKeywords.some((k) => k.toLowerCase() === seed.toLowerCase())),
+      createdAt: this.now,
+    };
   }
 
   /* leads */
