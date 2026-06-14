@@ -1,5 +1,10 @@
 # GEOSEO — Session Handoff (resume guide)
 
+> ⚠️ **CURRENT STATE LIVES IN `CLAUDE.md` → "▶ Pick up here — current state & handoff" + "Done recently".**
+> That section is authoritative (provider seams, hardening, lane boundaries, what's next). The notes below
+> predate the auth/de-brand/ingestion hardening and the DataForSEO / CMS (WordPress·Webflow·Shopify) /
+> image-gen seams — treat them as historical background only.
+
 **Read this first.** It lets any fresh Claude Code session continue exactly where work left off. Last updated 2026-06-13.
 
 ---

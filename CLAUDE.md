@@ -69,20 +69,39 @@ in `docs/` (see bottom).
   mock server + fallback. **GSC/Analytics** (monitoring) still mock/heuristic — need keys; GSC moot until pages publish
   on an owned domain.
 
-## ▶ Pick up here — remaining PRD phases
-Three operator PRDs are in flight (full briefs were pasted in chat; summarize from git/docs if needed):
-- **Global Search** — Phase 1 DONE (see below). Next: Phase 2 = dedicated `/search` page, saved
-  searches, result quick-actions (F3), search analytics events; Phase 3 = tenant scoping + RBAC +
-  rate-limit + audit; Phase 4 = NL parser / pgvector semantic.
-- **Authority HQ UI/UX** — Phase 1 partial. DONE: insight summary band (`insight-band.tsx`), KPI
-  click-nav. TODO Phase 1: upgrade Action Center into prioritized `AuthorityAction` cards (§10),
-  export/executive-summary action (§21, reuse `lib/csv.ts`), richer mobile ordering. Phase 2:
-  Domain-Health factor explanations + click-through, backlink quality score, momentum/forecast
-  module, role-aware actions. Phase 3: `GET /overview/authority` aggregate endpoint + action analytics.
-- **Route-level loading/error states** (`loading.tsx`/`error.tsx` per route) + consistent empty
-  states — still outstanding from the Upgrade Plan.
-Then Phase 4 security/scale foundation (DTO validation, tenant scoping, Clerk JWT verify in
-`BearerGuard`, RBAC). The `mode.ts` gate already exists (`GEOSEO_MODE`/`API_AUTH_REQUIRED`).
+## ▶ Pick up here — current state & handoff (updated 2026-06-14)
+
+**Session just completed (this account, all committed + pushed to `main`, see "Done recently"):**
+the launch-readiness P0 hardening (auth fail-closed, de-brand, ingestion), the two no-keys Gushwork
+"buildable-now" items (Brand Memory→generation, native theme on published pages), and **five env-gated
+provider seams** — all verified live (mock) + fallback, all activate with creds, **no code change**:
+
+| Capability | Activate by setting (on the API) | Endpoint / where |
+|---|---|---|
+| Keyword research | `DATAFORSEO_LOGIN` + `DATAFORSEO_PASSWORD` (+ `DATAFORSEO_BASE_URL`) | `POST /opportunities/discover` (reports `source`) |
+| CMS — WordPress | `WORDPRESS_BASE_URL` + `WORDPRESS_USERNAME` + `WORDPRESS_APP_PASSWORD` | `POST /pages/:id/publish` |
+| CMS — Webflow | `WEBFLOW_API_TOKEN` + `WEBFLOW_COLLECTION_ID` + `WEBFLOW_SITE_HOST` | same; `GET /pages/cms/status` |
+| CMS — Shopify | `SHOPIFY_STORE_DOMAIN` + `SHOPIFY_ACCESS_TOKEN` (+ `SHOPIFY_PUBLIC_HOST`) | same (`CMS_PROVIDER` forces choice) |
+| Image generation | `IMAGE_GEN_API_KEY` (+ `IMAGE_GEN_BASE_URL`/`_MODEL`) | `POST /images/generate` |
+
+All seams live in `apps/api/src/modules/{keyword-research,cms-publish,image-gen}.service.ts` and follow the
+same shape: env-gated, **return null/[] on any failure → safe fallback**, never throw.
+
+**What's left to close the Gushwork gap (none are no-code):**
+- 🔑 Provide the keys above (DataForSEO is the single biggest unlock — flips research fake→real).
+- 🟢 Wire generated images into the **page model + `/feeds` rendering** (image slots — needs a `GeneratedPage` field; coordinate on the contested type) — buildable now.
+- 🔑 More provider seams (same `switch`/pattern): **HubSpot CMS**, **GSC/Analytics** (real perf data — moot until pages publish on an owned domain), real per-engine **AI-citation** tracking.
+- 🟢 **Theme fidelity score** in the page list + component-level matching; dark-theme card handling on `/feeds`.
+
+**Lane boundaries (do NOT clobber):**
+- The **other account owns auth/tenant**: Clerk JWT verify in `bearer.guard.ts` (currently static `DEV_API_TOKEN`),
+  and the **deferred big rock — multi-tenant isolation + RBAC** (hardcoded `ws-default` + single-doc stores → thread
+  workspace-id from the Clerk session into every store key). This is the next major milestone; follow the auth landing.
+- Tasks **#38** (Authority HQ Phase 2/3 + search analytics) and **#48** (topbar 375px overflow) are the other account's.
+- The earlier Global Search / Authority HQ / route-state PRD phases are largely DONE (see "Done recently").
+
+**Biggest non-code unlock:** host `apps/api` on Railway (`railway.json` ready, see `docs/DEPLOY.md`) so the live
+Vercel demo runs the real backend (with these seams active) instead of the mock fallback.
 
 ## Done recently (don't redo)
 - **Branded image/infographic generation seam (PRD §14, key-gated, verified):** `ImageGenStore`
