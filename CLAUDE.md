@@ -85,6 +85,13 @@ Then Phase 4 security/scale foundation (DTO validation, tenant scoping, Clerk JW
 `BearerGuard`, RBAC). The `mode.ts` gate already exists (`GEOSEO_MODE`/`API_AUTH_REQUIRED`).
 
 ## Done recently (don't redo)
+- **Branded image/infographic generation seam (PRD §14, key-gated, verified):** `ImageGenStore`
+  (`modules/image-gen.service.ts`, `cx_images`) + `ImageGenController` — `POST /images/generate` `{subject, kind?}`
+  (kind = hero|infographic|illustration|og) builds a **brand + theme-aware prompt** (company/valueProp/tone + confirmed
+  theme primary color) and calls an OpenAI-compatible images API when `IMAGE_GEN_API_KEY` is set (+ optional
+  `IMAGE_GEN_BASE_URL`, `IMAGE_GEN_MODEL`); unconfigured ⇒ a **theme-aware SVG placeholder** (customer primary color,
+  data URI). `GET /images` lists + reports provider/configured. Verified: unconfigured → placeholder w/ teal theme color +
+  Zomato-aware prompt; configured (mock) → source=openai w/ API url. Pending: page-model image slots + /feeds rendering.
 - **Shopify CMS adapter (3rd provider on the publishing seam):** `CmsPublishStore` now dispatches WordPress / Webflow /
   **Shopify** by detected creds. Shopify path: `SHOPIFY_STORE_DOMAIN` + `SHOPIFY_ACCESS_TOKEN` (+ optional
   `SHOPIFY_PUBLIC_HOST`, `SHOPIFY_API_VERSION`=`2024-10`, `SHOPIFY_ADMIN_BASE_URL` proxy/test override) → Online Store

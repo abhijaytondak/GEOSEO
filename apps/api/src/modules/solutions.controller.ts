@@ -17,6 +17,7 @@ const AI_SEARCH: SolutionCapability[] = [
   { label: "Strategy blueprint", status: "partial" },
   { label: "Page generation", status: "partial" },
   { label: "Native theme matching", status: "partial", note: "Scan + confirm UI + preview + published /feeds pages now render in the confirmed theme tokens; component-level fidelity score + CMS-published rendering pending." },
+  { label: "Branded image / infographic generation", status: "partial", note: "Seam wired (IMAGE_GEN_API_KEY, OpenAI-compatible images API) with brand+theme-aware prompts; theme-aware SVG placeholder fallback when unconfigured. POST /images/generate. Page-model image slots + /feeds rendering pending." },
   { label: "Publish to /feeds + sitemap + llms.txt", status: "partial" },
   { label: "CMS publishing adapters", status: "gap", note: "WordPress + Webflow + Shopify publish adapters wired + verified (env-gated, auto-detected by creds, CMS_PROVIDER override); publishing pushes to the CMS + records the live URL the moment a token is set. HubSpot next; no live push without a token yet." },
   { label: "Backlinks / citations", status: "partial", note: "Opportunities + outreach exist; real acquisition pending." },

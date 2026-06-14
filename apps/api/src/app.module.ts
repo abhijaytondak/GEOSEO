@@ -67,6 +67,8 @@ import {
 import { PageEngineStore } from "./modules/page-engine.service";
 import { KeywordResearchService } from "./modules/keyword-research.service";
 import { CmsPublishStore } from "./modules/cms-publish.service";
+import { ImageGenController } from "./modules/image-gen.controller";
+import { ImageGenStore } from "./modules/image-gen.service";
 
 @Module({
   imports: [SeoModule],
@@ -108,6 +110,7 @@ import { CmsPublishStore } from "./modules/cms-publish.service";
     ConversionAuditController,
     LeadFollowupController,
     BrandLibraryController,
+    ImageGenController,
   ],
   providers: [
     OutreachStore,
@@ -138,6 +141,7 @@ import { CmsPublishStore } from "./modules/cms-publish.service";
     BrandLibraryStore,
     KeywordResearchService,
     CmsPublishStore,
+    ImageGenStore,
     { provide: APP_GUARD, useClass: BearerGuard },
     { provide: APP_GUARD, useClass: PublicThrottleGuard },
   ],
