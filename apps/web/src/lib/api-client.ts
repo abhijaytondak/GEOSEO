@@ -85,7 +85,13 @@ const MODE = (process.env.NEXT_PUBLIC_GEOSEO_MODE ?? "demo").toLowerCase();
 const FALLBACK_ALLOWED = IS_BUILD || MODE === "demo";
 
 function warnFallback(message: string): void {
-  if (!IS_BUILD) console.warn(`[api] ${message}`);
+  if (IS_BUILD) return;
+  console.warn(`[api] ${message}`);
+  // Make the demo fallback non-silent: signal the UI so it can surface a banner
+  // ("showing demo data") instead of passing mock off as live. Browser-only.
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new CustomEvent("geoseo:degraded", { detail: { message } }));
+  }
 }
 
 async function get<T>(path: string, fallback: () => Promise<T> | T): Promise<T> {

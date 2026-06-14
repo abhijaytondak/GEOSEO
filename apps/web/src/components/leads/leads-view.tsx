@@ -54,11 +54,30 @@ export function LeadsView({ leads }: { leads: Lead[] }) {
   }
 
   async function syncLead(id: string) {
-    setRows((arr) => arr.map((l) => (l.id === id ? { ...l, crmSyncStatus: "synced" } : l)));
+    // Optimistic "pending" only — the real CRM seam decides synced/skipped/failed (no fake "synced").
+    setRows((arr) => arr.map((l) => (l.id === id ? { ...l, crmSyncStatus: "pending" } : l)));
     try {
-      await pageEngineApi.syncLead(id);
-      notify({ kind: "success", title: "Synced to CRM" });
+      const { result } = await pageEngineApi.crmSyncLead(id);
+      if (result.status === "synced") {
+        setRows((arr) => arr.map((l) => (l.id === id ? { ...l, crmSyncStatus: "synced" } : l)));
+        notify({
+          kind: "success",
+          title: "Synced to CRM",
+          message: result.externalUrl ? `Record: ${result.externalUrl}` : `Provider: ${result.provider}`,
+        });
+      } else if (result.status === "skipped") {
+        setRows((arr) => arr.map((l) => (l.id === id ? { ...l, crmSyncStatus: "none" } : l)));
+        notify({
+          kind: "info",
+          title: "CRM not connected",
+          message: "Add a HubSpot key on the API to sync leads to your CRM.",
+        });
+      } else {
+        setRows((arr) => arr.map((l) => (l.id === id ? { ...l, crmSyncStatus: "none" } : l)));
+        notify({ kind: "error", title: "Sync failed", message: result.error ?? "Try again." });
+      }
     } catch (err) {
+      setRows((arr) => arr.map((l) => (l.id === id ? { ...l, crmSyncStatus: "none" } : l)));
       notify({ kind: "error", title: "Sync failed", message: err instanceof Error ? err.message : "Try again." });
     }
   }

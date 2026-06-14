@@ -90,7 +90,9 @@ export function RankChart({ data }: { data: RankPoint[] }) {
             fill="none"
             filter="url(#rank-glow)"
             isAnimationActive={false}
-            dot={(p) => <LeadingDot key={p.index} {...p} last={last} color="#6C4CF1" />}
+            dot={(p) => (
+              <LeadingDot key={`rank-${p.index}`} cx={p.cx} cy={p.cy} index={p.index} last={last} color="#6C4CF1" />
+            )}
             activeDot={{ r: 5, strokeWidth: 2, stroke: "var(--card)", fill: "#6C4CF1" }}
           />
         </AreaChart>

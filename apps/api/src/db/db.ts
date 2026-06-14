@@ -12,6 +12,19 @@ export const sql = url
 
 export const dbEnabled = Boolean(sql);
 
+/** Actively probe the DB connection (not just env presence) so /health can tell
+ *  the truth: a configured DATABASE_URL whose host is unreachable (e.g. a Supabase
+ *  DNS outage) reports `reachable: false`, and stores are running in-memory. */
+export async function dbPing(): Promise<{ reachable: boolean; error?: string }> {
+  if (!sql) return { reachable: false };
+  try {
+    await sql`select 1`;
+    return { reachable: true };
+  } catch (e) {
+    return { reachable: false, error: (e as Error).message };
+  }
+}
+
 /** Generic JSONB key-value table: `id text pk, data jsonb, updated_at`. One per entity.
  *  RLS is enabled (no policies) so the table is never reachable via Supabase's
  *  anon/PostgREST API — only this server's privileged `postgres` connection (which

@@ -116,7 +116,9 @@ export function TrafficChart({ data }: { data: ImpressionPoint[] }) {
             fill="url(#impr-fill)"
             filter="url(#impr-glow)"
             isAnimationActive={false}
-            dot={(p) => <LeadingDot key={p.index} {...p} last={last} color="#2D6BFF" />}
+            dot={(p) => (
+              <LeadingDot key={`impr-${p.index}`} cx={p.cx} cy={p.cy} index={p.index} last={last} color="#2D6BFF" />
+            )}
             activeDot={{ r: 5, strokeWidth: 2, stroke: "var(--card)", fill: "#2D6BFF" }}
           />
           <Area
@@ -130,7 +132,9 @@ export function TrafficChart({ data }: { data: ImpressionPoint[] }) {
             strokeLinejoin="round"
             fill="url(#clicks-fill)"
             isAnimationActive={false}
-            dot={(p) => <LeadingDot key={p.index} {...p} last={last} color="#10B981" />}
+            dot={(p) => (
+              <LeadingDot key={`clicks-${p.index}`} cx={p.cx} cy={p.cy} index={p.index} last={last} color="#10B981" />
+            )}
             activeDot={{ r: 5, strokeWidth: 2, stroke: "var(--card)", fill: "#10B981" }}
           />
         </AreaChart>

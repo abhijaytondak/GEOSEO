@@ -15,8 +15,8 @@ export class SettingsStore implements OnModuleInit {
 
   private settings: WorkspaceSettings = {
     profile: {
-      workspaceName: "Northwind Labs",
-      domain: "northwindlabs.io",
+      workspaceName: "Your Workspace",
+      domain: "example.com",
       defaultPublishPath: "/feeds",
       timezone: "Asia/Kolkata",
     },
@@ -26,13 +26,14 @@ export class SettingsStore implements OnModuleInit {
       publishFailures: true,
       leadAlerts: false,
     },
+    // Status here is a seed; SettingsController.get() overlays the real env-detected
+    // state for provider-backed rows, so this never claims an unconfigured provider is connected.
     integrations: [
       {
         id: "webflow",
         label: "Webflow",
         description: "Publish generated pages to the marketing site.",
-        status: "connected",
-        lastSyncAt: "2026-06-12T00:00:00.000Z",
+        status: "needs-attention",
       },
       {
         id: "search-console",
@@ -44,14 +45,25 @@ export class SettingsStore implements OnModuleInit {
         id: "hubspot",
         label: "HubSpot",
         description: "Sync qualified leads and source-page attribution.",
-        status: "disabled",
+        status: "needs-attention",
+      },
+      {
+        id: "dataforseo",
+        label: "DataForSEO",
+        description: "Real keyword volume, difficulty, and SERP data for research.",
+        status: "needs-attention",
+      },
+      {
+        id: "image-generation",
+        label: "Image generation",
+        description: "Generate brand- and theme-aware hero/infographic images for pages.",
+        status: "needs-attention",
       },
     ],
     team: [
-      { id: "tm-1", name: "Maya Chen", email: "maya@northwindlabs.io", role: "owner" },
-      { id: "tm-2", name: "Ari Patel", email: "ari@northwindlabs.io", role: "marketer" },
+      { id: "tm-1", name: "Workspace Owner", email: "owner@example.com", role: "owner" },
     ],
-    billing: { plan: "Grow", status: "trial", seatsUsed: 2, seatsLimit: 5 },
+    billing: { plan: "Grow", status: "trial", seatsUsed: 1, seatsLimit: 5 },
     publishing: { requireApproval: true, autoSitemap: true, autoLlms: true },
   };
 

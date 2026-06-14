@@ -79,8 +79,14 @@ async function main() {
   console.log(`GEOSEO live smoke → ${BASE}\n`);
 
   group("Health & mode");
-  await check("GET /health (mode reported)", "GET", "/health", {
-    expect: (d) => d.status === "ok" && typeof d.mode === "string",
+  await check("GET /health (honest persistence + dbReachable)", "GET", "/health", {
+    expect: (d) =>
+      ["ok", "degraded"].includes(d.status) &&
+      typeof d.mode === "string" &&
+      typeof d.dbReachable === "boolean" &&
+      ["postgres", "degraded", "memory"].includes(d.persistence) &&
+      // persistence reflects the live probe, not mere env presence: postgres ⟺ reachable.
+      (d.persistence === "postgres") === d.dbReachable,
   });
 
   group("Authority + Performance overview aggregates");
@@ -159,7 +165,24 @@ async function main() {
   }
 
   group("Settings");
-  const settings = await check("GET /settings", "GET", "/settings", { expect: (d) => d.settings?.profile });
+  // Live integration status must match the seams, not a stale seed (audit: no false "connected").
+  const cmsStatus = (await req("GET", "/pages/cms/status")).json?.data ?? {};
+  const gscStatus = (await req("GET", "/gsc/status")).json?.data ?? {};
+  const settings = await check("GET /settings (integration status = live seams)", "GET", "/settings", {
+    expect: (d) => {
+      const ints = d.settings?.integrations;
+      if (!d.settings?.profile || !Array.isArray(ints)) return false;
+      const validStatus = ints.every((i) => ["connected", "needs-attention", "disabled"].includes(i.status));
+      const cmsConnected = cmsStatus.configured === true ? cmsStatus.provider : null;
+      const cmsOk = ints
+        .filter((i) => ["webflow", "wordpress", "shopify"].includes(i.id))
+        .every((i) => (i.status === "connected") === (i.id === cmsConnected));
+      const gscOk = ints
+        .filter((i) => i.id === "search-console")
+        .every((i) => (i.status === "connected") === (gscStatus.configured === true));
+      return validStatus && cmsOk && gscOk;
+    },
+  });
   await check("PUT /settings (publishing persist)", "PUT", "/settings", {
     body: { publishing: { ...(settings?.settings?.publishing ?? {}), autoSitemap: true } },
     expect: (d) => d.settings?.publishing,
