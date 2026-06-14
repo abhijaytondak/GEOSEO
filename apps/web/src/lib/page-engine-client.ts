@@ -160,6 +160,16 @@ export const pageEngineApi = {
   publishPage: (id: string) => send<GeneratedPage>("POST", `/pages/${id}/publish`),
   validatePage: (id: string) =>
     send<{ blockers: string[]; canPublish: boolean }>("POST", `/pages/${id}/validate`),
+  crmSyncLead: (id: string) =>
+    send<{ result: { status: string; provider: string; externalUrl?: string; error?: string }; provider: string }>(
+      "POST",
+      `/leads/${id}/crm-sync`,
+    ),
+  getCrmSyncStatus: (id: string) =>
+    get<{ provider: string; result: { status: string; externalUrl?: string } | null }>(
+      `/leads/${id}/crm-sync`,
+      () => ({ provider: "none", result: null }),
+    ),
   getLeadActivity: (id: string) =>
     get<{ activity: LeadActivity[] }>(`/leads/${id}/activity`, () => ({ activity: [] })).then((d) => d.activity),
   addLeadActivity: (id: string, type: LeadActivityType, body: string) =>

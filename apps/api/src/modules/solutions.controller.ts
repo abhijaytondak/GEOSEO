@@ -41,7 +41,7 @@ const LEAD_CONVERSION: SolutionCapability[] = [
   { label: "AI SDR follow-up", status: "built", note: "Per-lead draft from Brand Memory + context (DeepSeek; template fallback); copy / mailto." },
   { label: "Meeting booking", status: "gap" },
   { label: "Website-wide conversion audit", status: "built", note: "SSRF-guarded page audit → score/grade + 7 findings with fixes." },
-  { label: "CRM sync", status: "partial", note: "Placeholder sync action; no real provider/retry/mapping." },
+  { label: "CRM sync", status: "built", note: "HubSpot seam (env-gated, idempotent upsert by email) + retry; activates with HUBSPOT_ACCESS_TOKEN." },
 ];
 
 const PAID_BOOST: SolutionCapability[] = [

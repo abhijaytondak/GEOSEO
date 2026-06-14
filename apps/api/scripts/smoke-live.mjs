@@ -237,6 +237,14 @@ async function main() {
       expect: (d) => typeof d.score?.fit === "number" && typeof d.score?.intent === "number" && typeof d.score?.spamRisk === "number",
     });
 
+    // CRM sync seam (HubSpot, env-gated) — unconfigured → skipped (no key in demo)
+    await check("POST /leads/:id/crm-sync (seam)", "POST", `/leads/${firstLead.id}/crm-sync`, {
+      expect: (d) => d.result && ["synced", "skipped", "failed"].includes(d.result.status) && typeof d.provider === "string",
+    });
+    await check("GET /leads/:id/crm-sync (status)", "GET", `/leads/${firstLead.id}/crm-sync`, {
+      expect: (d) => typeof d.provider === "string",
+    });
+
     // notification rules (Gap 5)
     const rule = await check("POST /lead-notification-rules", "POST", "/lead-notification-rules", {
       body: { name: "Smoke high-fit", channels: ["in_app", "slack"], minScore: 1 },

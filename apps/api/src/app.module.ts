@@ -69,6 +69,8 @@ import { KeywordResearchService } from "./modules/keyword-research.service";
 import { CmsPublishStore } from "./modules/cms-publish.service";
 import { ImageGenController } from "./modules/image-gen.controller";
 import { ImageGenStore } from "./modules/image-gen.service";
+import { CrmSyncController } from "./modules/crm-sync.controller";
+import { CrmSyncStore } from "./modules/crm-sync.service";
 
 @Module({
   imports: [SeoModule],
@@ -111,6 +113,7 @@ import { ImageGenStore } from "./modules/image-gen.service";
     LeadFollowupController,
     BrandLibraryController,
     ImageGenController,
+    CrmSyncController,
   ],
   providers: [
     OutreachStore,
@@ -142,6 +145,7 @@ import { ImageGenStore } from "./modules/image-gen.service";
     KeywordResearchService,
     CmsPublishStore,
     ImageGenStore,
+    CrmSyncStore,
     { provide: APP_GUARD, useClass: BearerGuard },
     { provide: APP_GUARD, useClass: PublicThrottleGuard },
   ],
