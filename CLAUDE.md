@@ -73,6 +73,17 @@ Then Phase 4 security/scale foundation (DTO validation, tenant scoping, Clerk JW
 `BearerGuard`, RBAC). The `mode.ts` gate already exists (`GEOSEO_MODE`/`API_AUTH_REQUIRED`).
 
 ## Done recently (don't redo)
+- **Brand Memory → generation + native theme on published pages (Gushwork-gap buildable-now items; typecheck/lint/build green, unit + screenshot verified):**
+  **(1)** `composeBrandContext(brand, library)` (pure, exported from `brand-library.service`) folds the structured
+  product/persona/proof library into the page-generation grounding hint; `PageEngineStore` now injects `BrandLibraryStore`
+  and `brandHint()` delegates to it — so DeepSeek drafts (and the template path) are grounded in real business facts, not
+  invented ones. Unit-verified (company+valueProp+audience+products+personas w/ pains/goals+proof; undefined when no company);
+  live generate confirmed DI boots. **(2)** Published `/feeds/[slug]` pages now render in the workspace's **confirmed Site
+  Theme Profile** — `themeStyle()` maps the theme's colors/border/radius/font onto the design-system CSS vars on the page root,
+  so the existing Tailwind classes inherit the customer palette (light-theme-safe set). Screenshot-verified: feed renders with
+  the confirmed teal brand accent + radius + de-branded "Zomato"/zomato.com canonical. Readiness notes bumped (Brand Memory
+  generation-wiring done; Native theme matching now renders on published pages). Remaining: pgvector recall, component-level
+  fidelity score, dark-theme card handling, CMS-published rendering.
 - **Launch-readiness P0 hardening (auth + de-brand + ingestion; typecheck/lint/build green, smoke 87/0, curl-verified):**
   Closed the controlled-beta blockers from the audit.
   **(1) API auth mode-driven + fail-closed** — `bearer.guard.ts` enforces via `authRequired()` (not the raw flag);

@@ -2,11 +2,41 @@ import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { Orbit } from "lucide-react";
+import type { SiteThemeProfile } from "@geoseo/types";
 import { pageEngineApi } from "@/lib/page-engine-client";
 import { api } from "@/lib/api-client";
 import { LeadForm } from "@/components/feeds/lead-form";
 
 export const dynamic = "force-dynamic";
+
+/**
+ * Map a confirmed Site Theme Profile onto the design-system CSS variables so the
+ * published page renders in the customer's own palette, radius, and font — native
+ * to their brand, not the generic GEOSEO theme (PRD §7.3). The existing Tailwind
+ * classes inherit these vars, so no per-element restyling is needed.
+ */
+function themeStyle(t: SiteThemeProfile | null): React.CSSProperties | undefined {
+  if (!t) return undefined;
+  const c = t.colors ?? ({} as SiteThemeProfile["colors"]);
+  const v: Record<string, string> = {};
+  if (c.background) {
+    v["--background"] = c.background;
+    v["--canvas"] = c.background;
+  }
+  if (c.foreground) {
+    v["--foreground"] = c.foreground;
+    v["--card-foreground"] = c.foreground;
+    v["--body"] = c.foreground;
+  }
+  if (c.primary) v["--brand"] = c.primary;
+  if (c.border) {
+    v["--border"] = c.border;
+    v["--border-strong"] = c.border;
+  }
+  if (t.layout?.radius) v["--radius"] = `${t.layout.radius}px`;
+  if (t.typography?.bodyFont) v["fontFamily"] = `'${t.typography.bodyFont}', system-ui, -apple-system, sans-serif`;
+  return v as React.CSSProperties;
+}
 
 type Params = { params: Promise<{ slug: string }> };
 
@@ -34,11 +64,15 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
 
 export default async function FeedPage({ params }: Params) {
   const { slug } = await params;
-  const [page, memory] = await Promise.all([
+  const [page, memory, themes] = await Promise.all([
     pageEngineApi.getPublishedBySlug(slug),
     api.getBrandMemory().catch(() => null),
+    api.getSiteThemes().catch(() => [] as SiteThemeProfile[]),
   ]);
   if (!page) notFound();
+
+  // Render in the workspace's confirmed site theme (falls back to the latest scan).
+  const theme = themes.find((t) => t.status === "confirmed") ?? themes[0] ?? null;
 
   // Auto-capture AI-crawler visits (AI Search bot analytics). Only fires the
   // record for crawler-like agents; the API classifies + no-ops for humans.
@@ -52,7 +86,7 @@ export default async function FeedPage({ params }: Params) {
   const canonical = page.publishedUrl ?? `https://${host}/feeds${page.slug}`;
 
   return (
-    <div className="min-h-dvh bg-canvas">
+    <div className="min-h-dvh bg-canvas" style={themeStyle(theme)}>
       {/* schema for traditional + AI crawlers */}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: page.schemaJson }} />
 

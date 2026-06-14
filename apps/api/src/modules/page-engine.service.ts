@@ -2,6 +2,7 @@ import { Inject, Injectable, OnModuleInit } from "@nestjs/common";
 import { countRows, dbEnabled, ensureTable, loadAll, removeRow, upsert } from "../db/db";
 import { draftPageContent, type DraftContent } from "../llm/deepseek";
 import { BrandMemoryStore } from "./brand.service";
+import { BrandLibraryStore, composeBrandContext } from "./brand-library.service";
 
 const T = {
   opps: "pe_opportunities",
@@ -78,18 +79,17 @@ export class PageEngineStore implements OnModuleInit {
   // fixed clock — keeps generated timestamps deterministic across reloads
   private now = "2026-06-12T00:00:00.000Z";
 
-  constructor(@Inject(BrandMemoryStore) private readonly brand: BrandMemoryStore) {
+  constructor(
+    @Inject(BrandMemoryStore) private readonly brand: BrandMemoryStore,
+    @Inject(BrandLibraryStore) private readonly library: BrandLibraryStore,
+  ) {
     // seed an initial version snapshot per seeded page
     for (const p of this.pages) this.snapshot(p, "Initial draft", "ai");
   }
 
-  /** Compose an LLM brand hint from the workspace's current Brand Memory. */
+  /** Grounding hint for generation — Brand Memory + the structured product/persona/proof library. */
   private brandHint(): string | undefined {
-    const p = this.brand.current();
-    if (!p?.company) return undefined;
-    const parts = [`${p.company}${p.valueProp ? ` — ${p.valueProp}` : ""}`];
-    if (p.audience) parts.push(`Audience: ${p.audience}.`);
-    return parts.join(" ").trim();
+    return composeBrandContext(this.brand.current(), this.library.get());
   }
 
   /**

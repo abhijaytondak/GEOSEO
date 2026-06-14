@@ -1,4 +1,5 @@
 import { Injectable, OnModuleInit } from "@nestjs/common";
+import type { BrandProfile } from "@geoseo/types";
 import { DocStore } from "../db/db";
 
 /** Structured Brand Memory library — products, buyer personas, and proof points.
@@ -46,6 +47,47 @@ const id = (v: unknown, fallback: string): string => {
   const s = str(v, 64);
   return s || fallback;
 };
+
+/**
+ * Compose a grounding hint for page/content generation from Brand Memory + the
+ * structured library. Pure (no DI) so it's unit-testable and reusable. Returns
+ * undefined when there's no company yet (caller falls back to neutral copy).
+ */
+export function composeBrandContext(brand: BrandProfile | null | undefined, lib: BrandLibrary): string | undefined {
+  if (!brand?.company) return undefined;
+  const parts = [`${brand.company}${brand.valueProp ? ` — ${brand.valueProp}` : ""}`];
+  if (brand.audience) parts.push(`Audience: ${brand.audience}.`);
+  if (lib.products.length) {
+    parts.push(
+      "Products: " +
+        lib.products.slice(0, 5).map((p) => `${p.name}${p.description ? ` (${p.description})` : ""}`).join("; ") +
+        ".",
+    );
+  }
+  if (lib.personas.length) {
+    parts.push(
+      "Buyer personas: " +
+        lib.personas
+          .slice(0, 4)
+          .map((p) => {
+            const bits = [p.name + (p.role ? ` (${p.role})` : "")];
+            if (p.painPoints.length) bits.push(`pains: ${p.painPoints.slice(0, 3).join(", ")}`);
+            if (p.goals.length) bits.push(`goals: ${p.goals.slice(0, 3).join(", ")}`);
+            return bits.join(" — ");
+          })
+          .join("; ") +
+        ".",
+    );
+  }
+  if (lib.proofPoints.length) {
+    parts.push(
+      "Proof points (cite where relevant, never fabricate): " +
+        lib.proofPoints.slice(0, 5).map((p) => p.label + (p.detail ? ` (${p.detail})` : "")).join("; ") +
+        ".",
+    );
+  }
+  return parts.join(" ").trim();
+}
 
 @Injectable()
 export class BrandLibraryStore implements OnModuleInit {

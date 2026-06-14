@@ -11,12 +11,12 @@ const completeness = (caps: SolutionCapability[]): number =>
   Math.round((caps.reduce((a, c) => a + (c.status === "built" ? 1 : c.status === "partial" ? 0.5 : 0), 0) / caps.length) * 100);
 
 const AI_SEARCH: SolutionCapability[] = [
-  { label: "Brand Memory", status: "partial", note: "Editable/versioned + structured product/persona/proof library (cx_brand_library); generation-wiring + pgvector recall pending." },
+  { label: "Brand Memory", status: "partial", note: "Editable/versioned + structured product/persona/proof library, wired into page-generation context (composeBrandContext); pgvector semantic recall pending." },
   { label: "Buyer-intent research", status: "gap", note: "Seed discovery only — no real Google/AI research yet." },
   { label: "SERP / AI-answer analysis", status: "gap" },
   { label: "Strategy blueprint", status: "partial" },
   { label: "Page generation", status: "partial" },
-  { label: "Native theme matching", status: "partial", note: "Scan + confirmation UI + themed desktop/tablet/mobile preview built; published-page token rendering pending." },
+  { label: "Native theme matching", status: "partial", note: "Scan + confirm UI + preview + published /feeds pages now render in the confirmed theme tokens; component-level fidelity score + CMS-published rendering pending." },
   { label: "Publish to /feeds + sitemap + llms.txt", status: "partial" },
   { label: "CMS publishing adapters", status: "gap" },
   { label: "Backlinks / citations", status: "partial", note: "Opportunities + outreach exist; real acquisition pending." },
