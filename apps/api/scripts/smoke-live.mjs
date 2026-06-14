@@ -274,6 +274,24 @@ async function main() {
   group("Search");
   await check("GET /search?q=segment", "GET", "/search?q=segment", { expect: (d) => Array.isArray(d.results) });
 
+  group("AI Search engine");
+  await check("GET /ai-search/overview", "GET", "/ai-search/overview", {
+    expect: (d) => typeof d.activePages === "number" && Array.isArray(d.byEngine) && Array.isArray(d.byBot),
+  });
+  await check("POST /ai-search/mentions/check (heuristic)", "POST", "/ai-search/mentions/check", {
+    body: { query: "best product analytics tools" },
+    expect: (d) => Array.isArray(d.recorded) && typeof d.live === "boolean",
+  });
+  await check("GET /ai-search/mentions", "GET", "/ai-search/mentions", { expect: (d) => Array.isArray(d.mentions) });
+  await check("POST /ai-search/bot-activity (record GPTBot hit)", "POST", "/ai-search/bot-activity", {
+    body: { bot: "GPTBot", url: "https://demo.test/feeds/pricing" },
+    expect: (d) => d.hit?.bot === "GPTBot",
+  });
+  await check("GET /ai-search/bot-activity", "GET", "/ai-search/bot-activity", {
+    expect: (d) => Array.isArray(d.hits) && Array.isArray(d.byBot),
+  });
+  await checkRejects("POST /ai-search/mentions validates engine", "POST", "/ai-search/mentions", { engine: "bogus", query: "x" });
+
   group("Onboarding journey");
   await check("GET /onboarding/status", "GET", "/onboarding/status", {
     expect: (d) => d.onboarding && typeof d.onboarding.completed === "boolean" && d.onboarding.steps,

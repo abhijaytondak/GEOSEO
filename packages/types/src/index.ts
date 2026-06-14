@@ -93,6 +93,57 @@ export interface AuthorityOverview {
   momentum: AuthorityMomentum;
 }
 
+/* ----------------- AI Search engine (mentions + bot crawl tracking) */
+
+export type AiMentionEngine = "chatgpt" | "perplexity" | "gemini" | "claude" | "copilot" | "grok" | "google-ai";
+
+/** A tracked brand mention/citation in an AI answer engine. */
+export interface AiMention {
+  id: string;
+  engine: AiMentionEngine;
+  query: string;
+  mentioned: boolean;
+  /** Citation rank within the AI answer, if cited. */
+  position?: number;
+  snippet?: string;
+  pageId?: string;
+  pageUrl?: string;
+  /** How the mention was determined — provider tracking activates with keys. */
+  source: "manual" | "heuristic" | "provider";
+  checkedAt: ISODate;
+}
+
+export type AiCrawlerBot =
+  | "GPTBot"
+  | "OAI-SearchBot"
+  | "PerplexityBot"
+  | "ClaudeBot"
+  | "Google-Extended"
+  | "Bingbot"
+  | "Other";
+
+/** A recorded AI-crawler visit to a published page. */
+export interface AiBotHit {
+  id: string;
+  bot: AiCrawlerBot;
+  url: string;
+  pageId?: string;
+  userAgent?: string;
+  at: ISODate;
+}
+
+/** Aggregate backing the AI Search workspace overview. */
+export interface AiSearchOverview {
+  activePages: number;
+  aiMentions: number;
+  botCrawls: number;
+  pagesIndexed: number;
+  qualifiedLeads: number;
+  authorityLinks: number;
+  byEngine: { engine: AiMentionEngine; mentions: number }[];
+  byBot: { bot: AiCrawlerBot; hits: number }[];
+}
+
 /* ----------------- Onboarding journey (self-serve company setup) */
 
 export interface OnboardingStatus {

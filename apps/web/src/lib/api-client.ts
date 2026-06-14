@@ -12,6 +12,10 @@ import { seoProvider, brandSource, outreachDrafter } from "@geoseo/mock";
 import type {
   ActivityEvent,
   AiVisibilitySignal,
+  AiBotHit,
+  AiMention,
+  AiMentionEngine,
+  AiSearchOverview,
   Alert,
   AuditEntry,
   AuthorityOverview,
@@ -260,6 +264,20 @@ export const api = {
   getAuthorityOverview: () => get<AuthorityOverview>("/overview/authority", authorityOverviewFallback),
   getSolutionReadiness: () =>
     get<{ solutions: SolutionReadiness[] }>("/solutions/readiness", () => ({ solutions: [] })).then((d) => d.solutions),
+
+  // AI Search engine (mentions + bot crawl tracking)
+  getAiSearchOverview: () =>
+    get<AiSearchOverview>("/ai-search/overview", () => ({
+      activePages: 0, aiMentions: 0, botCrawls: 0, pagesIndexed: 0, qualifiedLeads: 0, authorityLinks: 0, byEngine: [], byBot: [],
+    })),
+  getAiMentions: () =>
+    get<{ mentions: AiMention[] }>("/ai-search/mentions", () => ({ mentions: [] })).then((d) => d.mentions),
+  checkAiMentions: (query: string) =>
+    send<{ recorded: AiMention[]; live: boolean }>("POST", "/ai-search/mentions/check", { query }),
+  recordAiMention: (engine: AiMentionEngine, query: string) =>
+    send<{ mention: AiMention }>("POST", "/ai-search/mentions", { engine, query }).then((d) => d.mention),
+  getAiBotActivity: () =>
+    get<{ hits: AiBotHit[]; byBot: { bot: string; hits: number }[] }>("/ai-search/bot-activity", () => ({ hits: [], byBot: [] })),
 
   // onboarding journey
   getOnboardingStatus: () =>

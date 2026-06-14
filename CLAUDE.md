@@ -65,6 +65,18 @@ Then Phase 4 security/scale foundation (DTO validation, tenant scoping, Clerk JW
 `BearerGuard`, RBAC). The `mode.ts` gate already exists (`GEOSEO_MODE`/`API_AUTH_REQUIRED`).
 
 ## Done recently (don't redo)
+- **AI Search engine — mentions + bot tracking + workspace (smoke 85/85 + screenshot-verified):** `AiMentionStore`
+  (`cx_ai_mentions`) + `AiBotActivityStore` (`cx_ai_bots`) + `AiSearchController` (`@Controller("ai-search")`):
+  `GET/POST /ai-search/mentions`, `POST /ai-search/mentions/check` (heuristic from AI-visibility signals — real
+  per-engine provider activates with a key), `GET/POST /ai-search/bot-activity` (+ `AiBotActivityStore.classify(ua)`
+  for GPTBot/PerplexityBot/ClaudeBot/Google-Extended), `GET /ai-search/overview` (active pages, mentions, bot crawls,
+  qualified leads, authority links). Types `AiMention`/`AiBotHit`/`AiSearchOverview`. Frontend `/ai-search` workspace
+  (`ai-search-view.tsx`, beta banner + KPI strip + mention check + bot panel) + **AI Search nav link** (Bot icon).
+  Solutions readiness bumped (AI mention tracking + bot analytics → partial). Remaining AI Search: real research
+  (DataForSEO), live citation provider, auto bot-capture on `/feeds`.
+- **Leads PRD — lead config UIs (frontend, typecheck+lint clean):** `lead-config-actions.tsx` in the Leads page
+  header — **Notification rules** sheet (create/toggle/delete rules w/ score+channels) + **Lead forms** sheet
+  (list/edit CTA/thank-you/consent, create) — both wired to the new APIs. Added as a new component (leads-view untouched).
 - **Leads PRD — notification rules + lead-form config (Gap 5 & 11, smoke 79/79):** `LeadNotificationStore`
   (`cx_lead_notify`): rules CRUD at **`/lead-notification-rules`** (separate base — `/leads/notification-rules`
   would collide with `/leads/:id`) + `POST /leads/:id/notify` (evaluates enabled rules vs lead score/status/page →

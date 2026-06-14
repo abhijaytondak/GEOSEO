@@ -44,6 +44,8 @@ import { LeadNotificationRulesController, LeadNotifyController } from "./modules
 import { LeadNotificationStore } from "./modules/lead-notification.service";
 import { LeadFormController } from "./modules/lead-form.controller";
 import { LeadFormStore } from "./modules/lead-form.service";
+import { AiSearchController } from "./modules/ai-search.controller";
+import { AiMentionStore, AiBotActivityStore } from "./modules/ai-search.service";
 import { PublicThrottleGuard } from "./common/public-throttle.guard";
 import {
   OpportunitiesController,
@@ -91,6 +93,7 @@ import { PageEngineStore } from "./modules/page-engine.service";
     LeadNotificationRulesController,
     LeadNotifyController,
     LeadFormController,
+    AiSearchController,
   ],
   providers: [
     OutreachStore,
@@ -113,6 +116,8 @@ import { PageEngineStore } from "./modules/page-engine.service";
     OnboardingStore,
     LeadNotificationStore,
     LeadFormStore,
+    AiMentionStore,
+    AiBotActivityStore,
     { provide: APP_GUARD, useClass: BearerGuard },
     { provide: APP_GUARD, useClass: PublicThrottleGuard },
   ],
