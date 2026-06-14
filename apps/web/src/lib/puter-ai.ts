@@ -23,11 +23,12 @@ export function puterReady(): boolean {
   return typeof window !== "undefined" && typeof window.puter?.ai?.chat === "function";
 }
 
-export async function draftWithPuter(query: string, pageType: string): Promise<PuterDraft | null> {
+export async function draftWithPuter(query: string, pageType: string, brandHint?: string): Promise<PuterDraft | null> {
   const chat = typeof window !== "undefined" ? window.puter?.ai?.chat : undefined;
   if (!chat) return null;
 
-  const prompt = `You are an expert B2B SaaS SEO writer for Northwind Labs — warehouse-native product analytics with AI that explains why metrics move (audience: heads of product/growth at B2B SaaS).
+  const brand = brandHint?.trim() || "the customer's brand (no Brand Memory provided — write accurate, brand-neutral copy)";
+  const prompt = `You are an expert B2B SaaS SEO writer for ${brand}.
 Write a ${pageType} page targeting the search query "${query}".
 Respond ONLY with minified JSON (no markdown, no code fences) matching exactly:
 {"metaTitle":"<=60 chars","metaDescription":"<=155 chars","heroCopy":"1-2 sentences","sections":[{"heading":"","body":""}],"faqs":[{"q":"","a":""}]}

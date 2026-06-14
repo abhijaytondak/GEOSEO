@@ -1,6 +1,7 @@
-import { Injectable, OnModuleInit } from "@nestjs/common";
+import { Inject, Injectable, OnModuleInit } from "@nestjs/common";
 import { countRows, dbEnabled, ensureTable, loadAll, removeRow, upsert } from "../db/db";
 import { draftPageContent, type DraftContent } from "../llm/deepseek";
+import { BrandMemoryStore } from "./brand.service";
 
 const T = {
   opps: "pe_opportunities",
@@ -77,9 +78,18 @@ export class PageEngineStore implements OnModuleInit {
   // fixed clock — keeps generated timestamps deterministic across reloads
   private now = "2026-06-12T00:00:00.000Z";
 
-  constructor() {
+  constructor(@Inject(BrandMemoryStore) private readonly brand: BrandMemoryStore) {
     // seed an initial version snapshot per seeded page
     for (const p of this.pages) this.snapshot(p, "Initial draft", "ai");
+  }
+
+  /** Compose an LLM brand hint from the workspace's current Brand Memory. */
+  private brandHint(): string | undefined {
+    const p = this.brand.current();
+    if (!p?.company) return undefined;
+    const parts = [`${p.company}${p.valueProp ? ` — ${p.valueProp}` : ""}`];
+    if (p.audience) parts.push(`Audience: ${p.audience}.`);
+    return parts.join(" ").trim();
   }
 
   private snapshot(p: GeneratedPage, changeSummary: string, authorType: PageVersion["authorType"]) {
@@ -261,9 +271,10 @@ export class PageEngineStore implements OnModuleInit {
     if (!opp) return undefined;
     this.seq += 1;
     const slug = `/${opp.query.replace(/\s+/g, "-").toLowerCase()}`;
-    const ai = content ?? (await draftPageContent(opp.query, opp.recommendedPageType));
+    const ai = content ?? (await draftPageContent(opp.query, opp.recommendedPageType, this.brandHint()));
     const title = opp.query.replace(/\b\w/g, (c) => c.toUpperCase());
-    const metaTitle = ai?.metaTitle ?? `${opp.query} | Northwind Labs`;
+    const company = this.brand.current()?.company?.trim();
+    const metaTitle = ai?.metaTitle ?? (company ? `${title} | ${company}` : title);
     const page: GeneratedPage = {
       id: `pg-gen-${this.seq}`,
       blueprintId: this.blueprints[0]?.id ?? "bp-1",

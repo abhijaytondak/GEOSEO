@@ -12,21 +12,24 @@ export interface DraftContent {
   faqs: { q: string; a: string }[];
 }
 
-const BRAND_HINT =
-  "Northwind Labs — warehouse-native product analytics with AI that explains why metrics move. Audience: heads of product/growth at B2B SaaS.";
+/** Neutral fallback when no Brand Memory is supplied — never a hardcoded brand. */
+const NEUTRAL_BRAND_HINT =
+  "the customer's brand (no Brand Memory provided — write accurate, brand-neutral copy and avoid inventing claims)";
 
 export async function draftPageContent(
   query: string,
   pageType: string,
+  brandHint?: string,
 ): Promise<DraftContent | null> {
   const key = process.env.DEEPSEEK_API_KEY;
   if (!key) return null;
   const baseUrl = process.env.DEEPSEEK_BASE_URL ?? "https://api.deepseek.com";
   const model = process.env.DEEPSEEK_MODEL ?? "deepseek-chat";
 
+  const brand = brandHint?.trim() || NEUTRAL_BRAND_HINT;
   const system =
     "You are an expert B2B SaaS SEO content writer. Write clear, specific, non-generic copy with no unsupported claims. Respond ONLY with JSON.";
-  const user = `Brand: ${BRAND_HINT}
+  const user = `Brand: ${brand}
 Write a ${pageType} page targeting the search query "${query}".
 Return JSON exactly matching:
 {"metaTitle": string (<=60 chars), "metaDescription": string (<=155 chars), "heroCopy": string (1-2 sentences), "sections": [{"heading": string, "body": string}] (3 items), "faqs": [{"q": string, "a": string}] (2 items)}`;
