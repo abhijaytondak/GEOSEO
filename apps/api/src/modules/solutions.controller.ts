@@ -18,7 +18,7 @@ const AI_SEARCH: SolutionCapability[] = [
   { label: "Page generation", status: "partial" },
   { label: "Native theme matching", status: "partial", note: "Scan + confirm UI + preview + published /feeds pages now render in the confirmed theme tokens; component-level fidelity score + CMS-published rendering pending." },
   { label: "Publish to /feeds + sitemap + llms.txt", status: "partial" },
-  { label: "CMS publishing adapters", status: "gap", note: "WordPress + Webflow publish adapters wired + verified (env-gated, auto-detected by creds, CMS_PROVIDER override); publishing pushes to the CMS + records the live URL the moment a token is set. Shopify/HubSpot next; no live push without a token yet." },
+  { label: "CMS publishing adapters", status: "gap", note: "WordPress + Webflow + Shopify publish adapters wired + verified (env-gated, auto-detected by creds, CMS_PROVIDER override); publishing pushes to the CMS + records the live URL the moment a token is set. HubSpot next; no live push without a token yet." },
   { label: "Backlinks / citations", status: "partial", note: "Opportunities + outreach exist; real acquisition pending." },
   { label: "AI bot crawl analytics", status: "built", note: "Auto-captured on /feeds (GPTBot/Perplexity/Claude/Google-Extended) + per-bot breakdown." },
   { label: "AI mention / citation tracking", status: "partial", note: "Mention store + heuristic check built; real per-engine provider pending." },

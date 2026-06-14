@@ -59,8 +59,10 @@ in `docs/` (see bottom).
   managed `/feeds` (unchanged). Provider auto-detected from creds (or forced via `CMS_PROVIDER`). **WordPress:**
   `WORDPRESS_BASE_URL` + `WORDPRESS_USERNAME` + `WORDPRESS_APP_PASSWORD` → `/wp-json/wp/v2/posts`. **Webflow:**
   `WEBFLOW_API_TOKEN` + `WEBFLOW_COLLECTION_ID` + `WEBFLOW_SITE_HOST` (+ optional `WEBFLOW_COLLECTION_PATH`,
-  `WEBFLOW_CONTENT_FIELD` default `post-body`) → `/v2/collections/:id/items/live`. `GET /pages/cms/status` reports
-  provider + recorded pushes. Both verified live (mock) + fallback. Shopify/HubSpot are the next adapters (same switch).
+  `WEBFLOW_CONTENT_FIELD` default `post-body`) → `/v2/collections/:id/items/live`. **Shopify:** `SHOPIFY_STORE_DOMAIN`
+  + `SHOPIFY_ACCESS_TOKEN` (+ optional `SHOPIFY_PUBLIC_HOST`, `SHOPIFY_API_VERSION` default `2024-10`,
+  `SHOPIFY_ADMIN_BASE_URL`) → Online Store Pages `POST /admin/api/:ver/pages.json`, URL `https://{publicHost}/pages/{handle}`.
+  `GET /pages/cms/status` reports provider + recorded pushes. All three verified live (mock) + fallback. HubSpot next (same switch).
 - **DataForSEO** (research) — **seam now wired** (`modules/keyword-research.service.ts`, `KeywordResearchService`):
   set `DATAFORSEO_LOGIN` + `DATAFORSEO_PASSWORD` (+ optional `DATAFORSEO_BASE_URL`) and `discover()` returns real
   keyword ideas (volume/difficulty/CPC, DataForSEO Labs); unset ⇒ deterministic seed fallback. Verified live against a
@@ -83,6 +85,12 @@ Then Phase 4 security/scale foundation (DTO validation, tenant scoping, Clerk JW
 `BearerGuard`, RBAC). The `mode.ts` gate already exists (`GEOSEO_MODE`/`API_AUTH_REQUIRED`).
 
 ## Done recently (don't redo)
+- **Shopify CMS adapter (3rd provider on the publishing seam):** `CmsPublishStore` now dispatches WordPress / Webflow /
+  **Shopify** by detected creds. Shopify path: `SHOPIFY_STORE_DOMAIN` + `SHOPIFY_ACCESS_TOKEN` (+ optional
+  `SHOPIFY_PUBLIC_HOST`, `SHOPIFY_API_VERSION`=`2024-10`, `SHOPIFY_ADMIN_BASE_URL` proxy/test override) → Online Store
+  Pages `POST /admin/api/:ver/pages.json` (`X-Shopify-Access-Token`), `publishedUrl` = `https://{publicHost}/pages/{handle}`.
+  Verified live (mock): provider=shopify, publish → HTTP 201, publishedUrl `https://zomato.com/pages/vs-amplitude`,
+  recorded. WordPress/Webflow paths + managed `/feeds` fallback unchanged. Next adapter (same switch): HubSpot.
 - **Webflow CMS adapter (extends the publishing seam):** `CmsPublishStore` now dispatches **WordPress or Webflow** by
   detected creds (`CMS_PROVIDER` forces). Webflow path: `WEBFLOW_API_TOKEN` + `WEBFLOW_COLLECTION_ID` + `WEBFLOW_SITE_HOST`
   (+ optional `WEBFLOW_COLLECTION_PATH`, `WEBFLOW_CONTENT_FIELD`=`post-body`, `WEBFLOW_SUMMARY_FIELD`) → POST

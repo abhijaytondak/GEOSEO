@@ -5,7 +5,7 @@ import { DocStore } from "../db/db";
 /** Record of a page pushed to an external CMS (additive side-store cx_cms_publish). */
 export interface CmsPublishResult {
   pageId: string;
-  provider: "wordpress" | "webflow";
+  provider: "wordpress" | "webflow" | "shopify";
   externalId: string;
   externalUrl: string;
   status: string;
@@ -48,7 +48,7 @@ export class CmsPublishStore implements OnModuleInit {
   }
 
   /** Active CMS provider — explicit `CMS_PROVIDER` override, else auto-detected from creds. */
-  get provider(): "wordpress" | "webflow" | "none" {
+  get provider(): "wordpress" | "webflow" | "shopify" | "none" {
     const forced = process.env.CMS_PROVIDER?.toLowerCase();
     const wp = Boolean(
       process.env.WORDPRESS_BASE_URL && process.env.WORDPRESS_USERNAME && process.env.WORDPRESS_APP_PASSWORD,
@@ -56,10 +56,13 @@ export class CmsPublishStore implements OnModuleInit {
     const wf = Boolean(
       process.env.WEBFLOW_API_TOKEN && process.env.WEBFLOW_COLLECTION_ID && process.env.WEBFLOW_SITE_HOST,
     );
+    const sh = Boolean(process.env.SHOPIFY_STORE_DOMAIN && process.env.SHOPIFY_ACCESS_TOKEN);
     if (forced === "wordpress") return wp ? "wordpress" : "none";
     if (forced === "webflow") return wf ? "webflow" : "none";
+    if (forced === "shopify") return sh ? "shopify" : "none";
     if (wp) return "wordpress";
     if (wf) return "webflow";
+    if (sh) return "shopify";
     return "none";
   }
 
@@ -82,6 +85,8 @@ export class CmsPublishStore implements OnModuleInit {
         return this.publishWordPress(page, now);
       case "webflow":
         return this.publishWebflow(page, now);
+      case "shopify":
+        return this.publishShopify(page, now);
       default:
         return null;
     }
@@ -182,6 +187,53 @@ export class CmsPublishStore implements OnModuleInit {
       return result;
     } catch (err) {
       this.log.warn(`Webflow publish failed (${err instanceof Error ? err.message : "unknown"}) — managed fallback`);
+      return null;
+    }
+  }
+
+  private async publishShopify(page: GeneratedPage, now: string): Promise<CmsPublishResult | null> {
+    const storeDomain = process.env.SHOPIFY_STORE_DOMAIN!.replace(/^https?:\/\//, "").replace(/\/+$/, "");
+    const token = process.env.SHOPIFY_ACCESS_TOKEN!;
+    const version = process.env.SHOPIFY_API_VERSION ?? "2024-10";
+    const publicHost = (process.env.SHOPIFY_PUBLIC_HOST ?? storeDomain).replace(/^https?:\/\//, "").replace(/\/+$/, "");
+    // Admin host defaults to the store's https domain; SHOPIFY_ADMIN_BASE_URL overrides (proxy/self-host/test).
+    const adminBase = (process.env.SHOPIFY_ADMIN_BASE_URL ?? `https://${storeDomain}`).replace(/\/+$/, "");
+    const handle = page.slug.replace(/^\//, "");
+
+    try {
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), 12_000);
+      // Online Store "Pages" via the Admin REST API.
+      const res = await fetch(`${adminBase}/admin/api/${version}/pages.json`, {
+        method: "POST",
+        signal: ctrl.signal,
+        headers: { "x-shopify-access-token": token, "content-type": "application/json" },
+        body: JSON.stringify({
+          page: { title: page.metaTitle || page.title, handle, body_html: renderHtml(page), published: true },
+        }),
+      });
+      clearTimeout(timer);
+      if (!res.ok) {
+        this.log.warn(`Shopify ${res.status} — keeping managed /feeds destination`);
+        return null;
+      }
+      const json = (await res.json()) as { page?: { id?: number | string; handle?: string } };
+      const created = json.page;
+      if (!created?.id) return null;
+      const finalHandle = created.handle ?? handle;
+      const result: CmsPublishResult = {
+        pageId: page.id,
+        provider: "shopify",
+        externalId: String(created.id),
+        externalUrl: `https://${publicHost}/pages/${finalHandle}`,
+        status: "published",
+        publishedAt: now,
+      };
+      this.byPage[page.id] = result;
+      this.db.save({ byPage: this.byPage });
+      return result;
+    } catch (err) {
+      this.log.warn(`Shopify publish failed (${err instanceof Error ? err.message : "unknown"}) — managed fallback`);
       return null;
     }
   }
