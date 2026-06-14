@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { RefreshCw, Send, TrendingUp, Sparkles, Route, MessageSquare, Globe } from "lucide-react";
+import { RefreshCw, Send, TrendingUp, Sparkles, Route, MessageSquare, Globe, Loader2, Copy, Check } from "lucide-react";
 import type { Lead, LeadActivity, LeadJourneyEvent, LeadJourneySummary, LeadScore } from "@geoseo/types";
 import { pageEngineApi } from "@/lib/page-engine-client";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
@@ -50,6 +50,9 @@ function Detail({ lead }: { lead: Lead }) {
   const [loaded, setLoaded] = useState(false);
   const [note, setNote] = useState("");
   const [saving, setSaving] = useState(false);
+  const [followup, setFollowup] = useState<{ subject: string; body: string; source: string } | null>(null);
+  const [genning, setGenning] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -64,10 +67,42 @@ function Detail({ lead }: { lead: Lead }) {
       setActivity(a);
       setLoaded(true);
     });
+    // Load any existing AI-SDR follow-up draft (self-contained — avoids the shared client).
+    fetch(`/api/v1/leads/${lead.id}/followup`, { headers: { accept: "application/json" }, cache: "no-store" })
+      .then((r) => r.json())
+      .then((jr) => {
+        if (!cancelled && jr?.data?.draft) setFollowup(jr.data.draft);
+      })
+      .catch(() => {});
     return () => {
       cancelled = true;
     };
   }, [lead.id]);
+
+  async function genFollowup() {
+    setGenning(true);
+    try {
+      const r = await fetch(`/api/v1/leads/${lead.id}/followup`, {
+        method: "POST",
+        headers: { accept: "application/json", "content-type": "application/json" },
+      });
+      const jr = (await r.json()) as { success: boolean; data?: { draft: { subject: string; body: string; source: string } }; errors?: { message: string }[] };
+      if (!r.ok || !jr.success || !jr.data) throw new Error(jr.errors?.[0]?.message ?? "Failed");
+      setFollowup(jr.data.draft);
+      notify({ kind: "success", title: `Follow-up drafted${jr.data.draft.source === "template" ? " (template)" : ""}` });
+    } catch (err) {
+      notify({ kind: "error", title: "Draft failed", message: err instanceof Error ? err.message : "Try again." });
+    } finally {
+      setGenning(false);
+    }
+  }
+
+  function copyFollowup() {
+    if (!followup) return;
+    navigator.clipboard?.writeText(`Subject: ${followup.subject}\n\n${followup.body}`);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1400);
+  }
 
   async function addNote() {
     const body = note.trim();
@@ -113,8 +148,46 @@ function Detail({ lead }: { lead: Lead }) {
             <TabsTrigger value="overview"><Sparkles className="size-3.5" /> Overview</TabsTrigger>
             <TabsTrigger value="journey"><Route className="size-3.5" /> Journey</TabsTrigger>
             <TabsTrigger value="activity"><MessageSquare className="size-3.5" /> Activity</TabsTrigger>
+            <TabsTrigger value="followup"><Send className="size-3.5" /> Follow-up</TabsTrigger>
           </TabsList>
         </div>
+
+        {/* AI-SDR follow-up */}
+        <TabsContent value="followup" className="min-h-0 flex-1 space-y-3 overflow-y-auto px-6 py-4">
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-[12.5px] text-muted-foreground">AI-drafted SDR follow-up from Brand Memory + this lead&apos;s context.</p>
+            <Button size="sm" className="h-8 shrink-0" onClick={genFollowup} disabled={genning}>
+              {genning ? <Loader2 className="size-3.5 animate-spin" /> : <Send className="size-3.5" />}
+              {followup ? "Regenerate" : "Generate"}
+            </Button>
+          </div>
+          {followup ? (
+            <div className="rounded-xl border border-border bg-surface-sunken p-3.5">
+              <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">Subject</div>
+              <div className="mt-0.5 text-[13.5px] font-semibold text-foreground">{followup.subject}</div>
+              <div className="mt-3 whitespace-pre-wrap text-[13px] leading-relaxed text-foreground">{followup.body}</div>
+              <div className="mt-3 flex items-center gap-2">
+                <Button size="sm" variant="outline" className="h-8" onClick={copyFollowup}>
+                  {copied ? <Check className="size-3.5 text-positive" /> : <Copy className="size-3.5" />}
+                  Copy
+                </Button>
+                <a
+                  href={`mailto:${lead.email}?subject=${encodeURIComponent(followup.subject)}&body=${encodeURIComponent(followup.body)}`}
+                  className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-border px-3 text-[12.5px] font-medium transition-colors hover:bg-muted"
+                >
+                  <Send className="size-3.5" /> Open in email
+                </a>
+                {followup.source === "template" && (
+                  <span className="text-[11px] text-muted-foreground">Template (LLM unavailable)</span>
+                )}
+              </div>
+            </div>
+          ) : (
+            <div className="rounded-xl border border-dashed border-border py-10 text-center text-[13px] text-muted-foreground">
+              Generate a personalized follow-up for {lead.name || "this lead"}.
+            </div>
+          )}
+        </TabsContent>
 
         {/* Overview */}
         <TabsContent value="overview" className="min-h-0 flex-1 space-y-5 overflow-y-auto px-6 py-4">

@@ -50,6 +50,8 @@ import { LeadRoutingController } from "./modules/lead-routing.controller";
 import { LeadRoutingStore } from "./modules/lead-routing.service";
 import { ConversionAuditController } from "./modules/conversion-audit.controller";
 import { ConversionAuditStore } from "./modules/conversion-audit.service";
+import { LeadFollowupController } from "./modules/lead-followup.controller";
+import { LeadFollowupStore } from "./modules/lead-followup.service";
 import { PublicThrottleGuard } from "./common/public-throttle.guard";
 import {
   OpportunitiesController,
@@ -100,6 +102,7 @@ import { PageEngineStore } from "./modules/page-engine.service";
     AiSearchController,
     LeadRoutingController,
     ConversionAuditController,
+    LeadFollowupController,
   ],
   providers: [
     OutreachStore,
@@ -126,6 +129,7 @@ import { PageEngineStore } from "./modules/page-engine.service";
     AiBotActivityStore,
     LeadRoutingStore,
     ConversionAuditStore,
+    LeadFollowupStore,
     { provide: APP_GUARD, useClass: BearerGuard },
     { provide: APP_GUARD, useClass: PublicThrottleGuard },
   ],
