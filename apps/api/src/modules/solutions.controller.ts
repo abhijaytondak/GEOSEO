@@ -11,7 +11,7 @@ const completeness = (caps: SolutionCapability[]): number =>
   Math.round((caps.reduce((a, c) => a + (c.status === "built" ? 1 : c.status === "partial" ? 0.5 : 0), 0) / caps.length) * 100);
 
 const AI_SEARCH: SolutionCapability[] = [
-  { label: "Brand Memory", status: "partial", note: "Editable/versioned; needs product/buyer/proof library." },
+  { label: "Brand Memory", status: "partial", note: "Editable/versioned + structured product/persona/proof library (cx_brand_library); generation-wiring + pgvector recall pending." },
   { label: "Buyer-intent research", status: "gap", note: "Seed discovery only — no real Google/AI research yet." },
   { label: "SERP / AI-answer analysis", status: "gap" },
   { label: "Strategy blueprint", status: "partial" },

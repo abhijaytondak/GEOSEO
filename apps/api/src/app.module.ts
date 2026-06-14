@@ -52,6 +52,8 @@ import { ConversionAuditController } from "./modules/conversion-audit.controller
 import { ConversionAuditStore } from "./modules/conversion-audit.service";
 import { LeadFollowupController } from "./modules/lead-followup.controller";
 import { LeadFollowupStore } from "./modules/lead-followup.service";
+import { BrandLibraryController } from "./modules/brand-library.controller";
+import { BrandLibraryStore } from "./modules/brand-library.service";
 import { PublicThrottleGuard } from "./common/public-throttle.guard";
 import {
   OpportunitiesController,
@@ -103,6 +105,7 @@ import { PageEngineStore } from "./modules/page-engine.service";
     LeadRoutingController,
     ConversionAuditController,
     LeadFollowupController,
+    BrandLibraryController,
   ],
   providers: [
     OutreachStore,
@@ -130,6 +133,7 @@ import { PageEngineStore } from "./modules/page-engine.service";
     LeadRoutingStore,
     ConversionAuditStore,
     LeadFollowupStore,
+    BrandLibraryStore,
     { provide: APP_GUARD, useClass: BearerGuard },
     { provide: APP_GUARD, useClass: PublicThrottleGuard },
   ],

@@ -71,6 +71,14 @@ Then Phase 4 security/scale foundation (DTO validation, tenant scoping, Clerk JW
 `BearerGuard`, RBAC). The `mode.ts` gate already exists (`GEOSEO_MODE`/`API_AUTH_REQUIRED`).
 
 ## Done recently (don't redo)
+- **Brand Memory — structured product/persona/proof library (typecheck+lint clean, curl + CDP-screenshot-verified):**
+  additive `BrandLibraryStore` (`cx_brand_library`, **local types — no `@geoseo/types`/`brand.service` edits**) + `BrandLibraryController`
+  (`@Controller("brand-library")`, `GET` + full-replace `PUT`, every field server-sanitized/capped + fallback ids + audit). Frontend:
+  new **Library tab** in `brand-workspace.tsx` (`components/brand/brand-library.tsx`, self-contained fetch) — Products & services,
+  Buyer personas (pain points + goals as comma lists), and Proof points (typed: stat/testimonial/case-study/award/logo), each with
+  add/inline-edit/remove + a dirty-aware Save. `strength()` 0–100 signal exposed. Grounds page/outreach generation in real facts.
+  Remaining Brand Memory: **wire the library into content/page generation context** (lives in the contested page-engine files —
+  coordinate) + pgvector semantic recall (key/infra-gated).
 - **Page Engine Theme PRD — confirmation UI + themed preview (§7.2/§11.3, typecheck+lint clean, CDP-screenshot-verified desktop+mobile):**
   new `/theme` route (`app/(app)/theme/page.tsx`) + `components/theme/theme-settings-view.tsx` (all net-new — consumes the
   existing `api.getSiteThemes/scanSiteTheme/updateSiteTheme/confirmSiteTheme`, **no edits to the contested page-engine files**).
