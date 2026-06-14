@@ -11,10 +11,18 @@ import { useAppFeedback } from "@/components/system/app-feedback";
 
 const ranges = ["Last 30 days", "Last 8 weeks", "Last quarter"];
 
-export function Topbar() {
+/** 1–2 letter initials from a workspace name (e.g. "Northwind Labs" → "NL"). */
+function initialsOf(name: string): string {
+  const words = name.trim().split(/\s+/).filter(Boolean);
+  if (!words.length) return "WS";
+  return (words.length === 1 ? words[0].slice(0, 2) : words[0][0] + words[words.length - 1][0]).toUpperCase();
+}
+
+export function Topbar({ workspaceName }: { workspaceName?: string }) {
   const router = useRouter();
   const { notify, startJob } = useAppFeedback();
   const [range, setRange] = useState(0);
+  const wsName = workspaceName?.trim() || "Workspace";
 
   function openCommand() {
     window.dispatchEvent(new Event(COMMAND_EVENT));
@@ -42,9 +50,9 @@ export function Topbar() {
         onClick={() => router.push("/settings")}
       >
         <span className="flex size-6 items-center justify-center rounded-md bg-brand/15 text-[11px] font-bold text-brand">
-          NW
+          {initialsOf(wsName)}
         </span>
-        <span className="hidden sm:inline">Northwind Labs</span>
+        <span className="hidden sm:inline">{wsName}</span>
         <ChevronDown className="size-4 text-muted-foreground" />
       </button>
 

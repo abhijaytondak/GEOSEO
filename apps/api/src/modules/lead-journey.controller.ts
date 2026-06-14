@@ -1,10 +1,14 @@
 import { Body, Controller, Get, Inject, Param, Post } from "@nestjs/common";
 import { ApiTags } from "@nestjs/swagger";
 import type { LeadJourneyEventType } from "@geoseo/types";
+import { BadRequestException } from "@nestjs/common";
 import { LeadJourneyStore } from "./lead-journey.service";
 import { AiBotActivityStore } from "./ai-search.service";
+import { SettingsStore } from "./settings.service";
 import { Public } from "../common/public.decorator";
 import { validateBody, v } from "../common/validation";
+import { resolveMode } from "../common/mode";
+import { refererAllowed } from "../common/public-ingest";
 
 const EVENT_TYPES: LeadJourneyEventType[] = ["page_view", "cta_click", "form_start", "form_submit", "download", "external_click"];
 
@@ -26,6 +30,7 @@ export class PublicEventsController {
   constructor(
     @Inject(LeadJourneyStore) private readonly journey: LeadJourneyStore,
     @Inject(AiBotActivityStore) private readonly bots: AiBotActivityStore,
+    @Inject(SettingsStore) private readonly settings: SettingsStore,
   ) {}
 
   // Rate-limiting handled globally by PublicThrottleGuard (PRD §18).
@@ -45,6 +50,11 @@ export class PublicEventsController {
       leadId?: string;
     },
   ) {
+    // Production anti-abuse: events must originate from an allow-listed host when
+    // configured (demo stays permissive — see common/public-ingest).
+    if (resolveMode() !== "demo" && !refererAllowed(body.url, this.settings.get().profile.allowedDomains)) {
+      throw new BadRequestException("Events are not accepted from this domain");
+    }
     const event = this.journey.record(body);
     return { event };
   }

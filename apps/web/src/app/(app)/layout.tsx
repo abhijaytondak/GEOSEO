@@ -2,14 +2,21 @@ import { Sidebar } from "@/components/shell/sidebar";
 import { Topbar } from "@/components/shell/topbar";
 import { CommandPalette } from "@/components/shell/command-palette";
 import { AppFeedbackProvider } from "@/components/system/app-feedback";
+import { api } from "@/lib/api-client";
 
-export default function AppLayout({ children }: { children: React.ReactNode }) {
+export default async function AppLayout({ children }: { children: React.ReactNode }) {
+  // Real workspace identity (Brand Memory / onboarding) drives the topbar — no demo brand.
+  const workspaceName = await api
+    .getSettings()
+    .then((s) => s.profile?.workspaceName)
+    .catch(() => undefined);
+
   return (
     <AppFeedbackProvider>
       <div className="flex h-dvh overflow-hidden bg-background">
         <Sidebar className="hidden lg:flex" />
         <div className="flex min-w-0 flex-1 flex-col">
-          <Topbar />
+          <Topbar workspaceName={workspaceName} />
           <main className="flex-1 overflow-y-auto">{children}</main>
         </div>
       </div>

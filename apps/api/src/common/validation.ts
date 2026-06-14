@@ -71,6 +71,17 @@ export const v = {
       return ok(value);
     };
   },
+  /** A syntactically well-formed email (single @, no spaces, a dotted domain). */
+  email(opts: { max?: number } = {}): FieldValidator {
+    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return (value, key) => {
+      if (typeof value !== "string") return err(`\`${key}\` must be a string`);
+      const trimmed = value.trim();
+      if ((opts.max ?? 254) < trimmed.length) return err(`\`${key}\` must be ≤ ${opts.max ?? 254} chars`);
+      if (!re.test(trimmed)) return err(`\`${key}\` must be a valid email`);
+      return ok(trimmed);
+    };
+  },
   /** Any plain object (no deep validation) — for loosely-shaped nested config. */
   object(): FieldValidator {
     return (value, key) =>

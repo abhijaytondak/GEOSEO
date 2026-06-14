@@ -16,6 +16,23 @@ import { ApiTags } from "@nestjs/swagger";
 import { PageEngineStore } from "./page-engine.service";
 import { SettingsStore } from "./settings.service";
 import { Public } from "../common/public.decorator";
+import { validateBody, v } from "../common/validation";
+import { isDisposableEmail, refererAllowed } from "../common/public-ingest";
+import { resolveMode } from "../common/mode";
+
+// Public lead capture: required well-formed email, length caps, + a `website`
+// honeypot (real visitors never fill it). Unknown keys are stripped.
+const LeadCaptureSchema = {
+  email: v.email({ max: 254 }),
+  name: v.optional(v.string({ max: 160 })),
+  company: v.optional(v.string({ max: 200 })),
+  message: v.optional(v.string({ max: 4000 })),
+  slug: v.optional(v.string({ max: 320 })),
+  pageId: v.optional(v.string({ max: 64 })),
+  sourceUrl: v.optional(v.string({ max: 2048 })),
+  utm: v.optional(v.string({ max: 512 })),
+  website: v.optional(v.string({ max: 200 })), // honeypot
+};
 
 /* ----------------------------------------------- keyword opportunities */
 @ApiTags("page-engine")
@@ -316,7 +333,10 @@ export class PublishingController {
 @ApiTags("public")
 @Controller("public")
 export class PublicController {
-  constructor(@Inject(PageEngineStore) private readonly store: PageEngineStore) {}
+  constructor(
+    @Inject(PageEngineStore) private readonly store: PageEngineStore,
+    @Inject(SettingsStore) private readonly settings: SettingsStore,
+  ) {}
 
   @Public()
   @Get("pages")
@@ -335,19 +355,26 @@ export class PublicController {
   @Public()
   @Post("leads")
   capture(
-    @Body()
+    @Body(validateBody(LeadCaptureSchema))
     body: {
+      email: string;
       name?: string;
-      email?: string;
       company?: string;
       message?: string;
       slug?: string;
       pageId?: string;
       sourceUrl?: string;
       utm?: string;
+      website?: string;
     },
   ) {
-    if (!body?.email?.trim()) throw new BadRequestException("email is required");
+    // Honeypot — a real visitor never fills the hidden `website` field.
+    if (body.website && body.website.trim()) throw new BadRequestException("Invalid submission");
+    if (isDisposableEmail(body.email)) throw new BadRequestException("Disposable email addresses are not allowed");
+    // Production anti-abuse: source host must be allow-listed when configured (demo stays permissive).
+    if (resolveMode() !== "demo" && !refererAllowed(body.sourceUrl, this.settings.get().profile.allowedDomains)) {
+      throw new BadRequestException("Submissions are not accepted from this domain");
+    }
     const lead = this.store.addLead({
       name: body.name ?? "",
       email: body.email,

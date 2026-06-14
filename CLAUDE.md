@@ -16,10 +16,12 @@ in `docs/` (see bottom).
 - **API (port 4000):** `cd apps/api && set -a; . ./.env; set +a; PORT=4000 pnpm start`
   — the start script (`tsx src/main.ts`) does **not** auto-load `.env`; you must source it
   or `DATABASE_URL`/`REDIS_URL`/`DEV_API_TOKEN` won't load.
-  - ⚠️ `mode.ts` resolves `GEOSEO_MODE=production` whenever `DATABASE_URL` is set, which makes
-    boot **abort** unless auth is configured. `.env` now sets `API_AUTH_REQUIRED=false` (the
-    documented escape hatch) so it boots dev-permissive with persistence on. Remove that line
-    only after backend Clerk JWT verification lands in `bearer.guard.ts`.
+  - ⚠️ Auth is **mode-driven + fail-closed** (`mode.ts`): `GEOSEO_MODE` wins, else `DATABASE_URL`
+    implies `production`. In production/staging auth is forced on and you **cannot** disable it —
+    `assertModeConfig` aborts boot if `API_AUTH_REQUIRED=false`. The local `.env` therefore sets
+    **`GEOSEO_MODE=demo`** (explicit open beta: permissive + persistence on). For production set
+    `GEOSEO_MODE=production` + `API_AUTH_REQUIRED=true` + `DEV_API_TOKEN` (the web BFF injects it).
+    `bearer.guard.ts` now enforces via `authRequired()`; real Clerk JWT verify still slots in here.
 - **Web (port 3001):** `cd apps/web && PORT=3001 pnpm dev` (3000 is often taken).
 - **Public preview:** ngrok tunnel → `:3001` (Cloudflare quick-tunnels were flaky here).
 - **Vercel deploy (live):** project `geoseo` (team `rajputabhijay1-gmailcoms-projects`), **https://geoseo-tau.vercel.app**.
@@ -71,6 +73,25 @@ Then Phase 4 security/scale foundation (DTO validation, tenant scoping, Clerk JW
 `BearerGuard`, RBAC). The `mode.ts` gate already exists (`GEOSEO_MODE`/`API_AUTH_REQUIRED`).
 
 ## Done recently (don't redo)
+- **Launch-readiness P0 hardening (auth + de-brand + ingestion; typecheck/lint/build green, smoke 87/0, curl-verified):**
+  Closed the controlled-beta blockers from the audit.
+  **(1) API auth mode-driven + fail-closed** — `bearer.guard.ts` enforces via `authRequired()` (not the raw flag);
+  `mode.ts` `assertModeConfig` now **aborts boot** if production/staging + `API_AUTH_REQUIRED=false` (auth can't be
+  silently disabled). Local `.env` set to `GEOSEO_MODE=demo` (explicit open beta). Verified: prod+auth-off → boot abort;
+  prod+token → gated routes 401 w/o token, 200 with, public open.
+  **(2) Web auth tied to mode** — `proxy.ts` + the BFF route (`app/api/v1/[...path]/route.ts`) enforce when
+  `GEOSEO_REQUIRE_AUTH=true` **OR** `NEXT_PUBLIC_GEOSEO_MODE=production` (so prod can't stay open); the BFF injects the
+  server-only `DEV_API_TOKEN`. Committed the previously-uncommitted Clerk auth BFF (sign-in/up pages, route handler).
+  **(3) De-brand** — published URLs (`page-engine.service.publishedUrlFor`), `llms.txt`, `sitemap.ts`, topbar (real
+  workspace name via async `(app)/layout` → `getSettings`), and the publishing-settings sample all use the workspace's
+  own domain (Brand Memory / `PUBLIC_SITE_HOST`), never `northwindlabs.io`. Verified llms.txt → "# Zomato", 0 northwind URLs.
+  **(4) Public-ingestion hardening** — `common/public-ingest.ts` (disposable-email block + `refererAllowed` host
+  allowlist); lead capture (`/public/leads`) now validates email/caps + honeypot (`website`) + disposable + production
+  domain-allowlist; `/public/events` gets the same production referer guard. `WorkspaceSettings.profile.allowedDomains`
+  added (empty ⇒ permissive). Verified: bad-email/honeypot/disposable → 400, valid → 201; allowlist logic unit-checked.
+  Paid Boost stays absent from nav (readiness = planned). **Deferred (next major milestone): full tenant isolation +
+  RBAC** — hardcoded `ws-default` + single-doc stores need workspace-id from the Clerk session threaded into every store
+  key; large multi-pass refactor, follow auth landing.
 - **Input-validation hardening — nested validator + my write endpoints (typecheck+lint clean, curl negative+positive):**
   added **`v.shape(subSchema)`** to `common/validation.ts` (the previously-missing nested-object validator; composes with
   `v.arrayOf` for typed arrays). Applied `validateBody` to the raw `@Body()` write endpoints I own: `conversion-audit/run`

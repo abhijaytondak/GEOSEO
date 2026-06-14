@@ -32,6 +32,13 @@ export function authRequired(mode: AppMode = resolveMode()): boolean {
  */
 export function assertModeConfig(mode: AppMode = resolveMode()): void {
   if (mode === "demo") return;
+  // Fail-closed: auth cannot be explicitly disabled outside demo mode (P0.1).
+  if (process.env.API_AUTH_REQUIRED === "false") {
+    throw new Error(
+      `GEOSEO_MODE=${mode} cannot run with API_AUTH_REQUIRED=false — auth may only be ` +
+        `disabled in demo mode. Set GEOSEO_MODE=demo for an open beta, or remove the flag.`,
+    );
+  }
   if (authRequired(mode) && !process.env.DEV_API_TOKEN && !process.env.CLERK_SECRET_KEY) {
     throw new Error(
       `GEOSEO_MODE=${mode} requires auth config: set DEV_API_TOKEN or CLERK_SECRET_KEY, ` +

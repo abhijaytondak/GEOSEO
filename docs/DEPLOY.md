@@ -29,10 +29,17 @@ railway variables set \
   DEEPSEEK_API_KEY=...    \
   DEEPSEEK_BASE_URL=...   \
   DEEPSEEK_MODEL=...      \
-  GEOSEO_MODE=production  \
-  API_AUTH_REQUIRED=false        # or =true and add DEV_API_TOKEN / Clerk verify
+  GEOSEO_MODE=production  \      # fail-closed: auth CANNOT be disabled in production
+  API_AUTH_REQUIRED=true  \      # required; boot aborts if production + auth disabled
+  DEV_API_TOKEN=...              # the bearer secret the web BFF injects (or wire Clerk JWT verify)
 railway up                         # deploys; gives a public https URL
 ```
+
+> Mode matters: **production** forces auth on (the boot aborts if you try
+> `API_AUTH_REQUIRED=false`). For an **open beta** host, set `GEOSEO_MODE=demo`
+> instead — it runs unauthenticated + sales-safe with persistence still on.
+> Pair production with the web's `NEXT_PUBLIC_GEOSEO_MODE=production` so the BFF +
+> middleware enforce sign-in automatically.
 
 ## Point the Vercel web at the hosted API
 
@@ -45,8 +52,8 @@ vercel env add API_INTERNAL_URL production   # value: https://<railway-app>.up.r
 vercel deploy --prod --yes
 ```
 
-The web's `next.config.ts` rewrite (`/api/v1/* → $API_INTERNAL_URL/api/v1/*`) and
-the server-side api-client both read `API_INTERNAL_URL`, so browser + RSC calls
+The web's BFF route handler (`app/api/v1/[...path]/route.ts`, which replaced the old
+static rewrite) and the server-side api-client both read `API_INTERNAL_URL`, so browser + RSC calls
 reach the hosted API. Set `NEXT_PUBLIC_GEOSEO_MODE=production` to fail closed
 (no mock fallback) once the API is reliably up.
 

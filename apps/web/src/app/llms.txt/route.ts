@@ -1,26 +1,35 @@
 import { pageEngineApi } from "@/lib/page-engine-client";
+import { api } from "@/lib/api-client";
 
 export const dynamic = "force-dynamic";
 
 /**
  * llms.txt — AI-crawler guidance listing published, citation-ready pages.
- * (PRD §7.7: expose structured guidance for AI answer engines.)
+ * (PRD §7.7.) Built from the workspace's own Brand Memory — never a demo brand.
  */
 export async function GET() {
-  const pages = await pageEngineApi.getPublishedPages();
+  const [pages, brand] = await Promise.all([
+    pageEngineApi.getPublishedPages(),
+    api.getBrandMemory().then((b) => b.profile).catch(() => null),
+  ]);
+
+  const company = brand?.company?.trim() || "Our company";
+  const domain = (brand?.domain ?? "").trim().replace(/^https?:\/\//, "").replace(/\/+$/, "");
+  const base = domain ? `https://${domain}` : "";
+  const tagline = brand?.valueProp?.trim();
+
   const lines = [
-    "# Northwind Labs",
-    "> Warehouse-native product analytics with AI that explains why metrics move.",
+    `# ${company}`,
+    ...(tagline ? [`> ${tagline}`] : []),
     "",
     "## Pages",
     ...pages.map((p) => {
-      const url = p.publishedUrl ?? `https://northwindlabs.io/feeds${p.slug}`;
+      const url = p.publishedUrl ?? `${base}/feeds${p.slug}`;
       return `- [${p.title}](${url}): ${p.metaDescription}`;
     }),
-    "",
-    "## Contact",
-    "- Demo: https://northwindlabs.io/demo",
+    ...(brand?.contactEmail ? ["", "## Contact", `- ${brand.contactEmail}`] : []),
   ];
+
   return new Response(lines.join("\n"), {
     headers: { "content-type": "text/plain; charset=utf-8" },
   });

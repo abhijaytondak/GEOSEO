@@ -52,6 +52,7 @@ function Toggle({
 export function PublishingSettings() {
   const { notify } = useAppFeedback();
   const [policy, setPolicy] = useState<PublishingPolicy | null>(null);
+  const [domain, setDomain] = useState<string>("");
   const [loaded, setLoaded] = useState(false);
   const [savingKey, setSavingKey] = useState<keyof PublishingPolicy | null>(null);
 
@@ -61,6 +62,7 @@ export function PublishingSettings() {
     try {
       const settings = await api.getSettings();
       setPolicy(settings.publishing);
+      setDomain((settings.profile?.domain ?? "").trim().replace(/^https?:\/\//, "").replace(/\/+$/, ""));
     } catch {
       setPolicy({ requireApproval: true, autoSitemap: true, autoLlms: true });
     } finally {
@@ -108,7 +110,7 @@ export function PublishingSettings() {
               </span>
               <div className="min-w-0 flex-1">
                 <div className="text-[13.5px] font-semibold text-foreground">Managed subdirectory</div>
-                <div className="font-mono text-[12px] text-muted-foreground">northwindlabs.io/feeds/…</div>
+                <div className="font-mono text-[12px] text-muted-foreground">{(domain || "your-domain.com") + "/feeds/…"}</div>
               </div>
               <span className="rounded-full bg-positive/12 px-2 py-0.5 text-[11px] font-semibold text-positive">Active</span>
             </div>

@@ -662,6 +662,8 @@ export interface WorkspaceSettings {
     domain: string;
     defaultPublishPath: string;
     timezone: string;
+    /** Hosts allowed to submit public leads/events in production (anti-abuse). Empty ⇒ permissive. */
+    allowedDomains?: string[];
   };
   notifications: {
     weeklyDigest: boolean;

@@ -2,12 +2,15 @@ import { CanActivate, ExecutionContext, Inject, Injectable, UnauthorizedExceptio
 import { Reflector } from "@nestjs/core";
 import type { Request } from "express";
 import { IS_PUBLIC_KEY } from "./public.decorator";
+import { authRequired } from "./mode";
 
 /**
- * Bearer-token guard. Dev-permissive by default so the API is curl-able without
- * setup. Set `API_AUTH_REQUIRED=true` to enforce `Authorization: Bearer <token>`
- * matching `DEV_API_TOKEN`. In production this is where Clerk JWT verification +
- * tenant/scope resolution (admin | marketer | analyst) plug in.
+ * Bearer-token guard. Enforcement is **mode-driven + fail-closed** (P0.1): auth is
+ * required whenever `authRequired()` says so — i.e. production/staging always
+ * enforce (you cannot silently leave them open), demo is permissive, and the
+ * explicit `API_AUTH_REQUIRED` flag can force either way. When enforced, requires
+ * `Authorization: Bearer <token>` matching `DEV_API_TOKEN`. In production this is
+ * where Clerk JWT verification + tenant/scope resolution plug in.
  */
 @Injectable()
 export class BearerGuard implements CanActivate {
@@ -20,7 +23,7 @@ export class BearerGuard implements CanActivate {
     ]);
     if (isPublic) return true;
 
-    if (process.env.API_AUTH_REQUIRED !== "true") return true; // dev-permissive
+    if (!authRequired()) return true; // mode-driven: demo open, prod/staging enforce
 
     const expected = process.env.DEV_API_TOKEN;
     // Fail closed: if auth is required but no secret is configured, deny rather

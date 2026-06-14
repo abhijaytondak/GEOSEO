@@ -92,6 +92,19 @@ export class PageEngineStore implements OnModuleInit {
     return parts.join(" ").trim();
   }
 
+  /**
+   * Public URL for a published page. Uses the workspace's OWN domain (PUBLIC_SITE_HOST
+   * or Brand Memory), never a demo brand; falls back to a relative `/feeds` path when
+   * no domain is configured (so output is never stamped with someone else's host).
+   */
+  private publishedUrlFor(slug: string): string {
+    const host = (process.env.PUBLIC_SITE_HOST || this.brand.current()?.domain || "")
+      .trim()
+      .replace(/^https?:\/\//, "")
+      .replace(/\/+$/, "");
+    return host ? `https://${host}/feeds${slug}` : `/feeds${slug}`;
+  }
+
   private snapshot(p: GeneratedPage, changeSummary: string, authorType: PageVersion["authorType"]) {
     this.vseq += 1;
     const list = this.pageVersions[p.id] ?? (this.pageVersions[p.id] = []);
@@ -369,7 +382,7 @@ export class PageEngineStore implements OnModuleInit {
     p.status = status;
     p.updatedAt = this.now;
     if (status === "published") {
-      p.publishedUrl = `https://northwindlabs.io/feeds${p.slug}`;
+      p.publishedUrl = this.publishedUrlFor(p.slug);
       p.publishedAt = this.now;
       p.lastRefreshedAt = this.now;
       this.snapshot(p, "Published", "system");
@@ -569,7 +582,7 @@ export class PageEngineStore implements OnModuleInit {
       email,
       company: input.company?.trim() || "—",
       message: message || "(no message)",
-      sourceUrl: input.sourceUrl ?? page.publishedUrl ?? `https://northwindlabs.io/feeds${page.slug}`,
+      sourceUrl: input.sourceUrl ?? page.publishedUrl ?? this.publishedUrlFor(page.slug),
       utm: input.utm,
       score,
       status: "new",
