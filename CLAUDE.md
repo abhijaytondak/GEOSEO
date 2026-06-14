@@ -29,6 +29,12 @@ in `docs/` (see bottom).
   won't persist there**. Clerk pk/sk passed as build+runtime env. Redeploy: `vercel deploy --prod --yes` from repo
   root (Clerk keys via `--build-env`/`-e` from `apps/web/.env.local`). For a fully-working deploy, host `apps/api`
   (Railway/Render) and set `API_INTERNAL_URL` on the Vercel project.
+- **Live full-stack link (local-backed):** **https://nectar-polo-parameter.ngrok-free.dev** — reserved ngrok tunnel →
+  local web `:3001` (which proxies `/api/v1` → local API `:4000`, real Supabase data, production mode). Fully live
+  while the local web+API+tunnel run. Ephemeral/machine-bound — use Railway for durable.
+- **Durable API host:** `railway.json` (root, Nixpacks, `pnpm --filter @geoseo/api start`, healthcheck `/api/v1/health`)
+  is ready. One human step: `railway login`, then set env from `apps/api/.env` + `railway up`, then point Vercel's
+  `API_INTERNAL_URL` at the Railway URL. Full steps in **`docs/DEPLOY.md`**.
 - **Verify before claiming done:** `tsc --noEmit` in the changed app + a real `curl`/screenshot.
   Restart the API after backend edits (no watch in `pnpm start`).
 
