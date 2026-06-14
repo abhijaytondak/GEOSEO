@@ -76,6 +76,23 @@ export const v = {
     return (value, key) =>
       typeof value === "object" && value !== null && !Array.isArray(value) ? ok(value) : err(`\`${key}\` must be an object`);
   },
+  /**
+   * Deeply-validated nested object against a sub-schema; strips unknown keys.
+   * Composes with `arrayOf` for typed arrays: `v.arrayOf(v.shape({ name: v.string() }))`.
+   */
+  shape(subSchema: Schema): FieldValidator {
+    return (value, key) => {
+      if (typeof value !== "object" || value === null || Array.isArray(value)) return err(`\`${key}\` must be an object`);
+      const source = value as Record<string, unknown>;
+      const out: Record<string, unknown> = {};
+      for (const [k, validator] of Object.entries(subSchema)) {
+        const r = validator(source[k], `${key}.${k}`);
+        if (!r.ok) return r;
+        if (r.value !== undefined) out[k] = r.value;
+      }
+      return ok(out);
+    };
+  },
   optional,
 };
 

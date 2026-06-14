@@ -71,6 +71,13 @@ Then Phase 4 security/scale foundation (DTO validation, tenant scoping, Clerk JW
 `BearerGuard`, RBAC). The `mode.ts` gate already exists (`GEOSEO_MODE`/`API_AUTH_REQUIRED`).
 
 ## Done recently (don't redo)
+- **Input-validation hardening — nested validator + my write endpoints (typecheck+lint clean, curl negative+positive):**
+  added **`v.shape(subSchema)`** to `common/validation.ts` (the previously-missing nested-object validator; composes with
+  `v.arrayOf` for typed arrays). Applied `validateBody` to the raw `@Body()` write endpoints I own: `conversion-audit/run`
+  (`{url}`), `lead-routing` rule create + PATCH (name/enabled/field-enum/operator-enum/value/ownerId), and `site-theme` PUT
+  (nested `colors`/`layout` via `v.shape`, whitelisted patch). Verified: bad enum/missing-field/short-url → 400 with field
+  messages; valid → 200/201. ⚠️ **Tenant scoping + RBAC + backend Clerk JWT verify are intentionally NOT done here** — they're
+  coupled to the in-flight Clerk auth work (sign-in/sign-up/proxy) and `bearer.guard.ts`; coordinate before building them.
 - **Brand Memory — structured product/persona/proof library (typecheck+lint clean, curl + CDP-screenshot-verified):**
   additive `BrandLibraryStore` (`cx_brand_library`, **local types — no `@geoseo/types`/`brand.service` edits**) + `BrandLibraryController`
   (`@Controller("brand-library")`, `GET` + full-replace `PUT`, every field server-sanitized/capped + fallback ids + audit). Frontend:
@@ -201,8 +208,8 @@ Then Phase 4 security/scale foundation (DTO validation, tenant scoping, Clerk JW
   decorator metadata) + `common/schemas.ts` (CreateJob, AlertThresholds, AlertSnooze, ProspectUpdate, BulkProspects).
   Applied via `@Body(validateBody(Schema))` to: jobs create, alerts thresholds+snooze, backlink PATCH+bulk. Strips
   unknown keys, 400s with field errors. smoke has 3 negative tests proving rejections. **To extend §7 to more
-  endpoints, reuse `validateBody` — don't reach for class-validator/zod.** Nested bodies (e.g. settings PUT) need a
-  nested-object validator (not yet built).
+  endpoints, reuse `validateBody` — don't reach for class-validator/zod.** Nested bodies are now supported via
+  `v.shape(subSchema)` (deep-validates a nested object; composes with `v.arrayOf(v.shape({…}))` for typed arrays).
 - **PRD Phase 2 — workflow-completing endpoints (smoke-verified):** `POST /backlink/opportunities/:id/restore`
   (un-archive, pairs with DELETE), `POST /backlink/opportunities/bulk` (`{ids,action:archive|restore|status,status?}`),
   `POST /alerts/:id/snooze` (`{until?}`, 7-day default, auto-expires) + `snoozedUntil` surfaced in the alerts

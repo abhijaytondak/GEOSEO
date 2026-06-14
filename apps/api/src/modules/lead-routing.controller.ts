@@ -1,5 +1,4 @@
 import {
-  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -14,8 +13,30 @@ import { ApiTags } from "@nestjs/swagger";
 import { LeadRoutingStore, type LeadRoutingRule } from "./lead-routing.service";
 import { PageEngineStore } from "./page-engine.service";
 import { LeadAssignmentStore } from "./lead-assignment.service";
+import { validateBody, v } from "../common/validation";
 
 type RuleInput = Omit<LeadRoutingRule, "id">;
+
+const FIELDS = ["score", "company", "spamStatus", "pageTitle"] as const;
+const OPERATORS = ["gte", "lte", "eq", "contains"] as const;
+
+const CreateRuleSchema = {
+  name: v.string({ min: 1, max: 120 }),
+  enabled: v.optional(v.boolean()),
+  field: v.enumOf(FIELDS),
+  operator: v.enumOf(OPERATORS),
+  value: v.string({ max: 200 }),
+  ownerId: v.string({ min: 1, max: 120 }),
+};
+
+const UpdateRuleSchema = {
+  name: v.optional(v.string({ min: 1, max: 120 })),
+  enabled: v.optional(v.boolean()),
+  field: v.optional(v.enumOf(FIELDS)),
+  operator: v.optional(v.enumOf(OPERATORS)),
+  value: v.optional(v.string({ max: 200 })),
+  ownerId: v.optional(v.string({ min: 1, max: 120 })),
+};
 
 @ApiTags("lead-routing")
 @Controller("lead-routing")
@@ -32,13 +53,12 @@ export class LeadRoutingController {
   }
 
   @Post("rules")
-  create(@Body() body: RuleInput) {
-    if (!body?.name?.trim() || !body?.ownerId?.trim()) throw new BadRequestException("name and ownerId are required");
+  create(@Body(validateBody(CreateRuleSchema)) body: RuleInput) {
     return { rule: this.routing.create({ ...body, enabled: body.enabled ?? true }) };
   }
 
   @Patch("rules/:id")
-  update(@Param("id") id: string, @Body() body: Partial<RuleInput>) {
+  update(@Param("id") id: string, @Body(validateBody(UpdateRuleSchema)) body: Partial<RuleInput>) {
     const rule = this.routing.update(id, body);
     if (!rule) throw new NotFoundException(`Rule ${id} not found`);
     return { rule };

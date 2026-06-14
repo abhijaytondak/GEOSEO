@@ -1,6 +1,9 @@
-import { BadRequestException, Body, Controller, Get, Inject, Post } from "@nestjs/common";
+import { Body, Controller, Get, Inject, Post } from "@nestjs/common";
 import { ApiTags } from "@nestjs/swagger";
 import { ConversionAuditStore } from "./conversion-audit.service";
+import { validateBody, v } from "../common/validation";
+
+const RunSchema = { url: v.string({ min: 3, max: 2048 }) };
 
 @ApiTags("conversion-audit")
 @Controller("conversion-audit")
@@ -13,8 +16,7 @@ export class ConversionAuditController {
   }
 
   @Post("run")
-  async run(@Body() body: { url?: string }) {
-    if (!body?.url?.trim()) throw new BadRequestException("url is required");
+  async run(@Body(validateBody(RunSchema)) body: { url: string }) {
     const audit = await this.audit.run(body.url.trim(), new Date().toISOString());
     return { audit };
   }
