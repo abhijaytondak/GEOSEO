@@ -353,7 +353,16 @@ async function main() {
     await check("POST /site-theme/:id/confirm", "POST", `/site-theme/${theme.profile.id}/confirm`, {
       expect: (d) => d.profile?.status === "confirmed",
     });
+    await check("GET /site-theme/:id/fidelity (PRD §13)", "GET", `/site-theme/${theme.profile.id}/fidelity`, {
+      expect: (d) =>
+        typeof d.fidelity?.score === "number" &&
+        ["needs-review", "acceptable", "native-fit"].includes(d.fidelity?.grade) &&
+        Array.isArray(d.fidelity?.breakdown),
+    });
   }
+  await check("GET /site-theme/fidelity (active profile)", "GET", "/site-theme/fidelity", {
+    expect: (d) => typeof d.fidelity?.score === "number" && Array.isArray(d.fidelity?.breakdown),
+  });
   await checkRejects("POST /site-theme/scan blocks localhost (SSRF)", "POST", "/site-theme/scan", { url: "http://localhost:4000" });
   await checkRejects("POST /site-theme/scan blocks private IP (SSRF)", "POST", "/site-theme/scan", { url: "http://169.254.169.254/latest/meta-data" });
 

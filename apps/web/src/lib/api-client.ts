@@ -21,6 +21,7 @@ import type {
   AuthorityOverview,
   Backlink,
   SiteThemeProfile,
+  ThemeFidelity,
   SolutionReadiness,
   BacklinkProspect,
   BrandMemoryVersion,
@@ -343,6 +344,20 @@ export const api = {
     send<{ profile: SiteThemeProfile }>("PUT", `/site-theme/${encodeURIComponent(id)}`, patch).then((d) => d.profile),
   confirmSiteTheme: (id: string) =>
     send<{ profile: SiteThemeProfile }>("POST", `/site-theme/${encodeURIComponent(id)}/confirm`).then((d) => d.profile),
+  getThemeFidelity: (id?: string) =>
+    get<{ themeId: string | null; fidelity: ThemeFidelity }>(
+      id ? `/site-theme/${encodeURIComponent(id)}/fidelity` : "/site-theme/fidelity",
+      () => ({
+        themeId: null,
+        fidelity: {
+          score: 0,
+          grade: "needs-review" as const,
+          breakdown: [],
+          blockers: ["No site theme profile yet."],
+          recommendedAction: "Run a site-theme scan and confirm it.",
+        },
+      }),
+    ),
 
   // global search (PRD — Best-in-Class Global Search)
   search: (q: string, opts?: { type?: string; limit?: number; offset?: number }) => {

@@ -1,7 +1,7 @@
 import { Body, Controller, Get, Inject, Param, Post, Put } from "@nestjs/common";
 import { ApiTags } from "@nestjs/swagger";
 import type { SiteThemeProfile } from "@geoseo/types";
-import { SiteThemeStore } from "./site-theme.service";
+import { SiteThemeStore, computeThemeFidelity } from "./site-theme.service";
 import { JobsStore } from "./jobs.service";
 import { AuditStore } from "./audit.service";
 import { validateBody, v } from "../common/validation";
@@ -57,9 +57,22 @@ export class SiteThemeController {
     return { profile, job: this.jobs.create("settings-sync", `Theme scan: ${body.url}`) };
   }
 
+  /** Theme-fidelity score for the active (latest confirmed) profile — for the page-list badge (PRD §13). */
+  @Get("fidelity")
+  workspaceFidelity() {
+    const theme = this.themes.latest();
+    return { themeId: theme?.id ?? null, fidelity: computeThemeFidelity(theme) };
+  }
+
   @Get(":id")
   get(@Param("id") id: string) {
     return { profile: this.themes.get(id) };
+  }
+
+  /** Theme-fidelity score for a specific profile — how natively pages render to the site (PRD §13). */
+  @Get(":id/fidelity")
+  fidelity(@Param("id") id: string) {
+    return { themeId: id, fidelity: computeThemeFidelity(this.themes.get(id)) };
   }
 
   @Put(":id")

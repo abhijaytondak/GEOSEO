@@ -389,6 +389,16 @@ export interface SiteThemeProfile {
   updatedAt: ISODate;
 }
 
+/** How natively a generated page renders to the customer site (theme PRD §13). */
+export interface ThemeFidelity {
+  /** 0–100. */
+  score: number;
+  grade: "needs-review" | "acceptable" | "native-fit";
+  breakdown: { label: string; score: number }[];
+  blockers: string[];
+  recommendedAction: string;
+}
+
 /** Range-aware aggregate backing the Performance page summary strip. */
 export interface PerformanceOverview {
   range: string;

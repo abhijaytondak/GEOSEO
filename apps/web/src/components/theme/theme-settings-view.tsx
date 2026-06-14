@@ -13,7 +13,7 @@ import {
   Smartphone,
   Sparkles,
 } from "lucide-react";
-import type { SiteThemeProfile } from "@geoseo/types";
+import type { SiteThemeProfile, ThemeFidelity } from "@geoseo/types";
 import { api } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -215,6 +215,8 @@ export function ThemeSettingsView() {
       <div className="grid gap-5 lg:grid-cols-[minmax(0,360px)_minmax(0,1fr)]">
         {/* Detected tokens */}
         <div className="space-y-4">
+          <FidelityPanel key={`${active.id}:${active.status}:${active.updatedAt}`} themeId={active.id} />
+
           <Panel title="Colors">
             <div className="grid grid-cols-2 gap-2.5">
               {COLOR_KEYS.map(({ key, label }) => {
@@ -338,6 +340,76 @@ function Confidence({ value }: { value: number }) {
       <span className={cn("font-semibold tabular-nums", tone)}>{value}</span>
       <span className={cn("text-[11px]", tone)}>· {label}</span>
     </span>
+  );
+}
+
+const GRADE_META: Record<ThemeFidelity["grade"], { label: string; tone: string; bar: string }> = {
+  "native-fit": { label: "Native fit", tone: "text-positive", bar: "bg-positive" },
+  acceptable: { label: "Acceptable", tone: "text-warning", bar: "bg-warning" },
+  "needs-review": { label: "Needs review", tone: "text-destructive", bar: "bg-destructive" },
+};
+
+/** Theme-fidelity score (PRD §13) — how natively generated pages render to the customer site.
+ *  Keyed by the parent on themeId+status+updatedAt, so it remounts (fresh state) on any change. */
+function FidelityPanel({ themeId }: { themeId: string }) {
+  const [fidelity, setFidelity] = useState<ThemeFidelity | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    api
+      .getThemeFidelity(themeId)
+      .then((res) => !cancelled && setFidelity(res.fidelity))
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [themeId]);
+
+  if (!fidelity) {
+    return (
+      <Panel title="Theme fidelity">
+        <div className="flex items-center gap-2 text-[12.5px] text-muted-foreground">
+          <Loader2 className="size-3.5 animate-spin" /> Scoring fit…
+        </div>
+      </Panel>
+    );
+  }
+  const meta = GRADE_META[fidelity.grade];
+  return (
+    <Panel title="Theme fidelity">
+      <div className="flex items-end justify-between">
+        <div className="flex items-baseline gap-1.5">
+          <span className={cn("text-3xl font-bold tabular-nums leading-none", meta.tone)}>{fidelity.score}</span>
+          <span className="text-[12px] text-muted-foreground">/ 100</span>
+        </div>
+        <span className={cn("rounded-full bg-muted px-2 py-0.5 text-[11px] font-semibold", meta.tone)}>{meta.label}</span>
+      </div>
+      <p className="mt-1.5 text-[12px] leading-relaxed text-muted-foreground">{fidelity.recommendedAction}</p>
+
+      <div className="mt-3 space-y-2">
+        {fidelity.breakdown.map((b) => (
+          <div key={b.label}>
+            <div className="flex items-center justify-between text-[11.5px]">
+              <span className="text-muted-foreground">{b.label}</span>
+              <span className="font-medium tabular-nums text-foreground">{b.score}</span>
+            </div>
+            <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-muted">
+              <div className={cn("h-full rounded-full", b.score >= 80 ? "bg-positive" : b.score >= 60 ? "bg-warning" : "bg-destructive")} style={{ width: `${Math.max(0, Math.min(100, b.score))}%` }} />
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {fidelity.blockers.length > 0 && (
+        <ul className="mt-3 space-y-1 border-t border-border pt-2.5">
+          {fidelity.blockers.map((b, i) => (
+            <li key={i} className="flex gap-1.5 text-[11.5px] text-warning">
+              <span aria-hidden>⚠</span>
+              <span>{b}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </Panel>
   );
 }
 

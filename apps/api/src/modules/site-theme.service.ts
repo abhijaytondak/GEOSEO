@@ -1,7 +1,57 @@
 import { Injectable, NotFoundException, OnModuleInit } from "@nestjs/common";
-import type { SiteThemeProfile } from "@geoseo/types";
+import type { SiteThemeProfile, ThemeFidelity } from "@geoseo/types";
 import { DocStore } from "../db/db";
 import { safeFetchText } from "../common/ssrf";
+
+const present = (xs: unknown[]) => Math.round((xs.filter(Boolean).length / xs.length) * 100);
+
+/**
+ * Theme-fidelity score (theme PRD §13): how natively a page rendered with this
+ * profile will match the customer site. Derived from token completeness +
+ * extraction confidence, scaled by confirmation status. Pure + reusable.
+ */
+export function computeThemeFidelity(theme: SiteThemeProfile | null): ThemeFidelity {
+  if (!theme) {
+    return {
+      score: 0,
+      grade: "needs-review",
+      breakdown: [],
+      blockers: ["No site theme profile — scan and confirm the customer's site theme."],
+      recommendedAction: "Run a site-theme scan and confirm it so pages render in the customer's brand.",
+    };
+  }
+  const c = theme.colors ?? ({} as SiteThemeProfile["colors"]);
+  const t = theme.typography ?? ({} as SiteThemeProfile["typography"]);
+  const l = theme.layout ?? ({} as SiteThemeProfile["layout"]);
+  const comp = theme.components ?? ({} as SiteThemeProfile["components"]);
+
+  const colorMatch = present([c.primary, c.background, c.foreground, c.border, c.accent]);
+  const typographyMatch = present([t.headingFont, t.bodyFont, t.scale?.length]);
+  const layoutMatch = present([l.maxWidth, l.radius, l.sectionSpacing, l.headerStyle]);
+  const componentMatch = present([comp.button, comp.card, comp.input]);
+  const confidence = theme.confidence ?? 0;
+
+  const base = colorMatch * 0.3 + typographyMatch * 0.25 + layoutMatch * 0.2 + componentMatch * 0.15 + confidence * 0.1;
+  const mult = theme.status === "confirmed" ? 1 : theme.status === "draft" ? 0.85 : 0.7;
+  const score = Math.max(0, Math.min(100, Math.round(base * mult)));
+
+  const breakdown = [
+    { label: "Color match", score: colorMatch },
+    { label: "Typography match", score: typographyMatch },
+    { label: "Spacing & layout", score: layoutMatch },
+    { label: "Component styles", score: componentMatch },
+    { label: "Extraction confidence", score: confidence },
+  ];
+  const blockers = theme.status !== "confirmed" ? ["Theme not confirmed — confirm it to publish at full fidelity."] : [];
+  const grade: ThemeFidelity["grade"] = score >= 80 ? "native-fit" : score >= 60 ? "acceptable" : "needs-review";
+  const recommendedAction =
+    grade === "native-fit"
+      ? "Pages will render natively to the customer's site."
+      : grade === "acceptable"
+        ? "Acceptable fit — refine theme tokens for a closer match before publishing."
+        : "Needs review — rescan/confirm the theme and fill missing tokens before publishing.";
+  return { score, grade, breakdown, blockers, recommendedAction };
+}
 
 type ThemeState = { profiles: Record<string, SiteThemeProfile>; seq: number };
 
@@ -72,6 +122,12 @@ export class SiteThemeStore implements OnModuleInit {
     const profile = this.profiles[id];
     if (!profile) throw new NotFoundException(`No site theme profile '${id}'`);
     return profile;
+  }
+
+  /** The active profile — most recent confirmed, else most recent overall. */
+  latest(): SiteThemeProfile | null {
+    const all = this.list();
+    return all.find((p) => p.status === "confirmed") ?? all[0] ?? null;
   }
 
   /** SSRF-guarded scan → heuristic draft profile. */
