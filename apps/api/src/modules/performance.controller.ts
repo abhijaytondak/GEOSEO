@@ -129,12 +129,25 @@ export class PerformanceController {
 
   @Get("rank-series")
   async rankSeries() {
-    return { series: await this.seo.getRankSeries() };
+    // Real Search Console daily positions when GSC is connected; heuristic mock otherwise.
+    const rows = await this.gsc.searchAnalytics("quarter", "date");
+    if (rows && rows.length) {
+      const series = [...rows].sort((a, b) => a.key.localeCompare(b.key)).map((r) => ({ date: r.key, rank: r.position }));
+      return { series, source: "gsc" as const };
+    }
+    return { series: await this.seo.getRankSeries(), source: "heuristic" as const };
   }
 
   @Get("impression-series")
   async impressionSeries() {
-    return { series: await this.seo.getImpressionSeries() };
+    const rows = await this.gsc.searchAnalytics("quarter", "date");
+    if (rows && rows.length) {
+      const series = [...rows]
+        .sort((a, b) => a.key.localeCompare(b.key))
+        .map((r) => ({ date: r.key, impressions: r.impressions, clicks: r.clicks }));
+      return { series, source: "gsc" as const };
+    }
+    return { series: await this.seo.getImpressionSeries(), source: "heuristic" as const };
   }
 
   @Get("ai-visibility")

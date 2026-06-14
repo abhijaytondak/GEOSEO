@@ -98,6 +98,14 @@ async function main() {
   });
   await check("GET /performance/domain-health", "GET", "/performance/domain-health", { expect: (d) => typeof d.score === "number" });
   await check("GET /performance/pages", "GET", "/performance/pages?limit=5", { expect: (d) => Array.isArray(d.pages) });
+  // Time-series back GSC when connected, heuristic mock otherwise — source reports which.
+  await check("GET /performance/rank-series (source-labeled)", "GET", "/performance/rank-series", {
+    expect: (d) => Array.isArray(d.series) && d.series.every((p) => typeof p.rank === "number") && ["gsc", "heuristic"].includes(d.source),
+  });
+  await check("GET /performance/impression-series (source-labeled)", "GET", "/performance/impression-series", {
+    expect: (d) =>
+      Array.isArray(d.series) && d.series.every((p) => typeof p.impressions === "number") && ["gsc", "heuristic"].includes(d.source),
+  });
 
   group("Jobs lifecycle");
   const job = await check("POST /jobs (create)", "POST", "/jobs", {
