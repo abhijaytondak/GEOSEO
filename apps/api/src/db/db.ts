@@ -1,4 +1,5 @@
 import postgres from "postgres";
+import { DEFAULT_TENANT_ID } from "../common/tenant";
 
 /**
  * Postgres (Supabase) client. Null when DATABASE_URL is unset, so the app
@@ -127,6 +128,35 @@ export class DocStore<S> {
     void upsert(this.table, "state", state).catch((e) =>
       // eslint-disable-next-line no-console
       console.error(`[${this.table}] persist failed:`, (e as Error).message),
+    );
+  }
+
+  /* --- Multi-tenant groundwork (docs/MULTI-TENANCY.md) ---
+   * Per-tenant rows live in the SAME entity table under a tenant-scoped id; the
+   * default tenant maps to the legacy "state" row so existing data needs no
+   * migration. These are additive — adopt them per-store as services start
+   * threading `tenantId` (from `req.tenantId`); the single-doc API above is the
+   * `ws-default` special case. */
+
+  /** Row id for a tenant's document. `ws-default` → the legacy "state" row. */
+  static tenantRowId(tenantId: string): string {
+    return tenantId === DEFAULT_TENANT_ID ? "state" : `t:${tenantId}`;
+  }
+
+  /** Hydrate a specific tenant's document (ensures the table exists). */
+  async loadForTenant(tenantId: string): Promise<S | null> {
+    if (!sql) return null;
+    await ensureTable(this.table);
+    this.ready = true;
+    return loadDoc<S>(this.table, DocStore.tenantRowId(tenantId));
+  }
+
+  /** Write-through a specific tenant's document (fire-and-forget). */
+  saveForTenant(tenantId: string, state: S): void {
+    if (!sql) return;
+    void upsert(this.table, DocStore.tenantRowId(tenantId), state).catch((e) =>
+      // eslint-disable-next-line no-console
+      console.error(`[${this.table}:${tenantId}] persist failed:`, (e as Error).message),
     );
   }
 }

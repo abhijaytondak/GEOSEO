@@ -94,9 +94,10 @@ same shape: env-gated, **return null/[] on any failure → safe fallback**, neve
 - 🟢 **Theme fidelity score** in the page list + component-level matching; dark-theme card handling on `/feeds`.
 
 **Lane boundaries (do NOT clobber):**
-- The **other account owns auth/tenant**: Clerk JWT verify in `bearer.guard.ts` (currently static `DEV_API_TOKEN`),
-  and the **deferred big rock — multi-tenant isolation + RBAC** (hardcoded `ws-default` + single-doc stores → thread
-  workspace-id from the Clerk session into every store key). This is the next major milestone; follow the auth landing.
+- The **other account owns auth**: Clerk JWT verify in `bearer.guard.ts` (currently static `DEV_API_TOKEN`) — when it
+  lands it sets `req.auth.orgId`, which the tenant layer already consumes. **Multi-tenant isolation groundwork is now
+  landed** (tenant context + guard + per-tenant `DocStore` primitive — see `docs/MULTI-TENANCY.md`); the remaining
+  per-store migration + RLS-by-tenant + RBAC is incremental and follows the auth landing.
 - Tasks **#38** (Authority HQ Phase 2/3 + search analytics) and **#48** (topbar 375px overflow) are the other account's.
 - The earlier Global Search / Authority HQ / route-state PRD phases are largely DONE (see "Done recently").
 
@@ -104,6 +105,16 @@ same shape: env-gated, **return null/[] on any failure → safe fallback**, neve
 Vercel demo runs the real backend (with these seams active) instead of the mock fallback.
 
 ## Done recently (don't redo)
+- **Multi-tenant isolation — groundwork (additive, behavior-unchanged; typecheck+smoke 95/95, curl-verified):**
+  request-side tenant context is now in place so the per-store migration can proceed incrementally (full plan in
+  **`docs/MULTI-TENANCY.md`**). `common/tenant.ts` (`DEFAULT_TENANT_ID="ws-default"`, `resolveTenantId(req)` precedence:
+  `req.tenantId` → Clerk `req.auth.orgId` → `x-workspace-id` header → default; `normalizeTenantId`) + **`TenantGuard`**
+  (first `APP_GUARD`, attaches `req.tenantId`, always allows). `DocStore` gained additive **`loadForTenant`/`saveForTenant`**
+  (+ `tenantRowId`: `ws-default` → the legacy `"state"` row, so **no data migration**; other tenants → `t:<id>` rows in the
+  same table). `GET /tenant/context` verifies resolution (default → `ws-default`; `x-workspace-id: Acme Corp!!` → `acmecorp`).
+  Everything still resolves to `ws-default` today — zero behavior change. **Next (incremental, per docs):** Clerk sets
+  `req.auth.orgId` in `bearer.guard.ts` (other account); thread `tenantId` into services; convert stores to per-tenant maps;
+  RLS-by-tenant; RBAC. ⚠️ The DocStore per-tenant rows are DB-path code — verify against the real DB once Supabase resolves.
 - **Theme-fidelity badge in the Pages list (PRD §13; finishes the other account's theme-fidelity feature):** the
   fidelity score (`api.getThemeFidelity()` → confirmed-theme `{score, grade, recommendedAction}`) now renders as a chip
   in `pages-view.tsx` header (grade tones: native-fit/acceptable/needs-review), linking to `/theme` — previously it was

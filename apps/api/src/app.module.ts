@@ -73,6 +73,8 @@ import { CrmSyncController } from "./modules/crm-sync.controller";
 import { CrmSyncStore } from "./modules/crm-sync.service";
 import { GscController } from "./modules/gsc.controller";
 import { GscService } from "./modules/gsc.service";
+import { TenantController } from "./modules/tenant.controller";
+import { TenantGuard } from "./common/tenant.guard";
 
 @Module({
   imports: [SeoModule],
@@ -117,6 +119,7 @@ import { GscService } from "./modules/gsc.service";
     ImageGenController,
     CrmSyncController,
     GscController,
+    TenantController,
   ],
   providers: [
     OutreachStore,
@@ -150,6 +153,7 @@ import { GscService } from "./modules/gsc.service";
     ImageGenStore,
     CrmSyncStore,
     GscService,
+    { provide: APP_GUARD, useClass: TenantGuard },
     { provide: APP_GUARD, useClass: BearerGuard },
     { provide: APP_GUARD, useClass: PublicThrottleGuard },
   ],
