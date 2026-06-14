@@ -28,18 +28,18 @@ const AI_SEARCH: SolutionCapability[] = [
 const LEAD_CONVERSION: SolutionCapability[] = [
   { label: "Lead capture (public pages)", status: "built" },
   { label: "Leads dashboard", status: "built" },
-  { label: "Lead detail drawer", status: "built", note: "Overview / journey / activity, screenshot-verified." },
+  { label: "Lead detail drawer", status: "built", note: "Overview / journey / activity / follow-up, screenshot-verified." },
   { label: "Explainable lead scoring", status: "built", note: "fit/intent/engagement/spam-risk + reasons." },
   { label: "Visitor journey tracking", status: "built", note: "Public events → timeline + summary." },
   { label: "Notes & activity timeline", status: "built" },
   { label: "Owner assignment", status: "built", note: "assign / bulk-assign / workload." },
   { label: "Spam & duplicate filtering", status: "partial", note: "Basic regex/email + duplicate labels." },
   { label: "Lead form config", status: "built", note: "Per-workspace/page form builder API + defaults." },
-  { label: "Routing rules", status: "gap" },
+  { label: "Routing rules", status: "built", note: "Field/operator rules + first-match owner assignment + apply-to-unassigned." },
   { label: "Notifications", status: "partial", note: "Rules + evaluation + in-app delivery log; email/Slack/webhook providers stubbed." },
-  { label: "AI SDR follow-up", status: "gap" },
+  { label: "AI SDR follow-up", status: "built", note: "Per-lead draft from Brand Memory + context (DeepSeek; template fallback); copy / mailto." },
   { label: "Meeting booking", status: "gap" },
-  { label: "Website-wide conversion audit", status: "gap" },
+  { label: "Website-wide conversion audit", status: "built", note: "SSRF-guarded page audit → score/grade + 7 findings with fixes." },
   { label: "CRM sync", status: "partial", note: "Placeholder sync action; no real provider/retry/mapping." },
 ];
 

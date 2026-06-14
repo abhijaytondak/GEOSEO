@@ -71,6 +71,22 @@ Then Phase 4 security/scale foundation (DTO validation, tenant scoping, Clerk JW
 `BearerGuard`, RBAC). The `mode.ts` gate already exists (`GEOSEO_MODE`/`API_AUTH_REQUIRED`).
 
 ## Done recently (don't redo)
+- **Lead Conversion — AI-SDR follow-up drafts (typecheck+lint clean, curl + CDP-screenshot-verified):**
+  `LeadFollowupStore` (`cx_lead_followup`, injects `PageEngineStore`+`BrandMemoryStore`) + `LeadFollowupController`
+  (`@Controller("leads")`, `GET/POST /leads/:id/followup`). `generate()` builds a per-lead draft from Brand Memory +
+  the lead's page/message context — tries DeepSeek (OpenAI-compatible, 12s abort, `response_format: json_object`),
+  falls back to a deterministic personalized `templateDraft` when the LLM is unavailable (402/no key), so it always
+  returns a usable draft; drafts persist per-lead. Frontend: new **"Follow-up" tab** in `lead-detail-drawer.tsx`
+  (self-contained `fetch` to avoid the shared client) — generate/regenerate, copy, "Open in email" (mailto), and a
+  template-fallback indicator; loads any persisted draft on open. Registered additively in `app.module`.
+  **Lead Conversion readiness now 83%** (routing rules + follow-up + conversion audit flipped to `built` in
+  `solutions.controller.ts`). Remaining Lead Conversion (key-gated): real CRM sync (HubSpot/Salesforce),
+  meeting booking (Calendly/cal.com), notification delivery providers (SMTP/Slack).
+- **Lead Conversion — routing rules + auto-assign, conversion audit (committed `ab85d5b`):** `LeadRoutingStore`
+  (`cx_lead_routing`) + controller `/lead-routing/rules` CRUD + `POST /apply` (first-match field/operator rule →
+  owner, assigns unassigned via `LeadAssignmentStore`); `ConversionAuditStore` (`cx_conversion_audit`, SSRF-guarded)
+  + `/conversion-audit` + `/conversion-audit/run` → score/grade + 7 findings w/ fixes. Frontend: `/conversion-audit`
+  page + nav link, routing-rules panel on `/leads`.
 - **AI Search engine — mentions + bot tracking + workspace (smoke 85/85 + screenshot-verified):** `AiMentionStore`
   (`cx_ai_mentions`) + `AiBotActivityStore` (`cx_ai_bots`) + `AiSearchController` (`@Controller("ai-search")`):
   `GET/POST /ai-search/mentions`, `POST /ai-search/mentions/check` (heuristic from AI-visibility signals — real
