@@ -7,7 +7,7 @@ import { pageEngineApi } from "@/lib/page-engine-client";
 const inputCls =
   "h-10 w-full rounded-lg border border-border bg-surface-sunken px-3 text-sm outline-none focus:border-ring focus:bg-card";
 
-export function LeadForm({ slug, sourceUrl }: { slug: string; sourceUrl: string }) {
+export function LeadForm({ slug, sourceUrl, brandName = "us" }: { slug: string; sourceUrl: string; brandName?: string }) {
   const [form, setForm] = useState({ name: "", email: "", company: "", message: "" });
   const [state, setState] = useState<"idle" | "sending" | "done" | "error">("idle");
   const [error, setError] = useState("");
@@ -71,7 +71,7 @@ export function LeadForm({ slug, sourceUrl }: { slug: string; sourceUrl: string 
         Request a demo
       </button>
       <p className="mt-2 text-center text-[11px] text-muted-foreground">
-        By submitting you agree to be contacted about Northwind. No spam.
+        By submitting you agree to be contacted about {brandName}. No spam.
       </p>
     </form>
   );

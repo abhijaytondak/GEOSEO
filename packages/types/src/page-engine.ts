@@ -194,7 +194,7 @@ export interface AuditEntry {
   action:
     | "generate" | "edit" | "publish" | "approve" | "reject" | "defer" | "rollback" | "delete"
     | "create" | "update" | "discover" | "archive" | "restore" | "resolve" | "snooze"
-    | "export" | "integration" | "bulk";
+    | "export" | "integration" | "bulk" | "notification";
   entity: "page" | "opportunity" | "blueprint" | "lead" | "prospect" | "alert" | "settings" | "job" | "brand" | "content";
   entityId: string;
   actor: string;

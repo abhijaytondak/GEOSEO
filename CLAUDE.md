@@ -65,6 +65,14 @@ Then Phase 4 security/scale foundation (DTO validation, tenant scoping, Clerk JW
 `BearerGuard`, RBAC). The `mode.ts` gate already exists (`GEOSEO_MODE`/`API_AUTH_REQUIRED`).
 
 ## Done recently (don't redo)
+- **Leads PRD — notification rules + lead-form config (Gap 5 & 11, smoke 79/79):** `LeadNotificationStore`
+  (`cx_lead_notify`): rules CRUD at **`/lead-notification-rules`** (separate base — `/leads/notification-rules`
+  would collide with `/leads/:id`) + `POST /leads/:id/notify` (evaluates enabled rules vs lead score/status/page →
+  records deliveries; email/Slack/webhook channels are logged as in-app until providers connect) + `GET
+  /leads/:id/notifications`. `LeadFormStore` (`cx_lead_forms`, seeded default form): CRUD at `/lead-forms` +
+  `/lead-forms/:id/preview`. Types: `LeadNotificationRule`/`LeadNotification`/`LeadFormConfig`. Client methods on
+  `pageEngineApi` (`send` now allows PATCH). Audit `"notification"` action added. Solutions readiness bumped
+  (Lead Conversion: form config built, notifications partial). Remaining Leads: routing rules, real CRM sync jobs.
 - **Self-serve onboarding journey — live, no-mock (smoke 66/66 + screenshot-verified live crawl):** `OnboardingStore`
   (`cx_onboarding`) + `OnboardingController`: `GET /onboarding/status`, `POST /onboarding/progress`, `POST
   /onboarding/complete` (persists the company's **real workspace identity** to `settings.profile` — replaces seed

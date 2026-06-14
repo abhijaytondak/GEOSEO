@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Orbit } from "lucide-react";
 import { pageEngineApi } from "@/lib/page-engine-client";
+import { api } from "@/lib/api-client";
 import { LeadForm } from "@/components/feeds/lead-form";
 
 export const dynamic = "force-dynamic";
@@ -10,9 +11,13 @@ type Params = { params: Promise<{ slug: string }> };
 
 export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const { slug } = await params;
-  const page = await pageEngineApi.getPublishedBySlug(slug);
+  const [page, memory] = await Promise.all([
+    pageEngineApi.getPublishedBySlug(slug),
+    api.getBrandMemory().catch(() => null),
+  ]);
   if (!page) return { title: "Not found" };
-  const canonical = page.publishedUrl ?? `https://northwindlabs.io/feeds${page.slug}`;
+  const host = memory?.profile.domain?.trim() || "yourdomain.com";
+  const canonical = page.publishedUrl ?? `https://${host}/feeds${page.slug}`;
   return {
     title: page.metaTitle,
     description: page.metaDescription,
@@ -28,10 +33,15 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
 
 export default async function FeedPage({ params }: Params) {
   const { slug } = await params;
-  const page = await pageEngineApi.getPublishedBySlug(slug);
+  const [page, memory] = await Promise.all([
+    pageEngineApi.getPublishedBySlug(slug),
+    api.getBrandMemory().catch(() => null),
+  ]);
   if (!page) notFound();
 
-  const canonical = page.publishedUrl ?? `https://northwindlabs.io/feeds${page.slug}`;
+  const brandName = memory?.profile.company?.trim() || "Your Brand";
+  const host = memory?.profile.domain?.trim() || "yourdomain.com";
+  const canonical = page.publishedUrl ?? `https://${host}/feeds${page.slug}`;
 
   return (
     <div className="min-h-dvh bg-canvas">
@@ -44,7 +54,7 @@ export default async function FeedPage({ params }: Params) {
           <span className="flex size-7 items-center justify-center rounded-[8px] bg-brand text-brand-foreground">
             <Orbit className="size-4" strokeWidth={2.25} />
           </span>
-          <span className="text-[14px] font-semibold tracking-tight text-foreground">Northwind Labs</span>
+          <span className="text-[14px] font-semibold tracking-tight text-foreground">{brandName}</span>
           <span className="ml-auto rounded-full bg-brand/10 px-2 py-0.5 text-[11px] font-semibold text-brand">
             {page.pageType}
           </span>
@@ -92,13 +102,13 @@ export default async function FeedPage({ params }: Params) {
 
         {/* sticky lead capture */}
         <aside className="lg:sticky lg:top-12 lg:self-start">
-          <LeadForm slug={page.slug} sourceUrl={canonical} />
+          <LeadForm slug={page.slug} sourceUrl={canonical} brandName={brandName} />
         </aside>
       </main>
 
       <footer className="border-t border-border">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-5 text-[12px] text-muted-foreground">
-          <span>© Northwind Labs</span>
+          <span>© {brandName}</span>
           <a href="https://developer.puter.com" target="_blank" rel="noreferrer" className="hover:text-foreground">
             Powered by Puter
           </a>

@@ -236,7 +236,40 @@ async function main() {
     await check("POST /leads/:id/recalculate-score", "POST", `/leads/${firstLead.id}/recalculate-score`, {
       expect: (d) => typeof d.score?.fit === "number" && typeof d.score?.intent === "number" && typeof d.score?.spamRisk === "number",
     });
+
+    // notification rules (Gap 5)
+    const rule = await check("POST /lead-notification-rules", "POST", "/lead-notification-rules", {
+      body: { name: "Smoke high-fit", channels: ["in_app", "slack"], minScore: 1 },
+      expect: (d) => d.rule?.id && d.rule?.enabled === true,
+    });
+    await check("GET /lead-notification-rules", "GET", "/lead-notification-rules", { expect: (d) => Array.isArray(d.rules) && d.rules.length > 0 });
+    await check("POST /leads/:id/notify (evaluates rules)", "POST", `/leads/${firstLead.id}/notify`, {
+      expect: (d) => Array.isArray(d.delivered) && d.delivered.length >= 1 && typeof d.evaluated === "number",
+    });
+    await check("GET /leads/:id/notifications", "GET", `/leads/${firstLead.id}/notifications`, {
+      expect: (d) => Array.isArray(d.notifications) && d.notifications.length >= 1,
+    });
+    if (rule?.rule?.id) {
+      await check("PATCH /lead-notification-rules/:id", "PATCH", `/lead-notification-rules/${rule.rule.id}`, { body: { enabled: false }, expect: (d) => d.rule?.enabled === false });
+      await check("DELETE /lead-notification-rules/:id", "DELETE", `/lead-notification-rules/${rule.rule.id}`, { expect: (d) => d.deleted === true });
+    }
+    await checkRejects("POST /lead-notification-rules validates name", "POST", "/lead-notification-rules", { channels: ["in_app"] });
   }
+
+  group("Lead form config (Gap 11)");
+  await check("GET /lead-forms (seeded default)", "GET", "/lead-forms", {
+    expect: (d) => Array.isArray(d.forms) && d.forms.some((f) => f.id === "form-default"),
+  });
+  const form = await check("POST /lead-forms", "POST", "/lead-forms", {
+    body: { name: "Smoke form", ctaText: "Talk to us" },
+    expect: (d) => d.form?.id && d.form?.ctaText === "Talk to us" && Array.isArray(d.form?.fields),
+  });
+  if (form?.form?.id) {
+    await check("PATCH /lead-forms/:id", "PATCH", `/lead-forms/${form.form.id}`, { body: { consentRequired: true }, expect: (d) => d.form?.consentRequired === true });
+    await check("POST /lead-forms/:id/preview", "POST", `/lead-forms/${form.form.id}/preview`, { expect: (d) => d.form?.id === form.form.id });
+    await check("DELETE /lead-forms/:id", "DELETE", `/lead-forms/${form.form.id}`, { expect: (d) => d.deleted === true });
+  }
+  await checkRejects("POST /lead-forms validates name", "POST", "/lead-forms", { ctaText: "x" });
 
   group("Search");
   await check("GET /search?q=segment", "GET", "/search?q=segment", { expect: (d) => Array.isArray(d.results) });

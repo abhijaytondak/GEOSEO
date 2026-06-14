@@ -191,6 +191,62 @@ export interface LeadScore {
   recommendedAction: string;
 }
 
+export type LeadNotificationChannel = "in_app" | "email" | "slack" | "webhook";
+
+/** Routing/alerting rule for inbound leads (Leads PRD §11 / Gap 5). */
+export interface LeadNotificationRule {
+  id: string;
+  workspaceId: string;
+  name: string;
+  enabled: boolean;
+  channels: LeadNotificationChannel[];
+  /** Only notify for leads at/above this score. */
+  minScore?: number;
+  /** Only notify for these lead statuses. */
+  statuses?: string[];
+  /** Only notify for leads from these page ids. */
+  pages?: string[];
+  ownerOnly?: boolean;
+  quietHours?: { start: string; end: string; timezone: string };
+}
+
+/** A delivered (or suppressed) notification for a lead. */
+export interface LeadNotification {
+  id: string;
+  leadId: string;
+  ruleId?: string;
+  channels: LeadNotificationChannel[];
+  message: string;
+  status: "sent" | "suppressed";
+  createdAt: ISODate;
+}
+
+export type LeadFormFieldType = "text" | "email" | "phone" | "textarea" | "select" | "checkbox" | "hidden";
+
+export interface LeadFormField {
+  id: string;
+  type: LeadFormFieldType;
+  label: string;
+  required: boolean;
+  options?: string[];
+}
+
+/** Per-workspace / per-page lead capture form configuration (Leads PRD §11 / Gap 11). */
+export interface LeadFormConfig {
+  id: string;
+  workspaceId: string;
+  pageId?: string;
+  name: string;
+  fields: LeadFormField[];
+  ctaText: string;
+  thankYouTitle: string;
+  thankYouBody: string;
+  consentRequired: boolean;
+  consentText?: string;
+  spamProtection: { honeypot: boolean; rateLimit: boolean; disposableEmailCheck: boolean };
+  styleMode: "geoseo_default" | "match_page_theme";
+}
+
 export type LeadJourneyEventType =
   | "page_view"
   | "cta_click"

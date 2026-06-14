@@ -15,9 +15,12 @@ import type {
   LeadActivity,
   LeadActivityType,
   LeadAssignment,
+  LeadFormConfig,
   LeadJourneyEvent,
   LeadJourneyEventType,
   LeadJourneySummary,
+  LeadNotification,
+  LeadNotificationRule,
   LeadScore,
   LeadStatus,
   PageBlueprint,
@@ -84,7 +87,7 @@ async function get<T>(path: string, fallback: () => Promise<T> | T): Promise<T> 
   return body.data;
 }
 
-async function send<T>(method: "POST" | "PUT" | "DELETE", path: string, body?: unknown): Promise<T> {
+async function send<T>(method: "POST" | "PUT" | "PATCH" | "DELETE", path: string, body?: unknown): Promise<T> {
   const res = await fetch(`${base()}${path}`, {
     method,
     headers: { "content-type": "application/json", accept: "application/json", ...authHeaders() },
@@ -184,6 +187,26 @@ export const pageEngineApi = {
     })).then((d) => d.score),
   recalculateLeadScore: (id: string) =>
     send<{ score: LeadScore }>("POST", `/leads/${id}/recalculate-score`).then((d) => d.score),
+
+  // notification rules + delivery (Gap 5)
+  getNotificationRules: () =>
+    get<{ rules: LeadNotificationRule[] }>("/lead-notification-rules", () => ({ rules: [] })).then((d) => d.rules),
+  createNotificationRule: (rule: Partial<LeadNotificationRule> & { name: string }) =>
+    send<{ rule: LeadNotificationRule }>("POST", "/lead-notification-rules", rule).then((d) => d.rule),
+  updateNotificationRule: (id: string, patch: Partial<LeadNotificationRule>) =>
+    send<{ rule: LeadNotificationRule }>("PATCH", `/lead-notification-rules/${id}`, patch).then((d) => d.rule),
+  deleteNotificationRule: (id: string) => send<{ id: string; deleted: boolean }>("DELETE", `/lead-notification-rules/${id}`),
+  notifyLead: (id: string) => send<{ delivered: LeadNotification[]; evaluated: number }>("POST", `/leads/${id}/notify`),
+  getLeadNotifications: (id: string) =>
+    get<{ notifications: LeadNotification[] }>(`/leads/${id}/notifications`, () => ({ notifications: [] })).then((d) => d.notifications),
+
+  // lead form config (Gap 11)
+  getLeadForms: () => get<{ forms: LeadFormConfig[] }>("/lead-forms", () => ({ forms: [] })).then((d) => d.forms),
+  createLeadForm: (form: Partial<LeadFormConfig> & { name: string }) =>
+    send<{ form: LeadFormConfig }>("POST", "/lead-forms", form).then((d) => d.form),
+  updateLeadForm: (id: string, patch: Partial<LeadFormConfig>) =>
+    send<{ form: LeadFormConfig }>("PATCH", `/lead-forms/${id}`, patch).then((d) => d.form),
+  deleteLeadForm: (id: string) => send<{ id: string; deleted: boolean }>("DELETE", `/lead-forms/${id}`),
   approveOpportunity: (id: string) =>
     send<KeywordOpportunity>("POST", `/opportunities/${id}/approve`),
   rejectOpportunity: (id: string) =>
