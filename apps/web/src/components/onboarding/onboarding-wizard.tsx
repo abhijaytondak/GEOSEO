@@ -69,6 +69,10 @@ export function OnboardingWizard() {
   const [discovering, setDiscovering] = useState(false);
   const [discovered, setDiscovered] = useState<KeywordOpportunity[]>([]);
 
+  const [theme, setTheme] = useState<{ colors: { primary: string; accent?: string; muted?: string }; confidence: number } | null>(null);
+  const [integrations, setIntegrations] = useState<string[]>(["search-console"]);
+  const [launching, setLaunching] = useState(false);
+
   // Drive the scan checklist while a scan is running.
   useEffect(() => {
     if (!scanning) return;
@@ -96,6 +100,11 @@ export function OnboardingWizard() {
     try {
       const d = await pageEngineApi.extractBrand(url.trim());
       applyDraft(d);
+      // Best-effort visual theme scan (same SSRF-guarded crawl) — never blocks the flow.
+      api
+        .scanSiteTheme(url.trim())
+        .then((r) => setTheme({ colors: r.profile.colors, confidence: r.profile.confidence }))
+        .catch(() => {});
       setStep(1);
       notify({ kind: "success", title: "Site scanned", message: `Drafted Brand Memory from ${d.source}.` });
     } catch (err) {
@@ -182,6 +191,26 @@ export function OnboardingWizard() {
       notify({ kind: "error", title: "Discovery failed", message: err instanceof Error ? err.message : "Try again." });
     } finally {
       setDiscovering(false);
+    }
+  }
+
+  // Finalize: persist the company's real workspace identity + requested access,
+  // and mark the workspace onboarded (live APIs — no mock identity).
+  async function finishOnboarding() {
+    setLaunching(true);
+    try {
+      await api.completeOnboarding({
+        workspaceName: brand.company || domain.split(".")[0],
+        domain,
+        websiteUrl: url.trim() || `https://${domain}`,
+        requestedIntegrations: integrations,
+      });
+      notify({ kind: "success", title: "Workspace ready", message: `${brand.company || domain} is live on GEOSEO.` });
+    } catch (err) {
+      notify({ kind: "error", title: "Couldn't finalize setup", message: err instanceof Error ? err.message : "Try again." });
+    } finally {
+      setLaunching(false);
+      setStep(5);
     }
   }
 
@@ -296,6 +325,17 @@ export function OnboardingWizard() {
             </div>
             <h2 className="mt-3 text-[18px] font-semibold text-foreground">Review your Brand Memory</h2>
             <p className="mt-1 text-[13.5px] text-muted-foreground">Refine the AI-extracted draft before generation.</p>
+            {theme && (
+              <div className="mt-3 flex items-center gap-3 rounded-xl border border-border bg-surface-sunken p-2.5">
+                <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">Detected theme</span>
+                <div className="flex items-center gap-1.5">
+                  {[theme.colors.primary, theme.colors.accent, theme.colors.muted].filter(Boolean).map((c, i) => (
+                    <span key={i} className="size-5 rounded-md border border-border" style={{ backgroundColor: c as string }} title={c as string} />
+                  ))}
+                </div>
+                <span className="ml-auto text-[11.5px] text-muted-foreground">{theme.confidence}% confident</span>
+              </div>
+            )}
             <div className="mt-4 space-y-3">
               <div>
                 <label className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">Company</label>
@@ -364,6 +404,44 @@ export function OnboardingWizard() {
                   <Toggle on={publishing[row.key]} onChange={(v) => setPublishing((p) => ({ ...p, [row.key]: v }))} />
                 </div>
               ))}
+            </div>
+
+            {/* Access & integrations to unlock full functionality */}
+            <div className="mt-4">
+              <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">
+                Connect access (unlocks live data)
+              </div>
+              <p className="mt-0.5 text-[11.5px] text-muted-foreground">
+                Pick what to connect so GEOSEO can analyse your real search, traffic, and pipeline. You&apos;ll authorize each after setup.
+              </p>
+              <div className="mt-2 space-y-2">
+                {([
+                  { id: "search-console", label: "Google Search Console", hint: "Real rankings, impressions & clicks" },
+                  { id: "webflow", label: "CMS / Website (Webflow, WordPress…)", hint: "Publish pages into your site" },
+                  { id: "hubspot", label: "CRM (HubSpot, Salesforce…)", hint: "Sync captured leads to your pipeline" },
+                ]).map((row) => {
+                  const on = integrations.includes(row.id);
+                  return (
+                    <button
+                      key={row.id}
+                      type="button"
+                      onClick={() => setIntegrations((cur) => (on ? cur.filter((x) => x !== row.id) : [...cur, row.id]))}
+                      className={cn(
+                        "flex w-full items-center gap-3 rounded-xl border p-3 text-left transition-colors",
+                        on ? "border-brand bg-brand/5" : "border-border hover:bg-muted",
+                      )}
+                    >
+                      <span className={cn("flex size-5 shrink-0 items-center justify-center rounded-md border", on ? "border-brand bg-brand text-white" : "border-border")}>
+                        {on && <Check className="size-3.5" />}
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-[13px] font-medium text-foreground">{row.label}</span>
+                        <span className="block text-[11.5px] text-muted-foreground">{row.hint}</span>
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
 
             <div className="mt-5 flex justify-between">
@@ -444,7 +522,10 @@ export function OnboardingWizard() {
             )}
             <div className="mt-5 flex justify-between">
               <Button variant="ghost" className="h-10" onClick={() => setStep(3)}><ArrowLeft className="size-4" /> Add more seeds</Button>
-              <Button className="h-10 rounded-full px-5" onClick={() => setStep(5)}>Continue <ArrowRight className="size-4" /></Button>
+              <Button className="h-10 rounded-full px-5" disabled={launching} onClick={finishOnboarding}>
+                {launching ? <Loader2 className="size-4 animate-spin" /> : <ArrowRight className="size-4" />}
+                Finish setup
+              </Button>
             </div>
           </div>
         )}

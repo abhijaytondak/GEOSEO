@@ -241,6 +241,23 @@ async function main() {
   group("Search");
   await check("GET /search?q=segment", "GET", "/search?q=segment", { expect: (d) => Array.isArray(d.results) });
 
+  group("Onboarding journey");
+  await check("GET /onboarding/status", "GET", "/onboarding/status", {
+    expect: (d) => d.onboarding && typeof d.onboarding.completed === "boolean" && d.onboarding.steps,
+  });
+  // Capture the real workspace profile so this destructive test can restore it.
+  const savedProfile = (await req("GET", "/settings")).json?.data?.settings?.profile;
+  await check("POST /onboarding/complete (persists workspace identity + onboarded)", "POST", "/onboarding/complete", {
+    body: { workspaceName: "Smoke Co", domain: "smoke.test", websiteUrl: "https://smoke.test", requestedIntegrations: ["search-console"] },
+    expect: (d) => d.onboarding?.completed === true && d.settings?.profile?.workspaceName === "Smoke Co" && d.settings?.profile?.domain === "smoke.test",
+  });
+  await check("GET /onboarding/status reflects completion", "GET", "/onboarding/status", {
+    expect: (d) => d.onboarding?.completed === true && d.onboarding?.workspaceName === "Smoke Co",
+  });
+  await checkRejects("POST /onboarding/complete validates required fields", "POST", "/onboarding/complete", { domain: "x" });
+  // Restore the original workspace identity so smoke isn't destructive.
+  if (savedProfile) await req("PUT", "/settings", { profile: savedProfile });
+
   group("Solution readiness (Solution Parity PRD)");
   await check("GET /solutions/readiness", "GET", "/solutions/readiness", {
     expect: (d) =>

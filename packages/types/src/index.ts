@@ -93,6 +93,28 @@ export interface AuthorityOverview {
   momentum: AuthorityMomentum;
 }
 
+/* ----------------- Onboarding journey (self-serve company setup) */
+
+export interface OnboardingStatus {
+  completed: boolean;
+  /** Company / workspace identity captured during setup. */
+  workspaceName?: string;
+  domain?: string;
+  websiteUrl?: string;
+  /** Integrations the company asked to connect (real OAuth wired later). */
+  requestedIntegrations: string[];
+  /** Which setup steps have been finished. */
+  steps: {
+    websiteScanned: boolean;
+    brandSaved: boolean;
+    themeScanned: boolean;
+    publishingConfigured: boolean;
+    opportunitiesSeeded: boolean;
+  };
+  completedAt?: ISODate;
+  startedAt?: ISODate;
+}
+
 /* ----------------- Solution readiness (Solution Parity PRD §13 Phase 1) */
 
 export type SolutionStatus = "available" | "partial" | "planned";

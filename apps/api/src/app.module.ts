@@ -38,6 +38,8 @@ import { LeadAssignmentStore } from "./modules/lead-assignment.service";
 import { LeadScoreController } from "./modules/lead-score.controller";
 import { LeadScoreStore } from "./modules/lead-score.service";
 import { SolutionsController } from "./modules/solutions.controller";
+import { OnboardingController } from "./modules/onboarding.controller";
+import { OnboardingStore } from "./modules/onboarding.service";
 import { PublicThrottleGuard } from "./common/public-throttle.guard";
 import {
   OpportunitiesController,
@@ -81,6 +83,7 @@ import { PageEngineStore } from "./modules/page-engine.service";
     LeadAssignmentController,
     LeadScoreController,
     SolutionsController,
+    OnboardingController,
   ],
   providers: [
     OutreachStore,
@@ -100,6 +103,7 @@ import { PageEngineStore } from "./modules/page-engine.service";
     LeadJourneyStore,
     LeadAssignmentStore,
     LeadScoreStore,
+    OnboardingStore,
     { provide: APP_GUARD, useClass: BearerGuard },
     { provide: APP_GUARD, useClass: PublicThrottleGuard },
   ],

@@ -28,6 +28,7 @@ import type {
   JobRun,
   JobType,
   KpiMetric,
+  OnboardingStatus,
   OutreachTemplate,
   PerformanceOverview,
   ProspectUpdate,
@@ -259,6 +260,22 @@ export const api = {
   getAuthorityOverview: () => get<AuthorityOverview>("/overview/authority", authorityOverviewFallback),
   getSolutionReadiness: () =>
     get<{ solutions: SolutionReadiness[] }>("/solutions/readiness", () => ({ solutions: [] })).then((d) => d.solutions),
+
+  // onboarding journey
+  getOnboardingStatus: () =>
+    get<{ onboarding: OnboardingStatus }>("/onboarding/status", () => ({
+      onboarding: {
+        completed: false,
+        requestedIntegrations: [],
+        steps: { websiteScanned: false, brandSaved: false, themeScanned: false, publishingConfigured: false, opportunitiesSeeded: false },
+      },
+    })).then((d) => d.onboarding),
+  completeOnboarding: (body: {
+    workspaceName: string;
+    domain: string;
+    websiteUrl?: string;
+    requestedIntegrations?: string[];
+  }) => send<{ onboarding: OnboardingStatus; settings: WorkspaceSettings }>("POST", "/onboarding/complete", body),
   getBacklinks: () =>
     get<{ backlinks: Backlink[] }>("/backlinks", async () => ({ backlinks: await seoProvider.getBacklinks() })).then((d) => d.backlinks),
   getActivity: () =>

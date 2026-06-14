@@ -65,6 +65,16 @@ Then Phase 4 security/scale foundation (DTO validation, tenant scoping, Clerk JW
 `BearerGuard`, RBAC). The `mode.ts` gate already exists (`GEOSEO_MODE`/`API_AUTH_REQUIRED`).
 
 ## Done recently (don't redo)
+- **Self-serve onboarding journey — live, no-mock (smoke 66/66 + screenshot-verified live crawl):** `OnboardingStore`
+  (`cx_onboarding`) + `OnboardingController`: `GET /onboarding/status`, `POST /onboarding/progress`, `POST
+  /onboarding/complete` (persists the company's **real workspace identity** to `settings.profile` — replaces seed
+  Northwind identity — marks requested integrations `needs-attention`, sets onboarded + audit). `OnboardingStatus`
+  type; `api.getOnboardingStatus/completeOnboarding`. Wizard (`onboarding-wizard.tsx`) now: real site crawl
+  (`extractBrand`) + **theme scan** (`scanSiteTheme`, swatches shown) in step 0; **access/integrations capture**
+  (GSC/CMS/CRM) in the publishing step; **Finish setup** calls `completeOnboarding` (identity + access + onboarded).
+  Screenshot-verified: scanning `example.com` → step-1 brand review with theme swatches, live. ⚠️ smoke restores the
+  workspace profile (non-destructive). NOTE: onboarding needs the real API — on the Vercel demo (mock mode) the
+  crawl/scan won't run; works locally (`:4000`) or once `apps/api` is hosted.
 - **Solution Parity PRD — Phase 1 truthful readiness layer (smoke 62/62 + screenshot-verified desktop+mobile):**
   `SolutionReadiness`/`SolutionCapability` types; `SolutionsController` `GET /solutions/readiness` (hand-curated,
   honest, completeness % computed from capability statuses) → AI Search **partial 29%**, Lead Conversion **partial
