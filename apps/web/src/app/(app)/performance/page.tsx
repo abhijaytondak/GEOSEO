@@ -34,12 +34,15 @@ export default async function PerformancePage({
   const activeRange: RangeKey = VALID_RANGES.includes(range as RangeKey) ? (range as RangeKey) : "8w";
   const days = RANGE_DAYS[activeRange];
 
-  const [ranksAll, impressionsAll, aiSignals, pages] = await Promise.all([
+  const [ranksAll, impressionsAll, aiSignals, pages, overview] = await Promise.all([
     api.getRankSeries(),
     api.getImpressionSeries(),
     api.getAiVisibility(),
     api.getTrackedPages(),
+    api.getPerformanceOverview(activeRange),
   ]);
+  // Whether these numbers are real Search Console data or heuristic demo data (honesty: don't pass mock off as live).
+  const isLiveData = overview.source === "gsc";
 
   const ranks = ranksAll.slice(-days);
   const impressions = impressionsAll.slice(-days);
@@ -112,6 +115,20 @@ export default async function PerformancePage({
       />
 
       <div className="space-y-5 p-6 sm:p-8">
+        {/* Data-source badge — distinguishes live Search Console data from heuristic demo data. */}
+        <div className="flex items-center gap-2">
+          <span
+            className={
+              isLiveData
+                ? "inline-flex items-center gap-1.5 rounded-full bg-positive/12 px-2.5 py-1 text-[11.5px] font-medium text-positive"
+                : "inline-flex items-center gap-1.5 rounded-full bg-muted px-2.5 py-1 text-[11.5px] font-medium text-muted-foreground"
+            }
+          >
+            <span className={isLiveData ? "size-1.5 rounded-full bg-positive" : "size-1.5 rounded-full bg-muted-foreground"} />
+            {isLiveData ? "Live · Google Search Console" : "Demo estimate — connect Search Console for live data"}
+          </span>
+        </div>
+
         {/* Insight summary band (§7) */}
         <InsightBand status={perfStatus} headline={perfHeadline} />
 
