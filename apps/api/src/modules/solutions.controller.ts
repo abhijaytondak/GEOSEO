@@ -16,7 +16,7 @@ const AI_SEARCH: SolutionCapability[] = [
   { label: "SERP / AI-answer analysis", status: "gap" },
   { label: "Strategy blueprint", status: "partial" },
   { label: "Page generation", status: "partial" },
-  { label: "Native theme matching", status: "partial", note: "SSRF-guarded theme scan API built; confirm UI + render pending." },
+  { label: "Native theme matching", status: "partial", note: "Scan + confirmation UI + themed desktop/tablet/mobile preview built; published-page token rendering pending." },
   { label: "Publish to /feeds + sitemap + llms.txt", status: "partial" },
   { label: "CMS publishing adapters", status: "gap" },
   { label: "Backlinks / citations", status: "partial", note: "Opportunities + outreach exist; real acquisition pending." },

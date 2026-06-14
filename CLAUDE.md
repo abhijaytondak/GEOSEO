@@ -71,6 +71,16 @@ Then Phase 4 security/scale foundation (DTO validation, tenant scoping, Clerk JW
 `BearerGuard`, RBAC). The `mode.ts` gate already exists (`GEOSEO_MODE`/`API_AUTH_REQUIRED`).
 
 ## Done recently (don't redo)
+- **Page Engine Theme PRD — confirmation UI + themed preview (§7.2/§11.3, typecheck+lint clean, CDP-screenshot-verified desktop+mobile):**
+  new `/theme` route (`app/(app)/theme/page.tsx`) + `components/theme/theme-settings-view.tsx` (all net-new — consumes the
+  existing `api.getSiteThemes/scanSiteTheme/updateSiteTheme/confirmSiteTheme`, **no edits to the contested page-engine files**).
+  First-run scan empty state; status + confidence ("Native fit" ≥80) header; **color swatches, typography sample, layout
+  tokens**; **Edit tokens** mode (inline color/layout edit → `updateSiteTheme`), **Rescan**, **Accept theme** (`confirmSiteTheme`);
+  and a polished **themed preview** (`ThemedPreview`) that renders a full faux landing section — nav/hero/CTAs/feature cards/lead
+  form — using the customer's tokens, with a **desktop/tablet/mobile device toggle**. Nav link added under Page Engine (Palette icon).
+  AI Search readiness "Native theme matching" note bumped (scan+confirm+preview built; published-page token rendering still pending).
+  Remaining theme PRD tail (mostly **contested page-engine files — coordinate**): theme-fidelity score badge in the page list,
+  page `preview`/`duplicate`/`unpublish` endpoints, publishing-modes UI.
 - **Lead Conversion — AI-SDR follow-up drafts (typecheck+lint clean, curl + CDP-screenshot-verified):**
   `LeadFollowupStore` (`cx_lead_followup`, injects `PageEngineStore`+`BrandMemoryStore`) + `LeadFollowupController`
   (`@Controller("leads")`, `GET/POST /leads/:id/followup`). `generate()` builds a per-lead draft from Brand Memory +

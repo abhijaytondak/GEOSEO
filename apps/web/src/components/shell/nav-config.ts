@@ -13,6 +13,7 @@ import {
   LayoutDashboard,
   Boxes,
   Bot,
+  Palette,
   type LucideIcon,
 } from "lucide-react";
 
@@ -45,6 +46,7 @@ export const navSections: NavSection[] = [
       { label: "Pages", href: "/pages", icon: Files },
       { label: "Leads", href: "/leads", icon: Inbox },
       { label: "Conversion Audit", href: "/conversion-audit", icon: Gauge },
+      { label: "Theme", href: "/theme", icon: Palette },
     ],
   },
   {
