@@ -2,6 +2,7 @@ import { Body, Controller, Get, Inject, Param, Post } from "@nestjs/common";
 import { ApiTags } from "@nestjs/swagger";
 import type { LeadJourneyEventType } from "@geoseo/types";
 import { LeadJourneyStore } from "./lead-journey.service";
+import { AiBotActivityStore } from "./ai-search.service";
 import { Public } from "../common/public.decorator";
 import { validateBody, v } from "../common/validation";
 
@@ -22,7 +23,10 @@ const EventSchema = {
 @ApiTags("public")
 @Controller("public")
 export class PublicEventsController {
-  constructor(@Inject(LeadJourneyStore) private readonly journey: LeadJourneyStore) {}
+  constructor(
+    @Inject(LeadJourneyStore) private readonly journey: LeadJourneyStore,
+    @Inject(AiBotActivityStore) private readonly bots: AiBotActivityStore,
+  ) {}
 
   // Rate-limiting handled globally by PublicThrottleGuard (PRD §18).
   @Public()
@@ -43,6 +47,21 @@ export class PublicEventsController {
   ) {
     const event = this.journey.record(body);
     return { event };
+  }
+
+  /**
+   * Records an AI-crawler visit to a published page (AI Search bot analytics).
+   * Classifies the supplied user-agent; no-ops for human/unknown agents. Called
+   * fire-and-forget by the public /feeds renderer.
+   */
+  @Public()
+  @Post("ai-bot-hit")
+  botHit(@Body(validateBody({ userAgent: v.string({ min: 1, max: 1024 }), slug: v.optional(v.string({ max: 256 })), pageId: v.optional(v.string({ max: 128 })) }))
+    body: { userAgent: string; slug?: string; pageId?: string }) {
+    const bot = AiBotActivityStore.classify(body.userAgent);
+    if (!bot) return { recorded: false };
+    const hit = this.bots.record({ bot, url: body.slug ? `/feeds/${body.slug}` : "/feeds", pageId: body.pageId, userAgent: body.userAgent.slice(0, 256) });
+    return { recorded: true, bot, hit };
   }
 }
 

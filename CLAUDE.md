@@ -72,8 +72,9 @@ Then Phase 4 security/scale foundation (DTO validation, tenant scoping, Clerk JW
   for GPTBot/PerplexityBot/ClaudeBot/Google-Extended), `GET /ai-search/overview` (active pages, mentions, bot crawls,
   qualified leads, authority links). Types `AiMention`/`AiBotHit`/`AiSearchOverview`. Frontend `/ai-search` workspace
   (`ai-search-view.tsx`, beta banner + KPI strip + mention check + bot panel) + **AI Search nav link** (Bot icon).
-  Solutions readiness bumped (AI mention tracking + bot analytics → partial). Remaining AI Search: real research
-  (DataForSEO), live citation provider, auto bot-capture on `/feeds`.
+  Solutions readiness bumped. **Auto bot-capture on `/feeds` DONE:** public `POST /public/ai-bot-hit` (classifies UA,
+  no-ops humans) + the `/feeds/[slug]` server reads `user-agent` via `next/headers` and fires it for crawler agents
+  (bot analytics → built). Remaining AI Search (key-blocked): real research (DataForSEO), live per-engine citation provider.
 - **Leads PRD — lead config UIs (frontend, typecheck+lint clean):** `lead-config-actions.tsx` in the Leads page
   header — **Notification rules** sheet (create/toggle/delete rules w/ score+channels) + **Lead forms** sheet
   (list/edit CTA/thank-you/consent, create) — both wired to the new APIs. Added as a new component (leads-view untouched).

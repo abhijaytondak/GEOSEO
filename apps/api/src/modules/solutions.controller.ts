@@ -20,7 +20,7 @@ const AI_SEARCH: SolutionCapability[] = [
   { label: "Publish to /feeds + sitemap + llms.txt", status: "partial" },
   { label: "CMS publishing adapters", status: "gap" },
   { label: "Backlinks / citations", status: "partial", note: "Opportunities + outreach exist; real acquisition pending." },
-  { label: "AI bot crawl analytics", status: "partial", note: "Hit log + per-bot breakdown built; auto-capture on /feeds pending." },
+  { label: "AI bot crawl analytics", status: "built", note: "Auto-captured on /feeds (GPTBot/Perplexity/Claude/Google-Extended) + per-bot breakdown." },
   { label: "AI mention / citation tracking", status: "partial", note: "Mention store + heuristic check built; real per-engine provider pending." },
   { label: "Lead attribution from AI search", status: "partial", note: "Journey + source attribution exist." },
 ];

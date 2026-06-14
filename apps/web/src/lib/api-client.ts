@@ -278,6 +278,9 @@ export const api = {
     send<{ mention: AiMention }>("POST", "/ai-search/mentions", { engine, query }).then((d) => d.mention),
   getAiBotActivity: () =>
     get<{ hits: AiBotHit[]; byBot: { bot: string; hits: number }[] }>("/ai-search/bot-activity", () => ({ hits: [], byBot: [] })),
+  /** Fire-and-forget AI-crawler hit (public; server no-ops for non-bot agents). */
+  recordBotHit: (slug: string, userAgent: string) =>
+    send<{ recorded: boolean; bot?: string }>("POST", "/public/ai-bot-hit", { slug, userAgent }),
 
   // onboarding journey
   getOnboardingStatus: () =>

@@ -291,6 +291,14 @@ async function main() {
     expect: (d) => Array.isArray(d.hits) && Array.isArray(d.byBot),
   });
   await checkRejects("POST /ai-search/mentions validates engine", "POST", "/ai-search/mentions", { engine: "bogus", query: "x" });
+  await check("POST /public/ai-bot-hit records a crawler UA", "POST", "/public/ai-bot-hit", {
+    body: { userAgent: "Mozilla/5.0 (compatible; GPTBot/1.1; +https://openai.com/gptbot)", slug: "pricing" },
+    expect: (d) => d.recorded === true && d.bot === "GPTBot",
+  });
+  await check("POST /public/ai-bot-hit no-ops a human UA", "POST", "/public/ai-bot-hit", {
+    body: { userAgent: "Mozilla/5.0 (Macintosh; Intel Mac OS X) Safari/605", slug: "pricing" },
+    expect: (d) => d.recorded === false,
+  });
 
   group("Onboarding journey");
   await check("GET /onboarding/status", "GET", "/onboarding/status", {

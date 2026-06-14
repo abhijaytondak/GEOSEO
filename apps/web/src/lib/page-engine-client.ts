@@ -35,6 +35,16 @@ export interface BrandDraft {
   source: string;
 }
 
+export interface LeadRoutingRule {
+  id: string;
+  name: string;
+  enabled: boolean;
+  field: "score" | "company" | "spamStatus" | "pageTitle";
+  operator: "gte" | "lte" | "eq" | "contains";
+  value: string;
+  ownerId: string;
+}
+
 export interface RefreshRec {
   pageId: string;
   title: string;
@@ -187,6 +197,16 @@ export const pageEngineApi = {
     })).then((d) => d.score),
   recalculateLeadScore: (id: string) =>
     send<{ score: LeadScore }>("POST", `/leads/${id}/recalculate-score`).then((d) => d.score),
+
+  // lead routing rules → auto-assign owners by score/company/spam/page (Lead Conversion)
+  getRoutingRules: () =>
+    get<{ rules: LeadRoutingRule[] }>("/lead-routing/rules", () => ({ rules: [] })).then((d) => d.rules),
+  createRoutingRule: (rule: Omit<LeadRoutingRule, "id">) =>
+    send<{ rule: LeadRoutingRule }>("POST", "/lead-routing/rules", rule).then((d) => d.rule),
+  updateRoutingRule: (id: string, patch: Partial<Omit<LeadRoutingRule, "id">>) =>
+    send<{ rule: LeadRoutingRule }>("PATCH", `/lead-routing/rules/${id}`, patch).then((d) => d.rule),
+  deleteRoutingRule: (id: string) => send<{ ok: boolean }>("DELETE", `/lead-routing/rules/${id}`),
+  applyRouting: () => send<{ routed: number }>("POST", "/lead-routing/apply").then((d) => d.routed),
 
   // notification rules + delivery (Gap 5)
   getNotificationRules: () =>

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { Orbit } from "lucide-react";
 import { pageEngineApi } from "@/lib/page-engine-client";
@@ -38,6 +39,13 @@ export default async function FeedPage({ params }: Params) {
     api.getBrandMemory().catch(() => null),
   ]);
   if (!page) notFound();
+
+  // Auto-capture AI-crawler visits (AI Search bot analytics). Only fires the
+  // record for crawler-like agents; the API classifies + no-ops for humans.
+  const ua = (await headers()).get("user-agent") ?? "";
+  if (/bot|crawler|spider|gptbot|oai-searchbot|perplexity|claudebot|claude-web|google-extended|bingbot/i.test(ua)) {
+    await api.recordBotHit(page.slug.replace(/^\//, ""), ua).catch(() => {});
+  }
 
   const brandName = memory?.profile.company?.trim() || "Your Brand";
   const host = memory?.profile.domain?.trim() || "yourdomain.com";
