@@ -66,6 +66,7 @@ import {
 } from "./modules/page-engine.controller";
 import { PageEngineStore } from "./modules/page-engine.service";
 import { KeywordResearchService } from "./modules/keyword-research.service";
+import { CmsPublishStore } from "./modules/cms-publish.service";
 
 @Module({
   imports: [SeoModule],
@@ -136,6 +137,7 @@ import { KeywordResearchService } from "./modules/keyword-research.service";
     LeadFollowupStore,
     BrandLibraryStore,
     KeywordResearchService,
+    CmsPublishStore,
     { provide: APP_GUARD, useClass: BearerGuard },
     { provide: APP_GUARD, useClass: PublicThrottleGuard },
   ],

@@ -54,6 +54,10 @@ in `docs/` (see bottom).
 - **Supabase persistence is intentional** (see `docs/DECISIONS.md` — supersedes the old
   "mock-only prototype" framing). RLS auto-enabled on every table via `db.ts` `ensureTable`.
   No `DATABASE_URL` ⇒ pure in-memory; the prototype still runs DB-less.
+- **WordPress CMS publishing** — **seam now wired** (`modules/cms-publish.service.ts`, `CmsPublishStore`, `cx_cms_publish`):
+  set `WORDPRESS_BASE_URL` + `WORDPRESS_USERNAME` + `WORDPRESS_APP_PASSWORD` and `POST /pages/:id/publish` pushes the page
+  to the WordPress REST API (`/wp-json/wp/v2/posts`) + sets `publishedUrl` to the live WP link; unset ⇒ managed `/feeds`
+  destination (unchanged). `GET /pages/cms/status` reports provider + recorded pushes. Verified live (mock WP) + fallback.
 - **DataForSEO** (research) — **seam now wired** (`modules/keyword-research.service.ts`, `KeywordResearchService`):
   set `DATAFORSEO_LOGIN` + `DATAFORSEO_PASSWORD` (+ optional `DATAFORSEO_BASE_URL`) and `discover()` returns real
   keyword ideas (volume/difficulty/CPC, DataForSEO Labs); unset ⇒ deterministic seed fallback. Verified live against a

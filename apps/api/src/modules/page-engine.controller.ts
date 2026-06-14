@@ -15,6 +15,7 @@ import type { LeadStatus, PageBlueprint, PageEdit } from "@geoseo/types";
 import { ApiTags } from "@nestjs/swagger";
 import { PageEngineStore } from "./page-engine.service";
 import { SettingsStore } from "./settings.service";
+import { CmsPublishStore } from "./cms-publish.service";
 import { Public } from "../common/public.decorator";
 import { validateBody, v } from "../common/validation";
 import { isDisposableEmail, refererAllowed } from "../common/public-ingest";
@@ -127,7 +128,10 @@ export class BlueprintsController {
 @ApiTags("page-engine")
 @Controller("pages")
 export class PagesController {
-  constructor(@Inject(PageEngineStore) private readonly store: PageEngineStore) {}
+  constructor(
+    @Inject(PageEngineStore) private readonly store: PageEngineStore,
+    @Inject(CmsPublishStore) private readonly cms: CmsPublishStore,
+  ) {}
 
   @Get()
   list() {
@@ -176,7 +180,7 @@ export class PagesController {
   }
 
   @Post(":id/publish")
-  publish(@Param("id") id: string) {
+  async publish(@Param("id") id: string) {
     const blockers = this.store.publishBlockers(id);
     if (blockers.length > 0) {
       throw new UnprocessableEntityException({
@@ -184,7 +188,16 @@ export class PagesController {
         blockers,
       });
     }
-    return this.must(this.store.transitionPage(id, "published"), id);
+    const page = this.must(this.store.transitionPage(id, "published"), id);
+    // Push to the connected CMS when configured; otherwise keep the managed /feeds URL.
+    const cms = await this.cms.publish(page, new Date().toISOString());
+    return cms ? (this.store.attachCmsUrl(id, cms.externalUrl) ?? page) : page;
+  }
+
+  /** CMS publishing status + recorded pushes (PRD §8.3). */
+  @Get("cms/status")
+  cmsStatus() {
+    return { provider: this.cms.provider, configured: this.cms.configured, published: this.cms.list() };
   }
 
   /** Non-mutating publish quality-gate check (Page-Engine PRD §12). */

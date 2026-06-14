@@ -411,6 +411,16 @@ export class PageEngineStore implements OnModuleInit {
     return p;
   }
 
+  /** Point a published page at its live CMS URL after a successful CMS push. */
+  attachCmsUrl(id: string, externalUrl: string): GeneratedPage | undefined {
+    const p = this.getPage(id);
+    if (!p) return undefined;
+    p.publishedUrl = externalUrl;
+    p.updatedAt = this.now;
+    this.save(T.pages, p.id, p);
+    return p;
+  }
+
   /* page editing + versioning (PRD §9.4, §11.6) */
   updatePage(id: string, edit: PageEdit): GeneratedPage | undefined {
     const p = this.getPage(id);
