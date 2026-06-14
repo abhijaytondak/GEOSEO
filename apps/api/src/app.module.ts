@@ -71,6 +71,8 @@ import { ImageGenController } from "./modules/image-gen.controller";
 import { ImageGenStore } from "./modules/image-gen.service";
 import { CrmSyncController } from "./modules/crm-sync.controller";
 import { CrmSyncStore } from "./modules/crm-sync.service";
+import { GscController } from "./modules/gsc.controller";
+import { GscService } from "./modules/gsc.service";
 
 @Module({
   imports: [SeoModule],
@@ -114,6 +116,7 @@ import { CrmSyncStore } from "./modules/crm-sync.service";
     BrandLibraryController,
     ImageGenController,
     CrmSyncController,
+    GscController,
   ],
   providers: [
     OutreachStore,
@@ -146,6 +149,7 @@ import { CrmSyncStore } from "./modules/crm-sync.service";
     CmsPublishStore,
     ImageGenStore,
     CrmSyncStore,
+    GscService,
     { provide: APP_GUARD, useClass: BearerGuard },
     { provide: APP_GUARD, useClass: PublicThrottleGuard },
   ],

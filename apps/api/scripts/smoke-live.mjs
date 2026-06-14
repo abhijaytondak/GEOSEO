@@ -308,6 +308,14 @@ async function main() {
     expect: (d) => d.recorded === false,
   });
 
+  group("Google Search Console seam");
+  await check("GET /gsc/status (unconfigured → configured:false)", "GET", "/gsc/status", {
+    expect: (d) => typeof d.configured === "boolean",
+  });
+  await check("GET /gsc/search-analytics (safe when unkeyed)", "GET", "/gsc/search-analytics?range=30d", {
+    expect: (d) => typeof d.configured === "boolean" && Array.isArray(d.rows),
+  });
+
   group("Onboarding journey");
   await check("GET /onboarding/status", "GET", "/onboarding/status", {
     expect: (d) => d.onboarding && typeof d.onboarding.completed === "boolean" && d.onboarding.steps,

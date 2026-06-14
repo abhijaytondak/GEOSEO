@@ -428,6 +428,14 @@ export const api = {
       `/performance/overview?range=${encodeURIComponent(range)}`,
       () => performanceOverviewFallback(range),
     ),
+  // Google Search Console seam (real rankings when GSC creds configured)
+  getGscStatus: () =>
+    get<{ configured: boolean; siteUrl?: string }>("/gsc/status", () => ({ configured: false })),
+  getGscSearchAnalytics: (range = "30d", dimension: "date" | "query" | "page" = "date") =>
+    get<{ configured: boolean; dimension: string; range: string; rows: { key: string; clicks: number; impressions: number; ctr: number; position: number }[] }>(
+      `/gsc/search-analytics?range=${encodeURIComponent(range)}&dimension=${dimension}`,
+      () => ({ configured: false, dimension, range, rows: [] }),
+    ),
 
   // content optimization
   getInternalLinkSuggestions: () =>
