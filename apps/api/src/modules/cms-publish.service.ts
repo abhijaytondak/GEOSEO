@@ -5,7 +5,7 @@ import { DocStore } from "../db/db";
 /** Record of a page pushed to an external CMS (additive side-store cx_cms_publish). */
 export interface CmsPublishResult {
   pageId: string;
-  provider: "wordpress";
+  provider: "wordpress" | "webflow";
   externalId: string;
   externalUrl: string;
   status: string;
@@ -47,14 +47,24 @@ export class CmsPublishStore implements OnModuleInit {
     });
   }
 
-  get configured(): boolean {
-    return Boolean(
+  /** Active CMS provider — explicit `CMS_PROVIDER` override, else auto-detected from creds. */
+  get provider(): "wordpress" | "webflow" | "none" {
+    const forced = process.env.CMS_PROVIDER?.toLowerCase();
+    const wp = Boolean(
       process.env.WORDPRESS_BASE_URL && process.env.WORDPRESS_USERNAME && process.env.WORDPRESS_APP_PASSWORD,
     );
+    const wf = Boolean(
+      process.env.WEBFLOW_API_TOKEN && process.env.WEBFLOW_COLLECTION_ID && process.env.WEBFLOW_SITE_HOST,
+    );
+    if (forced === "wordpress") return wp ? "wordpress" : "none";
+    if (forced === "webflow") return wf ? "webflow" : "none";
+    if (wp) return "wordpress";
+    if (wf) return "webflow";
+    return "none";
   }
 
-  get provider(): "wordpress" | "none" {
-    return this.configured ? "wordpress" : "none";
+  get configured(): boolean {
+    return this.provider !== "none";
   }
 
   get(pageId: string): CmsPublishResult | null {
@@ -65,9 +75,19 @@ export class CmsPublishStore implements OnModuleInit {
     return Object.values(this.byPage);
   }
 
-  /** Push a page to WordPress. Returns null when unconfigured or on any failure. */
+  /** Push a page to the active CMS. Returns null when unconfigured or on any failure. */
   async publish(page: GeneratedPage, now: string): Promise<CmsPublishResult | null> {
-    if (!this.configured) return null;
+    switch (this.provider) {
+      case "wordpress":
+        return this.publishWordPress(page, now);
+      case "webflow":
+        return this.publishWebflow(page, now);
+      default:
+        return null;
+    }
+  }
+
+  private async publishWordPress(page: GeneratedPage, now: string): Promise<CmsPublishResult | null> {
     const base = process.env.WORDPRESS_BASE_URL!.replace(/\/+$/, "");
     const auth = Buffer.from(`${process.env.WORDPRESS_USERNAME}:${process.env.WORDPRESS_APP_PASSWORD}`).toString("base64");
     const existing = this.byPage[page.id];
@@ -110,6 +130,58 @@ export class CmsPublishStore implements OnModuleInit {
       return result;
     } catch (err) {
       this.log.warn(`WordPress publish failed (${err instanceof Error ? err.message : "unknown"}) — managed fallback`);
+      return null;
+    }
+  }
+
+  private async publishWebflow(page: GeneratedPage, now: string): Promise<CmsPublishResult | null> {
+    const token = process.env.WEBFLOW_API_TOKEN!;
+    const collectionId = process.env.WEBFLOW_COLLECTION_ID!;
+    const base = (process.env.WEBFLOW_BASE_URL ?? "https://api.webflow.com").replace(/\/+$/, "");
+    const host = process.env.WEBFLOW_SITE_HOST!.replace(/^https?:\/\//, "").replace(/\/+$/, "");
+    const collPath = (process.env.WEBFLOW_COLLECTION_PATH ?? "").replace(/^\/+|\/+$/g, "");
+    const contentField = process.env.WEBFLOW_CONTENT_FIELD ?? "post-body";
+    const slug = page.slug.replace(/^\//, "");
+
+    // Webflow CMS items are field-driven; `name` + `slug` are universal, the rich-text
+    // field slug varies per collection (set WEBFLOW_CONTENT_FIELD to match yours).
+    const fieldData: Record<string, unknown> = {
+      name: page.metaTitle || page.title,
+      slug,
+      [contentField]: renderHtml(page),
+    };
+    if (process.env.WEBFLOW_SUMMARY_FIELD) fieldData[process.env.WEBFLOW_SUMMARY_FIELD] = page.metaDescription;
+
+    try {
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), 12_000);
+      const res = await fetch(`${base}/v2/collections/${encodeURIComponent(collectionId)}/items/live`, {
+        method: "POST",
+        signal: ctrl.signal,
+        headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
+        body: JSON.stringify({ isArchived: false, isDraft: false, fieldData }),
+      });
+      clearTimeout(timer);
+      if (!res.ok) {
+        this.log.warn(`Webflow ${res.status} — keeping managed /feeds destination`);
+        return null;
+      }
+      const json = (await res.json()) as { id?: string; fieldData?: { slug?: string } };
+      if (!json.id) return null;
+      const finalSlug = json.fieldData?.slug ?? slug;
+      const result: CmsPublishResult = {
+        pageId: page.id,
+        provider: "webflow",
+        externalId: String(json.id),
+        externalUrl: `https://${host}${collPath ? `/${collPath}` : ""}/${finalSlug}`,
+        status: "published",
+        publishedAt: now,
+      };
+      this.byPage[page.id] = result;
+      this.db.save({ byPage: this.byPage });
+      return result;
+    } catch (err) {
+      this.log.warn(`Webflow publish failed (${err instanceof Error ? err.message : "unknown"}) — managed fallback`);
       return null;
     }
   }

@@ -54,10 +54,13 @@ in `docs/` (see bottom).
 - **Supabase persistence is intentional** (see `docs/DECISIONS.md` — supersedes the old
   "mock-only prototype" framing). RLS auto-enabled on every table via `db.ts` `ensureTable`.
   No `DATABASE_URL` ⇒ pure in-memory; the prototype still runs DB-less.
-- **WordPress CMS publishing** — **seam now wired** (`modules/cms-publish.service.ts`, `CmsPublishStore`, `cx_cms_publish`):
-  set `WORDPRESS_BASE_URL` + `WORDPRESS_USERNAME` + `WORDPRESS_APP_PASSWORD` and `POST /pages/:id/publish` pushes the page
-  to the WordPress REST API (`/wp-json/wp/v2/posts`) + sets `publishedUrl` to the live WP link; unset ⇒ managed `/feeds`
-  destination (unchanged). `GET /pages/cms/status` reports provider + recorded pushes. Verified live (mock WP) + fallback.
+- **CMS publishing (WordPress + Webflow)** — **seam now wired** (`modules/cms-publish.service.ts`, `CmsPublishStore`,
+  `cx_cms_publish`): `POST /pages/:id/publish` pushes to the connected CMS + sets `publishedUrl` to the live URL; unset ⇒
+  managed `/feeds` (unchanged). Provider auto-detected from creds (or forced via `CMS_PROVIDER`). **WordPress:**
+  `WORDPRESS_BASE_URL` + `WORDPRESS_USERNAME` + `WORDPRESS_APP_PASSWORD` → `/wp-json/wp/v2/posts`. **Webflow:**
+  `WEBFLOW_API_TOKEN` + `WEBFLOW_COLLECTION_ID` + `WEBFLOW_SITE_HOST` (+ optional `WEBFLOW_COLLECTION_PATH`,
+  `WEBFLOW_CONTENT_FIELD` default `post-body`) → `/v2/collections/:id/items/live`. `GET /pages/cms/status` reports
+  provider + recorded pushes. Both verified live (mock) + fallback. Shopify/HubSpot are the next adapters (same switch).
 - **DataForSEO** (research) — **seam now wired** (`modules/keyword-research.service.ts`, `KeywordResearchService`):
   set `DATAFORSEO_LOGIN` + `DATAFORSEO_PASSWORD` (+ optional `DATAFORSEO_BASE_URL`) and `discover()` returns real
   keyword ideas (volume/difficulty/CPC, DataForSEO Labs); unset ⇒ deterministic seed fallback. Verified live against a
@@ -80,6 +83,12 @@ Then Phase 4 security/scale foundation (DTO validation, tenant scoping, Clerk JW
 `BearerGuard`, RBAC). The `mode.ts` gate already exists (`GEOSEO_MODE`/`API_AUTH_REQUIRED`).
 
 ## Done recently (don't redo)
+- **Webflow CMS adapter (extends the publishing seam):** `CmsPublishStore` now dispatches **WordPress or Webflow** by
+  detected creds (`CMS_PROVIDER` forces). Webflow path: `WEBFLOW_API_TOKEN` + `WEBFLOW_COLLECTION_ID` + `WEBFLOW_SITE_HOST`
+  (+ optional `WEBFLOW_COLLECTION_PATH`, `WEBFLOW_CONTENT_FIELD`=`post-body`, `WEBFLOW_SUMMARY_FIELD`) → POST
+  `/v2/collections/:id/items/live` (Bearer), `publishedUrl` = `https://{host}/{path}/{slug}`. Verified live (mock Webflow):
+  publish → HTTP 201, publishedUrl `https://zomato.com/guides/cohort-retention-guide`, recorded provider=webflow. WordPress
+  path + managed `/feeds` fallback unchanged. Next adapters (same `switch`): Shopify, HubSpot.
 - **DataForSEO keyword-research seam (key-gated, verified live + fallback):** `KeywordResearchService`
   (`modules/keyword-research.service.ts`) — `researchKeywords(seeds)` hits **DataForSEO Labs keyword_ideas** (Basic auth
   `DATAFORSEO_LOGIN:DATAFORSEO_PASSWORD`, 15s timeout) when configured, returns `[]` on any failure/unconfigured (never
