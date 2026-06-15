@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { RefreshCw, Send, TrendingUp, Sparkles, Route, MessageSquare, Globe, Loader2, Copy, Check } from "lucide-react";
-import type { Lead, LeadActivity, LeadJourneyEvent, LeadJourneySummary, LeadScore } from "@geoseo/types";
+import type { Lead, LeadActivity, LeadJourneyEvent, LeadJourneySummary, LeadScore, TeamMember } from "@geoseo/types";
 import { pageEngineApi } from "@/lib/page-engine-client";
+import { api } from "@/lib/api-client";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -54,6 +55,23 @@ function Detail({ lead }: { lead: Lead }) {
   const [genning, setGenning] = useState(false);
   const [copied, setCopied] = useState(false);
   const [recalc, setRecalc] = useState(false);
+  const [owners, setOwners] = useState<TeamMember[]>([]);
+  const [ownerId, setOwnerId] = useState("");
+  const [assigning, setAssigning] = useState(false);
+
+  async function assignOwner(id: string) {
+    if (!id) return;
+    setAssigning(true);
+    try {
+      await pageEngineApi.assignLead(lead.id, id);
+      setOwnerId(id);
+      notify({ kind: "success", title: "Owner assigned", message: owners.find((o) => o.id === id)?.name });
+    } catch (err) {
+      notify({ kind: "error", title: "Assign failed", message: err instanceof Error ? err.message : "Try again." });
+    } finally {
+      setAssigning(false);
+    }
+  }
 
   async function recalcScore() {
     setRecalc(true);
@@ -86,6 +104,13 @@ function Detail({ lead }: { lead: Lead }) {
       .then((r) => r.json())
       .then((jr) => {
         if (!cancelled && jr?.data?.draft) setFollowup(jr.data.draft);
+      })
+      .catch(() => {});
+    // Team list + current owner for the assignment control.
+    api.getSettings().then((s) => !cancelled && setOwners(s.team)).catch(() => {});
+    pageEngineApi.getLeadWorkload()
+      .then((w) => {
+        if (!cancelled) setOwnerId(w.assignments.find((a) => a.leadId === lead.id)?.ownerId ?? "");
       })
       .catch(() => {});
     return () => {
@@ -215,6 +240,26 @@ function Detail({ lead }: { lead: Lead }) {
                     <TrendingUp className="size-3.5" /> Recommended action
                   </div>
                   <p className="mt-1 text-[13.5px] text-foreground">{score.recommendedAction}</p>
+                </div>
+              )}
+              {owners.length > 0 && (
+                <div className="flex items-center gap-2 rounded-xl border border-border bg-surface-sunken p-3">
+                  <span className="text-[12px] font-medium text-muted-foreground">Owner</span>
+                  <select
+                    value={ownerId}
+                    disabled={assigning}
+                    onChange={(e) => assignOwner(e.target.value)}
+                    className="ml-auto h-8 rounded-lg border border-border bg-background px-2 text-[13px] outline-none focus:border-ring disabled:opacity-60"
+                  >
+                    <option value="" disabled>
+                      Assign owner…
+                    </option>
+                    {owners.map((o) => (
+                      <option key={o.id} value={o.id}>
+                        {o.name}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               )}
               {score && (
