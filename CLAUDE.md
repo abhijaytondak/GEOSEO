@@ -111,9 +111,11 @@ Vercel demo runs the real backend (with these seams active) instead of the mock 
   validatePage gate** (surfaces blockers); **real visitor journey** (`FeedTracker` fires page_view on `/feeds` +
   `linkLeadVisitor` on capture → journey tab no longer a phantom); **lead owner assignment UI** (drawer select; was
   backend-only); **page unpublish + duplicate** (new backend routes + client + drawer buttons — didn't exist anywhere);
-  **image-gen UI** (Brand → Assets tab over `/images/generate`). Remaining audit items (lower-pri, not done): team-role
-  edit (needs `updateTeamMember` backend), lead-form field editor, prospect **restore** archived view, surfacing
-  audit-log/jobs/CMS-status/GSC-analytics, and dead-code cleanup (`syncLead`/`generateBlueprint`/`/leads/export`).
+  **image-gen UI** (Brand → Assets tab over `/images/generate`); **team-member role edit** (PATCH /settings/team/:id +
+  role select); **prospect restore** (GET /backlink/opportunities/archived + "Archived" toggle with Restore).
+  Remaining audit items (lowest-pri, not done): lead-form field editor; surface read-only views for
+  audit-log / jobs / CMS publish status / GSC analytics (built, no UI); dead-code cleanup
+  (`syncLead`/`generateBlueprint`/`/leads/export`).
 - **Multi-tenant: `conversion-audit` migrated as the reference per-tenant store (typecheck+smoke 95/95, isolation-verified):**
   `ConversionAuditStore` now keys state by tenant — `cache: Map<tenantId, AuditState>`, lazy `state(tenantId)` via
   `DocStore.loadForTenant`, `commit(tenantId,…)` via `saveForTenant`; `latest(tenantId)`/`run(tenantId,…)` take the tenant
