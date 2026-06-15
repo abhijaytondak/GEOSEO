@@ -54,6 +54,9 @@ import { LeadFollowupController } from "./modules/lead-followup.controller";
 import { LeadFollowupStore } from "./modules/lead-followup.service";
 import { BrandLibraryController } from "./modules/brand-library.controller";
 import { BrandLibraryStore } from "./modules/brand-library.service";
+import { CompetitorAnalysisService } from "./modules/competitor-analysis.service";
+import { BrandAnalysisStore } from "./modules/brand-analysis.service";
+import { BrandAnalysisController } from "./modules/brand-analysis.controller";
 import { PublicThrottleGuard } from "./common/public-throttle.guard";
 import {
   OpportunitiesController,
@@ -116,6 +119,7 @@ import { TenantGuard } from "./common/tenant.guard";
     ConversionAuditController,
     LeadFollowupController,
     BrandLibraryController,
+    BrandAnalysisController,
     ImageGenController,
     CrmSyncController,
     GscController,
@@ -149,6 +153,8 @@ import { TenantGuard } from "./common/tenant.guard";
     LeadFollowupStore,
     BrandLibraryStore,
     KeywordResearchService,
+    CompetitorAnalysisService,
+    BrandAnalysisStore,
     CmsPublishStore,
     ImageGenStore,
     CrmSyncStore,

@@ -13,6 +13,7 @@ import { DeltaChip } from "@/components/dashboard/delta-chip";
 import { ActivityFeed } from "@/components/dashboard/activity-feed";
 import { AuthorityActions } from "@/components/dashboard/authority-actions";
 import { ActionCenter } from "@/components/dashboard/action-center";
+import { BrandScorecard } from "@/components/dashboard/brand-scorecard";
 import { OverviewExport, type SummaryRow } from "@/components/dashboard/overview-export";
 import { deriveAuthorityActions } from "@/lib/authority-actions";
 import { thousands } from "@/lib/format";
@@ -109,6 +110,9 @@ export default async function AuthorityHQ() {
       <div className="space-y-5 p-6 sm:p-8">
         {/* Insight summary band (§7) */}
         <InsightBand status={insightStatus} headline={insightHeadline} source="Sample data" />
+
+        {/* Brand Scorecard — auto-analysis of the workspace's own domain (self-fetching) */}
+        <BrandScorecard />
 
         {/* Momentum / forecast (Authority HQ §Phase2) */}
         <div className="flex items-center gap-2.5 rounded-xl border border-border bg-card px-4 py-2.5 text-[13px] shadow-card">

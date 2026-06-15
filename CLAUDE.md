@@ -83,6 +83,7 @@ provider seams** — all verified live (mock) + fallback, all activate with cred
 | CMS — Webflow | `WEBFLOW_API_TOKEN` + `WEBFLOW_COLLECTION_ID` + `WEBFLOW_SITE_HOST` | same; `GET /pages/cms/status` |
 | CMS — Shopify | `SHOPIFY_STORE_DOMAIN` + `SHOPIFY_ACCESS_TOKEN` (+ `SHOPIFY_PUBLIC_HOST`) | same (`CMS_PROVIDER` forces choice) |
 | Image generation | `IMAGE_GEN_API_KEY` (+ `IMAGE_GEN_BASE_URL`/`_MODEL`) | `POST /images/generate` |
+| Competitor SERP | `BRAVE_SEARCH_API_KEY` (free; else keyless DuckDuckGo, else heuristic) | `POST /brand-analysis/run`, `GET /brand-analysis/competitors` (reports `source`) |
 
 All seams live in `apps/api/src/modules/{keyword-research,cms-publish,image-gen}.service.ts` and follow the
 same shape: env-gated, **return null/[] on any failure → safe fallback**, never throw.
@@ -105,6 +106,25 @@ same shape: env-gated, **return null/[] on any failure → safe fallback**, neve
 Vercel demo runs the real backend (with these seams active) instead of the mock fallback.
 
 ## Done recently (don't redo)
+- **Brand auto-analysis + free competitor intelligence + dashboard Scorecard (typecheck 4-pkg + web build + smoke 99/99 + live curl + Brave-parse asserts + screenshots):**
+  closed the "land on the dashboard and see what's good/bad/improvable for *your* brand" loop. **Backend (additive, never-throws, per-tenant):**
+  `CompetitorAnalysisService` (`competitor-analysis.service.ts`) — **100% free tiered SERP chain**: Brave Search API
+  (`BRAVE_SEARCH_API_KEY`, free tier, `BRAVE_SEARCH_BASE_URL` override) → **keyless DuckDuckGo HTML** (`COMPETITOR_SERP_DDG_URL`
+  override) → **heuristic** (declared `BrandProfile.competitors` + estimates); reports `source: brave|duckduckgo|heuristic`,
+  bounded by `COMPETITOR_SERP_KEYWORDS` (default 8), `COMPETITOR_SERP_PROVIDER` forces a tier. `BrandAnalysisStore`
+  (`brand-analysis.service.ts`, `cx_brand_analysis`, per-tenant like `ConversionAuditStore`) orchestrates keyword research →
+  conversion audit → competitor SERP → pure `computeScorecard()` (strengths/weaknesses/top-3-actions + 0–100 blended score).
+  `BrandAnalysisController`: `GET /brand-analysis` (cached or `status:"pending"`, never blocks), `POST /brand-analysis/run`
+  (explicit), `GET /brand-analysis/competitors`. **Onboarding `complete()` fires `run()` fire-and-forget** so the dashboard is
+  warm. **DOES NOT touch the contested page-engine files** — calls `KeywordResearchService` directly. **Frontend:**
+  `components/dashboard/brand-scorecard.tsx` (self-fetching panel on Authority HQ — score ring, strong/weak/actions columns,
+  live-vs-Estimated source badge, Re-run, View competitors), new **`/competitors`** route + `competitor-analysis-view.tsx`
+  (visibility header, competitor table, keyword-gap table w/ Generate-page CTAs) + **Competitors** nav item (`Swords`), wizard
+  "Analyzing your brand…" step. `api.getBrandAnalysis/runBrandAnalysis/getCompetitorAnalysis` + demo-mode fallbacks. New
+  `@geoseo/types`: `BrandAnalysis/BrandScorecard/BrandScorecardItem/CompetitorAnalysis/CompetitorEntry/KeywordGap/CompetitorSource`.
+  Verified live: DuckDuckGo returned 8 real competitors keyless; mock-Brave proved `source:brave` parsing + your-rank/visibility
+  aggregation; smoke +4 checks. **To upgrade competitor data reliability: set free `BRAVE_SEARCH_API_KEY` on the API** (DDG can be
+  rate-limited from a datacenter IP; heuristic needs declared competitors). **NOT pushed/deployed — awaiting confirmation.**
 - **Dead-clicks / missing-CRUD audit — fixes (Tier 1 + Tier-2 quick wins; typecheck+lint+smoke 95/95):** the visible UI
   had ~0 literal dead clicks; the real gaps were built-but-unreachable capabilities. Fixed: routing-rule **edit**,
   lead-form **delete**, alert **snooze**, lead-score **recalculate** (methods existed, no button); **pre-publish

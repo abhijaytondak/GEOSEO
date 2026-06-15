@@ -72,6 +72,7 @@ export function OnboardingWizard() {
   const [theme, setTheme] = useState<{ colors: { primary: string; accent?: string; muted?: string }; confidence: number } | null>(null);
   const [integrations, setIntegrations] = useState<string[]>(["search-console"]);
   const [launching, setLaunching] = useState(false);
+  const [analyzing, setAnalyzing] = useState(false);
 
   // Drive the scan checklist while a scan is running.
   useEffect(() => {
@@ -205,10 +206,15 @@ export function OnboardingWizard() {
         websiteUrl: url.trim() || `https://${domain}`,
         requestedIntegrations: integrations,
       });
+      // Auto-analyze the brand so the dashboard Scorecard + Competitors are warm on arrival.
+      // Non-fatal: launch even if the analysis is slow or unavailable.
+      setAnalyzing(true);
+      await api.runBrandAnalysis().catch(() => undefined);
       notify({ kind: "success", title: "Workspace ready", message: `${brand.company || domain} is live on GEOSEO.` });
     } catch (err) {
       notify({ kind: "error", title: "Couldn't finalize setup", message: err instanceof Error ? err.message : "Try again." });
     } finally {
+      setAnalyzing(false);
       setLaunching(false);
       setStep(5);
     }
@@ -524,7 +530,7 @@ export function OnboardingWizard() {
               <Button variant="ghost" className="h-10" onClick={() => setStep(3)}><ArrowLeft className="size-4" /> Add more seeds</Button>
               <Button className="h-10 rounded-full px-5" disabled={launching} onClick={finishOnboarding}>
                 {launching ? <Loader2 className="size-4 animate-spin" /> : <ArrowRight className="size-4" />}
-                Finish setup
+                {analyzing ? "Analyzing your brand…" : launching ? "Finishing…" : "Finish setup"}
               </Button>
             </div>
           </div>

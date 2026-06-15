@@ -6,6 +6,8 @@
  * provides in-memory implementations for the UI prototype.
  */
 
+import type { SearchIntent } from "./page-engine";
+
 export type ISODate = string; // YYYY-MM-DD or full ISO timestamp
 
 export type Direction = "up" | "down" | "flat";
@@ -575,6 +577,86 @@ export interface BrandMemoryVersion {
   updatedAt: ISODate;
   author: string;
   note: string;
+}
+
+/* ------------------------------------------------- Brand Analysis & Competitor Intelligence */
+
+/** One competitor domain surfaced from SERP overlap across the brand's target keywords. */
+export interface CompetitorEntry {
+  domain: string;
+  /** How many of the analysed keywords this domain appears in (top results). */
+  appearances: number;
+  /** Average organic position across the keywords it appears in (lower = stronger). */
+  avgPosition: number;
+  /** The specific keywords where this competitor outranks / overlaps the brand. */
+  overlapKeywords: string[];
+  /** 0–100 weighted share of the analysed SERP slots this domain holds. */
+  visibilityScore: number;
+}
+
+/** A keyword the brand should win but currently doesn't — a competitor ranks, you don't. */
+export interface KeywordGap {
+  keyword: string;
+  volume: number;
+  difficulty: number;
+  intent: SearchIntent;
+  /** The brand's own organic position for this keyword, or null if absent from the results. */
+  yourRank: number | null;
+  topCompetitor: string;
+  competitorRank: number;
+}
+
+/** Which free SERP tier produced the competitor data (for honest real-vs-estimated labelling). */
+export type CompetitorSource = "brave" | "duckduckgo" | "heuristic";
+
+export interface CompetitorAnalysis {
+  domain: string;
+  /** The target keywords the analysis ran over. */
+  keywords: string[];
+  competitors: CompetitorEntry[];
+  gaps: KeywordGap[];
+  /** 0–100 the brand's own weighted visibility across the analysed keywords. */
+  yourVisibility: number;
+  source: CompetitorSource;
+  generatedAt: ISODate;
+}
+
+/** A single auto-generated insight line on the brand scorecard. */
+export interface BrandScorecardItem {
+  kind: "strength" | "weakness" | "action";
+  title: string;
+  detail: string;
+  severity?: "low" | "medium" | "high";
+}
+
+export interface BrandScorecard {
+  /** 0–100 blended brand health (audit + competitor visibility + brand-memory completeness). */
+  score: number;
+  grade: "A" | "B" | "C" | "D";
+  status: "strong" | "mixed" | "needs-attention";
+  strengths: BrandScorecardItem[];
+  weaknesses: BrandScorecardItem[];
+  actions: BrandScorecardItem[];
+}
+
+/**
+ * The auto-analysis a workspace gets after onboarding: a brand-specific scorecard
+ * (what's strong / weak / to do), the competitor picture, and the conversion-audit headline.
+ * `status: "pending"` means no analysis has run yet (the GET endpoint never blocks to compute one).
+ */
+export interface BrandAnalysis {
+  domain: string;
+  scorecard: BrandScorecard;
+  competitor: CompetitorAnalysis;
+  /** Conversion-audit headline (0–100 + letter grade) for the brand's homepage. */
+  auditScore: number;
+  auditGrade: string;
+  /** The buyer-intent keywords the brand should target, with estimated metrics. */
+  topKeywords: { keyword: string; volume: number; difficulty: number }[];
+  /** Composite source label (e.g. "duckduckgo + autocomplete"). */
+  source: string;
+  status: "ready" | "pending";
+  generatedAt: ISODate;
 }
 
 export interface OutreachTemplate {

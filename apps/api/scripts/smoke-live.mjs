@@ -374,6 +374,28 @@ async function main() {
       typeof d.solutions[0].completeness === "number",
   });
 
+  group("Brand analysis (auto-analysis + competitor intelligence)");
+  await check("GET /brand-analysis (cached or pending, never blocks)", "GET", "/brand-analysis", {
+    expect: (d) => d.analysis && ["ready", "pending"].includes(d.analysis.status) && typeof d.analysis.source === "string",
+  });
+  await check("POST /brand-analysis/run (free SERP chain → scorecard)", "POST", "/brand-analysis/run", {
+    expect: (d) =>
+      d.analysis?.status === "ready" &&
+      ["A", "B", "C", "D"].includes(d.analysis.scorecard?.grade) &&
+      ["brave", "duckduckgo", "heuristic"].includes(d.analysis.competitor?.source) &&
+      Array.isArray(d.analysis.scorecard?.actions) &&
+      Array.isArray(d.analysis.topKeywords),
+  });
+  await check("GET /brand-analysis reflects the run (ready + cached)", "GET", "/brand-analysis", {
+    expect: (d) => d.analysis?.status === "ready" && typeof d.analysis.scorecard?.score === "number",
+  });
+  await check("GET /brand-analysis/competitors", "GET", "/brand-analysis/competitors", {
+    expect: (d) =>
+      Array.isArray(d.competitor?.competitors) &&
+      Array.isArray(d.competitor?.gaps) &&
+      ["brave", "duckduckgo", "heuristic"].includes(d.competitor?.source),
+  });
+
   group("Site theme scan (PRD §7 / §19 SSRF)");
   const theme = await check("POST /site-theme/scan (public URL)", "POST", "/site-theme/scan", {
     body: { url: "https://example.com" },

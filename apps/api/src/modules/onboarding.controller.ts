@@ -1,10 +1,12 @@
-import { Body, Controller, Get, Inject, Post } from "@nestjs/common";
+import { Body, Controller, Get, Inject, Post, Req } from "@nestjs/common";
 import { ApiTags } from "@nestjs/swagger";
 import type { OnboardingStatus } from "@geoseo/types";
 import { OnboardingStore } from "./onboarding.service";
 import { SettingsStore } from "./settings.service";
 import { AuditStore } from "./audit.service";
+import { BrandAnalysisStore } from "./brand-analysis.service";
 import { validateBody, v } from "../common/validation";
+import { resolveTenantId, type TenantRequest } from "../common/tenant";
 
 const PatchSchema = {
   workspaceName: v.optional(v.string({ max: 120 })),
@@ -30,6 +32,7 @@ export class OnboardingController {
     @Inject(OnboardingStore) private readonly onboarding: OnboardingStore,
     @Inject(SettingsStore) private readonly settings: SettingsStore,
     @Inject(AuditStore) private readonly audit: AuditStore,
+    @Inject(BrandAnalysisStore) private readonly brandAnalysis: BrandAnalysisStore,
   ) {}
 
   @Get("status")
@@ -51,6 +54,7 @@ export class OnboardingController {
    */
   @Post("complete")
   complete(
+    @Req() req: TenantRequest,
     @Body(validateBody(CompleteSchema))
     body: {
       workspaceName: string;
@@ -92,6 +96,9 @@ export class OnboardingController {
       },
     });
     this.audit.record("create", "settings", "onboarding");
+    // Auto-analyze the brand in the background so the dashboard Scorecard is warm on first load.
+    // Fire-and-forget: never block or fail the onboarding response on the network-bound analysis.
+    void this.brandAnalysis.run(resolveTenantId(req), new Date().toISOString()).catch(() => undefined);
     return { onboarding, settings: this.settings.get() };
   }
 }

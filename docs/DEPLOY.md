@@ -43,6 +43,9 @@ railway variables \
 # Optional integration keys flip a capability from demo→live (see the template for all):
 #   DATAFORSEO_LOGIN / DATAFORSEO_PASSWORD · HUBSPOT_ACCESS_TOKEN ·
 #   GSC_SERVICE_ACCOUNT_JSON / GSC_SITE_URL · IMAGE_GEN_API_KEY · WORDPRESS_*/WEBFLOW_*/SHOPIFY_*
+#   BRAVE_SEARCH_API_KEY  — free competitor SERP (search.brave.com/api; free tier ~2k/mo).
+#                           Unset → keyless DuckDuckGo, then a declared-competitor heuristic.
+#                           Tune: COMPETITOR_SERP_KEYWORDS (default 8), COMPETITOR_SERP_PROVIDER (force a tier).
 
 railway up                         # deploys; prints a public https URL
 ```

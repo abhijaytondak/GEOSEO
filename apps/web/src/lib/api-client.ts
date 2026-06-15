@@ -24,6 +24,8 @@ import type {
   ThemeFidelity,
   SolutionReadiness,
   BacklinkProspect,
+  BrandAnalysis,
+  CompetitorAnalysis,
   BrandMemoryVersion,
   BrandProfile,
   ContentRefreshAction,
@@ -261,6 +263,65 @@ async function performanceOverviewFallback(range: string): Promise<PerformanceOv
   return { range, days, avgRank, rankDelta, impressions: totalImpr, clicks: totalClicks, ctr, aiMentions, avgShareOfVoice, trackedPages: pages.length, topMovers, source: "heuristic" };
 }
 
+// Demo-mode fallback for the brand auto-analysis (Vercel mock deployment has no live API).
+// Derived from the mock Brand Memory so the Scorecard + Competitors view look coherent.
+async function competitorAnalysisDemo(): Promise<CompetitorAnalysis> {
+  const brand = await brandSource.getBrandProfile();
+  const domain = (brand.domain || "example.com").toLowerCase();
+  const rivals = (brand.competitors?.length ? brand.competitors : ["amplitude.com", "mixpanel.com", "heap.io"]).slice(0, 4);
+  const kws = (brand.keywords?.length ? brand.keywords : brand.topics?.length ? brand.topics : ["product analytics", "cohort retention", "customer data platform", "session replay", "funnel analysis"]).slice(0, 6);
+  const competitors = rivals.map((d, i) => ({
+    domain: d.toLowerCase().replace(/^https?:\/\//, "").replace(/^www\./, ""),
+    appearances: Math.max(1, kws.length - i),
+    avgPosition: 2 + i,
+    overlapKeywords: kws.slice(0, Math.max(1, kws.length - i)),
+    visibilityScore: Math.max(8, 62 - i * 14),
+  }));
+  const gaps = kws.slice(0, 6).map((keyword, i) => ({
+    keyword,
+    volume: 2400 - i * 320,
+    difficulty: 42 + i * 6,
+    intent: (i % 2 ? "commercial" : "comparison") as CompetitorAnalysis["gaps"][number]["intent"],
+    yourRank: null,
+    topCompetitor: competitors[i % competitors.length]?.domain ?? rivals[0],
+    competitorRank: 1 + (i % 3),
+  }));
+  return { domain, keywords: kws, competitors, gaps, yourVisibility: 28, source: "heuristic", generatedAt: new Date().toISOString() };
+}
+
+async function brandAnalysisDemo(): Promise<BrandAnalysis> {
+  const competitor = await competitorAnalysisDemo();
+  const lead = competitor.competitors[0]?.domain ?? "a competitor";
+  return {
+    domain: competitor.domain,
+    scorecard: {
+      score: 64,
+      grade: "B",
+      status: "mixed",
+      strengths: [
+        { kind: "strength", title: "Conversion-ready homepage", detail: "72/100 — 5 of 7 conversion checks pass." },
+        { kind: "strength", title: "Clear value proposition", detail: "Your positioning is well-defined in Brand Memory." },
+      ],
+      weaknesses: [
+        { kind: "weakness", title: "Low search visibility", detail: `${lead} outranks you on your own topics.`, severity: "high" },
+        { kind: "weakness", title: `${competitor.gaps.length} keyword gaps`, detail: "Competitors rank for buyer-intent keywords where you don't appear.", severity: "medium" },
+      ],
+      actions: [
+        { kind: "action", title: `Win "${competitor.gaps[0]?.keyword ?? "your top keyword"}"`, detail: `${lead} ranks and you don't — high-intent and winnable.`, severity: "medium" },
+        { kind: "action", title: "Complete your Brand Memory", detail: "Add audience, differentiators, and competitors so generated pages stay on-brand.", severity: "medium" },
+        { kind: "action", title: `Publish a page for "${competitor.gaps[1]?.keyword ?? "a target keyword"}"`, detail: "Buyer-intent keyword with no page yet.", severity: "low" },
+      ],
+    },
+    competitor,
+    auditScore: 72,
+    auditGrade: "B",
+    topKeywords: competitor.gaps.slice(0, 6).map((g) => ({ keyword: g.keyword, volume: g.volume, difficulty: g.difficulty })),
+    source: `${competitor.source} + autocomplete`,
+    status: "ready",
+    generatedAt: new Date().toISOString(),
+  };
+}
+
 export const api = {
   // dashboard / authority hq
   getKpis: () =>
@@ -271,6 +332,14 @@ export const api = {
   getAuthorityOverview: () => get<AuthorityOverview>("/overview/authority", authorityOverviewFallback),
   getSolutionReadiness: () =>
     get<{ solutions: SolutionReadiness[] }>("/solutions/readiness", () => ({ solutions: [] })).then((d) => d.solutions),
+
+  // brand auto-analysis (scorecard + competitor intelligence)
+  getBrandAnalysis: () =>
+    get<{ analysis: BrandAnalysis }>("/brand-analysis", async () => ({ analysis: await brandAnalysisDemo() })).then((d) => d.analysis),
+  runBrandAnalysis: () =>
+    send<{ analysis: BrandAnalysis }>("POST", "/brand-analysis/run").then((d) => d.analysis),
+  getCompetitorAnalysis: () =>
+    get<{ competitor: CompetitorAnalysis }>("/brand-analysis/competitors", async () => ({ competitor: await competitorAnalysisDemo() })).then((d) => d.competitor),
 
   // AI Search engine (mentions + bot crawl tracking)
   getAiSearchOverview: () =>

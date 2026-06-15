@@ -14,6 +14,7 @@ import {
   Boxes,
   Bot,
   Palette,
+  Swords,
   type LucideIcon,
 } from "lucide-react";
 
@@ -34,6 +35,7 @@ export const navSections: NavSection[] = [
     items: [
       { label: "Authority HQ", href: "/", icon: Gauge },
       { label: "Backlink Opportunities", href: "/opportunities", icon: Link2, badge: "15" },
+      { label: "Competitors", href: "/competitors", icon: Swords },
       { label: "Analytics", href: "/analytics", icon: LineChart },
     ],
   },
