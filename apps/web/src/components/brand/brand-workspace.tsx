@@ -1,18 +1,20 @@
 "use client";
 
 import { useState } from "react";
-import { BrainCircuit, History, Gauge, Check, AlertTriangle, ArrowRight, Library } from "lucide-react";
+import { BrainCircuit, History, Gauge, Check, AlertTriangle, ArrowRight, Library, Image as ImageIcon } from "lucide-react";
 import type { BrandProfile, BrandMemoryVersion } from "@geoseo/types";
 import { cn } from "@/lib/utils";
 import { BrandMemoryEditor } from "./brand-memory-editor";
 import { VersionHistory } from "./version-history";
 import { BrandLibrary } from "./brand-library";
+import { BrandAssets } from "./brand-assets";
 
-type Tab = "overview" | "memory" | "library" | "versions";
+type Tab = "overview" | "memory" | "library" | "assets" | "versions";
 const TABS: { id: Tab; label: string; icon: typeof Gauge }[] = [
   { id: "overview", label: "Overview", icon: Gauge },
   { id: "memory", label: "Brand Memory", icon: BrainCircuit },
   { id: "library", label: "Library", icon: Library },
+  { id: "assets", label: "Assets", icon: ImageIcon },
   { id: "versions", label: "Versions", icon: History },
 ];
 
@@ -108,6 +110,8 @@ export function BrandWorkspace({
       {tab === "memory" && <BrandMemoryEditor initial={profile} />}
 
       {tab === "library" && <BrandLibrary />}
+
+      {tab === "assets" && <BrandAssets />}
 
       {tab === "versions" && (
         <div className="rounded-2xl border border-border bg-card p-5 shadow-card">
