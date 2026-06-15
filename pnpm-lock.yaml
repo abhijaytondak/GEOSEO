@@ -53,6 +53,9 @@ importers:
       rxjs:
         specifier: ^7.8.1
         version: 7.8.2
+      tsx:
+        specifier: ^4.19.2
+        version: 4.22.4
     devDependencies:
       '@types/express':
         specifier: ^5.0.0
@@ -60,9 +63,6 @@ importers:
       '@types/node':
         specifier: ^22.10.0
         version: 22.19.21
-      tsx:
-        specifier: ^4.19.2
-        version: 4.22.4
       typescript:
         specifier: ^5.7.0
         version: 5.9.3

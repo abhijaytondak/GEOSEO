@@ -15,24 +15,36 @@ public product you host BOTH and point the web at the API.
 ## Durable API host — Railway (one-time)
 
 `railway.json` (repo root) is already configured: Nixpacks builder, start
-`pnpm --filter @geoseo/api start` (tsx), healthcheck `/api/v1/health`. The API
-reads `$PORT` automatically.
+`pnpm --filter @geoseo/api start` (tsx — now a **runtime** dependency so a
+production install keeps it), healthcheck `/api/v1/health` (300s timeout — the
+API boots ~90s as it inits ~30 stores serially). The server binds `0.0.0.0:$PORT`
+automatically — **do not set `PORT`**.
+
+The full env-var list (with comments, no secrets) is **`apps/api/.env.railway.example`** —
+copy real values from your local `apps/api/.env`.
 
 ```bash
-railway login                      # interactive — only step a human must do
-railway init                       # or: railway link  (pick/create a project)
-# Set env vars (copy values from apps/api/.env — never commit them):
-railway variables set \
-  DATABASE_URL=...        \
-  REDIS_URL=...           \
-  LLM_PROVIDER=deepseek   \
-  DEEPSEEK_API_KEY=...    \
-  DEEPSEEK_BASE_URL=...   \
-  DEEPSEEK_MODEL=...      \
-  GEOSEO_MODE=production  \      # fail-closed: auth CANNOT be disabled in production
-  API_AUTH_REQUIRED=true  \      # required; boot aborts if production + auth disabled
-  DEV_API_TOKEN=...              # the bearer secret the web BFF injects (or wire Clerk JWT verify)
-railway up                         # deploys; gives a public https URL
+railway login                      # interactive — the only step a human must do
+railway init                       # create a project (or `railway link` to an existing one)
+
+# Core vars — copy real values from apps/api/.env (current Railway CLI syntax):
+railway variables \
+  --set "GEOSEO_MODE=production" \        # fail-closed: auth CANNOT be disabled in production
+  --set "API_AUTH_REQUIRED=true" \        # required; boot aborts if production + auth disabled
+  --set "DEV_API_TOKEN=<bearer>" \        # the secret the web BFF injects (until Clerk JWT verify lands)
+  --set "WEB_ORIGIN=https://geoseo-tau.vercel.app" \   # CORS allow-list (your web origin)
+  --set "DATABASE_URL=<supabase-url>" \
+  --set "REDIS_URL=<upstash-url>" \
+  --set "LLM_PROVIDER=deepseek" \
+  --set "DEEPSEEK_API_KEY=<key>" \
+  --set "DEEPSEEK_BASE_URL=https://api.deepseek.com" \
+  --set "DEEPSEEK_MODEL=deepseek-chat"
+
+# Optional integration keys flip a capability from demo→live (see the template for all):
+#   DATAFORSEO_LOGIN / DATAFORSEO_PASSWORD · HUBSPOT_ACCESS_TOKEN ·
+#   GSC_SERVICE_ACCOUNT_JSON / GSC_SITE_URL · IMAGE_GEN_API_KEY · WORDPRESS_*/WEBFLOW_*/SHOPIFY_*
+
+railway up                         # deploys; prints a public https URL
 ```
 
 > Mode matters: **production** forces auth on (the boot aborts if you try
@@ -40,6 +52,15 @@ railway up                         # deploys; gives a public https URL
 > instead — it runs unauthenticated + sales-safe with persistence still on.
 > Pair production with the web's `NEXT_PUBLIC_GEOSEO_MODE=production` so the BFF +
 > middleware enforce sign-in automatically.
+
+**Verify the deploy** (the honesty-pass health check confirms the DB is truly reachable, not just configured):
+
+```bash
+curl -s https://<railway-app>.up.railway.app/api/v1/health | jq
+# Expect: {"status":"ok","mode":"production","persistence":"postgres","dbReachable":true,"authRequired":true}
+# persistence:"degraded" ⇒ DATABASE_URL is set but unreachable from Railway (check the Supabase host/allowlist).
+curl -s https://<railway-app>.up.railway.app/api/v1/dashboard/kpis   # ⇒ 401 without a token (auth is on) ✓
+```
 
 ## Point the Vercel web at the hosted API
 

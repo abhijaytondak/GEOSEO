@@ -39,7 +39,8 @@ async function bootstrap() {
   SwaggerModule.setup("api/docs", app, doc, { jsonDocumentUrl: "api/docs-json" });
 
   const port = Number.parseInt(process.env.PORT ?? "4000", 10);
-  await app.listen(port);
+  // Bind all interfaces (0.0.0.0) so the container is reachable on hosts like Railway.
+  await app.listen(port, "0.0.0.0");
   // eslint-disable-next-line no-console
   console.log(`GEOSEO API on http://localhost:${port}/api/v1  ·  docs: /api/docs`);
 }
