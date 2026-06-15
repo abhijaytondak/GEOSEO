@@ -105,6 +105,15 @@ same shape: env-gated, **return null/[] on any failure → safe fallback**, neve
 Vercel demo runs the real backend (with these seams active) instead of the mock fallback.
 
 ## Done recently (don't redo)
+- **Dead-clicks / missing-CRUD audit — fixes (Tier 1 + Tier-2 quick wins; typecheck+lint+smoke 95/95):** the visible UI
+  had ~0 literal dead clicks; the real gaps were built-but-unreachable capabilities. Fixed: routing-rule **edit**,
+  lead-form **delete**, alert **snooze**, lead-score **recalculate** (methods existed, no button); **pre-publish
+  validatePage gate** (surfaces blockers); **real visitor journey** (`FeedTracker` fires page_view on `/feeds` +
+  `linkLeadVisitor` on capture → journey tab no longer a phantom); **lead owner assignment UI** (drawer select; was
+  backend-only); **page unpublish + duplicate** (new backend routes + client + drawer buttons — didn't exist anywhere);
+  **image-gen UI** (Brand → Assets tab over `/images/generate`). Remaining audit items (lower-pri, not done): team-role
+  edit (needs `updateTeamMember` backend), lead-form field editor, prospect **restore** archived view, surfacing
+  audit-log/jobs/CMS-status/GSC-analytics, and dead-code cleanup (`syncLead`/`generateBlueprint`/`/leads/export`).
 - **Multi-tenant: `conversion-audit` migrated as the reference per-tenant store (typecheck+smoke 95/95, isolation-verified):**
   `ConversionAuditStore` now keys state by tenant — `cache: Map<tenantId, AuditState>`, lazy `state(tenantId)` via
   `DocStore.loadForTenant`, `commit(tenantId,…)` via `saveForTenant`; `latest(tenantId)`/`run(tenantId,…)` take the tenant
