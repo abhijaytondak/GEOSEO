@@ -194,6 +194,16 @@ export class PagesController {
     return cms ? (this.store.attachCmsUrl(id, cms.externalUrl) ?? page) : page;
   }
 
+  @Post(":id/unpublish")
+  unpublish(@Param("id") id: string) {
+    return this.must(this.store.unpublish(id), id);
+  }
+
+  @Post(":id/duplicate")
+  duplicate(@Param("id") id: string) {
+    return this.must(this.store.duplicate(id), id);
+  }
+
   /** CMS publishing status + recorded pushes (PRD §8.3). */
   @Get("cms/status")
   cmsStatus() {

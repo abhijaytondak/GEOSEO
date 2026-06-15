@@ -22,6 +22,7 @@ import {
   AlertTriangle,
   GitCompare,
   Palette,
+  Copy,
 } from "lucide-react";
 import type {
   GeneratedPage,
@@ -289,6 +290,39 @@ export function PagesView({
         title: "Action failed",
         message: err instanceof Error ? err.message : "Try again.",
       });
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function duplicate(id: string) {
+    setBusy(id);
+    try {
+      const copy = await pageEngineApi.duplicatePage(id);
+      setPages((arr) => [copy, ...arr]);
+      notify({ kind: "success", title: "Page duplicated", message: copy.title });
+      openPage(copy.id);
+    } catch (err) {
+      notify({ kind: "error", title: "Duplicate failed", message: err instanceof Error ? err.message : "Try again." });
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function unpublish(id: string) {
+    const ok = await confirm({
+      title: "Unpublish this page?",
+      message: "It will be taken offline and removed from your public feed.",
+      confirmLabel: "Unpublish",
+    });
+    if (!ok) return;
+    setBusy(id);
+    try {
+      const updated = await pageEngineApi.unpublishPage(id);
+      setPages((arr) => arr.map((p) => (p.id === id ? updated : p)));
+      notify({ kind: "success", title: "Page unpublished" });
+    } catch (err) {
+      notify({ kind: "error", title: "Unpublish failed", message: err instanceof Error ? err.message : "Try again." });
     } finally {
       setBusy(null);
     }
@@ -899,6 +933,9 @@ export function PagesView({
                 <span className="mr-auto text-[12px] text-muted-foreground tabular-nums">
                   {current.wordCount.toLocaleString()} words · BM v{current.brandMemoryVersion}
                 </span>
+                <Button variant="ghost" className="h-9" disabled={busy === current.id} onClick={() => duplicate(current.id)}>
+                  <Copy className="size-4" /> Duplicate
+                </Button>
                 {current.status === "draft" && (
                   <Button variant="outline" className="h-9" disabled={busy === current.id} onClick={() => transition(current.id, "in-review", "Sent for review")}>
                     Submit for review
@@ -916,9 +953,16 @@ export function PagesView({
                   </Button>
                 )}
                 {current.status === "published" && (
-                  <a className={cn(buttonVariants({ variant: "outline" }), "h-9")} href={current.publishedUrl} target="_blank" rel="noreferrer">
-                    View live <ArrowRight className="size-3.5" />
-                  </a>
+                  <>
+                    <Button variant="outline" className="h-9" disabled={busy === current.id} onClick={() => unpublish(current.id)}>
+                      <X className="size-4" /> Unpublish
+                    </Button>
+                    {current.publishedUrl && (
+                      <a className={cn(buttonVariants({ variant: "outline" }), "h-9")} href={current.publishedUrl} target="_blank" rel="noreferrer">
+                        View live <ArrowRight className="size-3.5" />
+                      </a>
+                    )}
+                  </>
                 )}
               </div>
             </>

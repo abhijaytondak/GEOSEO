@@ -421,6 +421,45 @@ export class PageEngineStore implements OnModuleInit {
     return p;
   }
 
+  /** Take a published page offline — back to approved, public URL cleared. */
+  unpublish(id: string): GeneratedPage | undefined {
+    const p = this.getPage(id);
+    if (!p) return undefined;
+    if (p.status !== "published") return p;
+    p.status = "approved";
+    p.publishedUrl = undefined;
+    p.publishedAt = undefined;
+    p.updatedAt = this.now;
+    this.snapshot(p, "Unpublished", "system");
+    this.logAudit("update", "page", p.id);
+    this.save(T.pages, p.id, p);
+    return p;
+  }
+
+  /** Duplicate a page as a fresh draft (new id/slug, publish state cleared). */
+  duplicate(id: string): GeneratedPage | undefined {
+    const src = this.getPage(id);
+    if (!src) return undefined;
+    this.seq += 1;
+    const copy: GeneratedPage = {
+      ...clone(src),
+      id: `pg-gen-${this.seq}`,
+      title: `${src.title} (copy)`,
+      slug: `${src.slug}-copy`,
+      status: "draft",
+      publishedUrl: undefined,
+      publishedAt: undefined,
+      lastRefreshedAt: undefined,
+      createdAt: this.now,
+      updatedAt: this.now,
+    };
+    this.pages.unshift(copy);
+    this.snapshot(copy, "Duplicated", "system");
+    this.logAudit("create", "page", copy.id);
+    this.save(T.pages, copy.id, copy);
+    return copy;
+  }
+
   /* page editing + versioning (PRD §9.4, §11.6) */
   updatePage(id: string, edit: PageEdit): GeneratedPage | undefined {
     const p = this.getPage(id);

@@ -158,6 +158,8 @@ export const pageEngineApi = {
   submitPage: (id: string) => send<GeneratedPage>("POST", `/pages/${id}/submit`),
   approvePage: (id: string) => send<GeneratedPage>("POST", `/pages/${id}/approve`),
   publishPage: (id: string) => send<GeneratedPage>("POST", `/pages/${id}/publish`),
+  unpublishPage: (id: string) => send<GeneratedPage>("POST", `/pages/${id}/unpublish`),
+  duplicatePage: (id: string) => send<GeneratedPage>("POST", `/pages/${id}/duplicate`),
   validatePage: (id: string) =>
     send<{ blockers: string[]; canPublish: boolean }>("POST", `/pages/${id}/validate`),
   crmSyncLead: (id: string) =>
