@@ -53,6 +53,20 @@ function Detail({ lead }: { lead: Lead }) {
   const [followup, setFollowup] = useState<{ subject: string; body: string; source: string } | null>(null);
   const [genning, setGenning] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [recalc, setRecalc] = useState(false);
+
+  async function recalcScore() {
+    setRecalc(true);
+    try {
+      const s = await pageEngineApi.recalculateLeadScore(lead.id);
+      setScore(s);
+      notify({ kind: "success", title: "Score recalculated", message: `New score ${s.total}` });
+    } catch (err) {
+      notify({ kind: "error", title: "Recalculate failed", message: err instanceof Error ? err.message : "Try again." });
+    } finally {
+      setRecalc(false);
+    }
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -212,7 +226,16 @@ function Detail({ lead }: { lead: Lead }) {
                     <Bar label="Spam risk" value={score.spamRisk} />
                   </div>
                   <div className="space-y-1.5">
-                    <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">Why this score</div>
+                    <div className="flex items-center justify-between">
+                      <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">Why this score</div>
+                      <button
+                        onClick={recalcScore}
+                        disabled={recalc}
+                        className="inline-flex items-center gap-1 text-[11px] font-medium text-brand transition-opacity hover:underline disabled:opacity-50"
+                      >
+                        {recalc ? <Loader2 className="size-3 animate-spin" /> : <RefreshCw className="size-3" />} Recalculate
+                      </button>
+                    </div>
                     {score.reasons.map((r, i) => (
                       <div key={i} className="flex items-start gap-2 text-[12.5px]">
                         <span

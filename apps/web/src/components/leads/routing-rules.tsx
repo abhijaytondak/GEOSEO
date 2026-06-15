@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { GitBranch, Plus, Trash2, Play, Loader2 } from "lucide-react";
+import { GitBranch, Plus, Trash2, Play, Loader2, Pencil } from "lucide-react";
 import type { TeamMember } from "@geoseo/types";
 import { pageEngineApi, type LeadRoutingRule } from "@/lib/page-engine-client";
 import { Button } from "@/components/ui/button";
@@ -27,7 +27,8 @@ export function RoutingRules({ initialRules, team }: { initialRules: LeadRouting
   const [rules, setRules] = useState<LeadRoutingRule[]>(initialRules);
   const [open, setOpen] = useState(false);
   const [applying, setApplying] = useState(false);
-  const [draft, setDraft] = useState<Omit<LeadRoutingRule, "id">>({
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const emptyDraft = (): Omit<LeadRoutingRule, "id"> => ({
     name: "",
     enabled: true,
     field: "score",
@@ -35,22 +36,40 @@ export function RoutingRules({ initialRules, team }: { initialRules: LeadRouting
     value: "",
     ownerId: team[0]?.id ?? "",
   });
+  const [draft, setDraft] = useState<Omit<LeadRoutingRule, "id">>(emptyDraft());
 
   const ownerName = (id: string) => team.find((t) => t.id === id)?.name ?? id;
 
-  async function add() {
+  function resetForm() {
+    setDraft(emptyDraft());
+    setEditingId(null);
+    setOpen(false);
+  }
+
+  function startEdit(rule: LeadRoutingRule) {
+    setDraft({ name: rule.name, enabled: rule.enabled, field: rule.field, operator: rule.operator, value: rule.value, ownerId: rule.ownerId });
+    setEditingId(rule.id);
+    setOpen(true);
+  }
+
+  async function save() {
     if (!draft.name.trim() || !draft.value.trim() || !draft.ownerId) {
       notify({ kind: "error", title: "Name, value, and owner are required" });
       return;
     }
     try {
-      const rule = await pageEngineApi.createRoutingRule(draft);
-      setRules((r) => [...r, rule]);
-      setDraft({ name: "", enabled: true, field: "score", operator: "gte", value: "", ownerId: team[0]?.id ?? "" });
-      setOpen(false);
-      notify({ kind: "success", title: "Routing rule added" });
+      if (editingId) {
+        await pageEngineApi.updateRoutingRule(editingId, draft);
+        setRules((r) => r.map((x) => (x.id === editingId ? { ...x, ...draft } : x)));
+        notify({ kind: "success", title: "Routing rule updated" });
+      } else {
+        const rule = await pageEngineApi.createRoutingRule(draft);
+        setRules((r) => [...r, rule]);
+        notify({ kind: "success", title: "Routing rule added" });
+      }
+      resetForm();
     } catch (err) {
-      notify({ kind: "error", title: "Add failed", message: err instanceof Error ? err.message : "Try again." });
+      notify({ kind: "error", title: editingId ? "Update failed" : "Add failed", message: err instanceof Error ? err.message : "Try again." });
     }
   }
 
@@ -108,7 +127,7 @@ export function RoutingRules({ initialRules, team }: { initialRules: LeadRouting
             {applying ? <Loader2 className="size-3.5 animate-spin" /> : <Play className="size-3.5" />}
             Apply to unassigned
           </Button>
-          <Button size="sm" className="h-8 rounded-full" onClick={() => setOpen((v) => !v)}>
+          <Button size="sm" className="h-8 rounded-full" onClick={() => (open ? resetForm() : (setEditingId(null), setDraft(emptyDraft()), setOpen(true)))}>
             <Plus className="size-3.5" /> Rule
           </Button>
         </div>
@@ -138,7 +157,8 @@ export function RoutingRules({ initialRules, team }: { initialRules: LeadRouting
           <select className={sel} value={draft.ownerId} onChange={(e) => setDraft((d) => ({ ...d, ownerId: e.target.value }))}>
             {team.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
           </select>
-          <Button size="sm" className="h-9" onClick={add}>Save</Button>
+          <Button size="sm" variant="ghost" className="h-9" onClick={resetForm}>Cancel</Button>
+          <Button size="sm" className="h-9" onClick={save}>{editingId ? "Update" : "Save"}</Button>
         </div>
       )}
 
@@ -164,6 +184,13 @@ export function RoutingRules({ initialRules, team }: { initialRules: LeadRouting
                 {FIELDS.find((f) => f.value === r.field)?.label} {OPS.find((o) => o.value === r.operator)?.label} <span className="font-medium text-foreground/80">{r.value}</span> → {ownerName(r.ownerId)}
               </div>
             </div>
+            <button
+              onClick={() => startEdit(r)}
+              aria-label={`Edit ${r.name}`}
+              className="flex size-8 items-center justify-center rounded-lg border border-border text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            >
+              <Pencil className="size-3.5" />
+            </button>
             <button
               onClick={() => remove(r.id)}
               aria-label={`Delete ${r.name}`}

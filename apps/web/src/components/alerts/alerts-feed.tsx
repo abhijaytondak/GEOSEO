@@ -93,6 +93,18 @@ export function AlertsFeed({ alerts: initialAlerts }: { alerts: Alert[] }) {
     }
   }
 
+  async function snooze(alert: Alert) {
+    setAlerts((items) => items.map((item) => (item.id === alert.id ? { ...item, read: true } : item)));
+    try {
+      const { snoozedUntil } = await api.snoozeAlert(alert.id);
+      setAlerts((items) => items.map((item) => (item.id === alert.id ? { ...item, read: true, snoozedUntil } : item)));
+      notify({ kind: "success", title: "Alert snoozed", message: "Hidden for 7 days." });
+    } catch (err) {
+      setAlerts((items) => items.map((item) => (item.id === alert.id ? alert : item)));
+      notify({ kind: "error", title: "Could not snooze alert", message: err instanceof Error ? err.message : "Try again." });
+    }
+  }
+
   return (
     <div className="space-y-5">
       {/* severity summary */}
@@ -194,6 +206,11 @@ export function AlertsFeed({ alerts: initialAlerts }: { alerts: Alert[] }) {
                       {!a.resolved && (
                         <Button variant="ghost" size="sm" className="h-9 rounded-full" onClick={() => resolve(a)}>
                           Resolve
+                        </Button>
+                      )}
+                      {!a.resolved && !a.snoozedUntil && (
+                        <Button variant="ghost" size="sm" className="h-9 rounded-full" onClick={() => snooze(a)}>
+                          Snooze
                         </Button>
                       )}
                       <span className="ml-auto text-[11px] text-muted-foreground/70">

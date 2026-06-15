@@ -190,6 +190,18 @@ function LeadFormsSheet() {
     }
   }
 
+  async function removeForm(form: LeadFormConfig) {
+    const prev = forms;
+    setForms((fs) => fs.filter((f) => f.id !== form.id));
+    try {
+      await pageEngineApi.deleteLeadForm(form.id);
+      notify({ kind: "success", title: "Form deleted", message: form.name });
+    } catch (err) {
+      setForms(prev);
+      notify({ kind: "error", title: "Delete failed", message: err instanceof Error ? err.message : "Try again." });
+    }
+  }
+
   async function createForm() {
     try {
       const form = await pageEngineApi.createLeadForm({ name: `Form ${forms.length + 1}` });
@@ -220,7 +232,16 @@ function LeadFormsSheet() {
             <div key={f.id} className="space-y-2.5 rounded-xl border border-border p-3.5">
               <div className="flex items-center justify-between">
                 <div className="text-[13px] font-semibold text-foreground">{f.name}</div>
-                <span className="rounded-md bg-muted px-1.5 py-0.5 text-[10.5px] font-medium text-muted-foreground">{f.fields.length} fields</span>
+                <div className="flex items-center gap-2">
+                  <span className="rounded-md bg-muted px-1.5 py-0.5 text-[10.5px] font-medium text-muted-foreground">{f.fields.length} fields</span>
+                  <button
+                    onClick={() => removeForm(f)}
+                    aria-label={`Delete ${f.name}`}
+                    className="text-muted-foreground transition-colors hover:text-negative"
+                  >
+                    <Trash2 className="size-3.5" />
+                  </button>
+                </div>
               </div>
               <div>
                 <label className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">CTA text</label>
