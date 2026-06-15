@@ -11,6 +11,9 @@ export interface KeywordIdea {
   competition: number;
 }
 
+/** Which provider actually produced the last result set. */
+export type ResearchSource = "dataforseo" | "autocomplete" | "mock";
+
 interface DfsItem {
   keyword?: string;
   keyword_info?: { search_volume?: number; competition?: number; cpc?: number };
@@ -22,37 +25,82 @@ interface DfsResponse {
 
 const clamp = (n: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, Math.round(n)));
 
+/** Stable pseudo-metric seed so estimated numbers are deterministic per keyword. */
+function hashStr(s: string): number {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+  return h;
+}
+
+const COMMERCIAL =
+  /\b(buy|price|pricing|cost|best|top|software|tool|tools|platform|service|services|vs|versus|alternative|alternatives|review|reviews|cheap|free|company|companies|solution|solutions|agency|vendor|quote|demo)\b/i;
+
 /**
- * Buyer-intent keyword research. **Seam wired, key-gated:** when DataForSEO Basic-auth
- * creds (`DATAFORSEO_LOGIN` + `DATAFORSEO_PASSWORD`) are present it returns real keyword
- * ideas (volume/difficulty/CPC) from DataForSEO Labs; otherwise `researchKeywords` returns
- * `[]` and the caller falls back to its deterministic seed logic — so the product runs
- * today and flips to real data the moment a key is added (no code change). Never throws.
+ * Buyer-intent keyword research with a tiered, env-gated provider chain — never throws:
+ *   1. DataForSEO Labs (real volume/difficulty/CPC) when `DATAFORSEO_LOGIN`+`DATAFORSEO_PASSWORD` set.
+ *   2. Google Autocomplete (FREE, no key) — real keyword *ideas* (what people actually type) with
+ *      deterministic *estimated* metrics. Always on unless `KEYWORD_AUTOCOMPLETE=false`.
+ *   3. `[]` → the caller falls back to its deterministic seed logic.
+ * `source` reports which tier produced the last result so the UI can label real-vs-estimated data.
  */
 @Injectable()
 export class KeywordResearchService {
   private readonly log = new Logger(KeywordResearchService.name);
+  private last: ResearchSource | null = null;
 
+  /** DataForSEO configured — also drives the Settings "dataforseo" integration row. */
   get configured(): boolean {
     return Boolean(process.env.DATAFORSEO_LOGIN && process.env.DATAFORSEO_PASSWORD);
   }
 
-  get source(): "dataforseo" | "mock" {
-    return this.configured ? "dataforseo" : "mock";
+  get autocompleteEnabled(): boolean {
+    return process.env.KEYWORD_AUTOCOMPLETE !== "false";
   }
 
-  /** Expand seed terms into keyword ideas. Returns [] when unconfigured or on any failure. */
+  get source(): ResearchSource {
+    return this.last ?? (this.configured ? "dataforseo" : this.autocompleteEnabled ? "autocomplete" : "mock");
+  }
+
+  /** Expand seed terms into keyword ideas. Returns [] when no provider yields results. */
   async researchKeywords(
     seeds: string[],
     opts: { locationName?: string; languageCode?: string; limit?: number } = {},
   ): Promise<KeywordIdea[]> {
     const terms = seeds.map((s) => s.trim()).filter(Boolean).slice(0, 20);
-    if (!this.configured || terms.length === 0) return [];
+    const limit = clamp(opts.limit ?? 24, 1, 100);
+    if (terms.length === 0) {
+      this.last = "mock";
+      return [];
+    }
 
+    if (this.configured) {
+      const dfs = await this.viaDataForSeo(terms, opts, limit);
+      if (dfs.length) {
+        this.last = "dataforseo";
+        return dfs;
+      }
+    }
+
+    if (this.autocompleteEnabled) {
+      const ac = await this.viaAutocomplete(terms, limit);
+      if (ac.length) {
+        this.last = "autocomplete";
+        return ac;
+      }
+    }
+
+    this.last = "mock";
+    return [];
+  }
+
+  /** DataForSEO Labs keyword_ideas — real metrics. */
+  private async viaDataForSeo(
+    terms: string[],
+    opts: { locationName?: string; languageCode?: string },
+    limit: number,
+  ): Promise<KeywordIdea[]> {
     const base = (process.env.DATAFORSEO_BASE_URL ?? "https://api.dataforseo.com").replace(/\/+$/, "");
     const auth = Buffer.from(`${process.env.DATAFORSEO_LOGIN}:${process.env.DATAFORSEO_PASSWORD}`).toString("base64");
-    const limit = clamp(opts.limit ?? 24, 1, 100);
-
     try {
       const ctrl = new AbortController();
       const timer = setTimeout(() => ctrl.abort(), 15_000);
@@ -71,7 +119,7 @@ export class KeywordResearchService {
       });
       clearTimeout(timer);
       if (!res.ok) {
-        this.log.warn(`DataForSEO ${res.status} — falling back to seed discovery`);
+        this.log.warn(`DataForSEO ${res.status} — trying free providers`);
         return [];
       }
       const json = (await res.json()) as DfsResponse;
@@ -97,8 +145,49 @@ export class KeywordResearchService {
         .filter((x): x is KeywordIdea => x !== null)
         .slice(0, limit);
     } catch (err) {
-      this.log.warn(`DataForSEO request failed (${err instanceof Error ? err.message : "unknown"}) — seed fallback`);
+      this.log.warn(`DataForSEO request failed (${err instanceof Error ? err.message : "unknown"})`);
       return [];
     }
+  }
+
+  /** Google Autocomplete — free, keyless. Real suggestions; metrics are deterministic estimates. */
+  private async viaAutocomplete(terms: string[], limit: number): Promise<KeywordIdea[]> {
+    const out = new Map<string, KeywordIdea>();
+    for (const term of terms.slice(0, 6)) {
+      try {
+        const ctrl = new AbortController();
+        const timer = setTimeout(() => ctrl.abort(), 6_000);
+        const res = await fetch(
+          `https://suggestqueries.google.com/complete/search?client=firefox&hl=en&q=${encodeURIComponent(term)}`,
+          { signal: ctrl.signal, headers: { accept: "application/json" } },
+        );
+        clearTimeout(timer);
+        if (!res.ok) continue;
+        const parsed = JSON.parse(await res.text()) as [string, string[]];
+        const suggestions = Array.isArray(parsed?.[1]) ? parsed[1] : [];
+        for (const raw of [term, ...suggestions]) {
+          const kw = String(raw).trim().toLowerCase();
+          if (!kw || out.has(kw)) continue;
+          out.set(kw, { keyword: kw, ...this.estimateMetrics(kw) });
+          if (out.size >= limit) break;
+        }
+      } catch {
+        // skip this seed; other seeds / fallback still apply
+      }
+      if (out.size >= limit) break;
+    }
+    return [...out.values()].slice(0, limit);
+  }
+
+  /** Deterministic, plausible metric estimates for a keyword (used by the keyless autocomplete tier). */
+  private estimateMetrics(keyword: string): Omit<KeywordIdea, "keyword"> {
+    const words = keyword.split(/\s+/).filter(Boolean).length || 1;
+    const h = hashStr(keyword);
+    const commercial = COMMERCIAL.test(keyword);
+    const searchVolume = clamp(Math.round(3200 / words + (h % 900) - 100), 10, 9900);
+    const difficulty = clamp(64 - words * 9 + (commercial ? 8 : 0) + (h % 16), 4, 92);
+    const cpc = Math.round(((commercial ? 2.2 : 0.5) + (h % 100) / 50) * 100) / 100;
+    const competition = clamp(difficulty + (commercial ? 6 : -6), 0, 100) / 100;
+    return { searchVolume, difficulty, cpc, competition };
   }
 }

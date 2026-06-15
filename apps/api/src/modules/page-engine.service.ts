@@ -3,7 +3,7 @@ import { countRows, dbEnabled, ensureTable, loadAll, removeRow, upsert } from ".
 import { draftPageContent, type DraftContent } from "../llm/deepseek";
 import { BrandMemoryStore } from "./brand.service";
 import { BrandLibraryStore, composeBrandContext } from "./brand-library.service";
-import { KeywordResearchService, type KeywordIdea } from "./keyword-research.service";
+import { KeywordResearchService, type KeywordIdea, type ResearchSource } from "./keyword-research.service";
 
 const T = {
   opps: "pe_opportunities",
@@ -515,7 +515,7 @@ export class PageEngineStore implements OnModuleInit {
   }
 
   /** Which research source produced the last/next discovery (for operator visibility). */
-  researchSource(): "dataforseo" | "mock" {
+  researchSource(): ResearchSource {
     return this.research.source;
   }
 
