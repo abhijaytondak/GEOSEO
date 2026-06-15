@@ -1,4 +1,4 @@
-import { Controller, Get, Inject } from "@nestjs/common";
+import { Controller, Get, Inject, Logger } from "@nestjs/common";
 import { ApiTags } from "@nestjs/swagger";
 import type {
   SeoDataProvider,
@@ -7,8 +7,20 @@ import type {
   AuthorityOverview,
   BacklinkQuality,
   AuthorityMomentum,
+  DomainHealth,
 } from "@geoseo/types";
 import { SEO_PROVIDER } from "../seo/seo.module";
+import { settled, degradeLogger } from "../common/async";
+
+/** Neutral health used when the domain-health provider fails — keeps the aggregate 200. */
+const NEUTRAL_HEALTH: DomainHealth = {
+  score: 0,
+  grade: "D",
+  delta: { pct: 0, direction: "flat", goodWhen: "up" },
+  factors: [],
+  backlinksAcquired: 0,
+  backlinksOpportunities: 0,
+};
 
 /** Per-status contribution to backlink quality (live links matter most). */
 const STATUS_WEIGHT: Record<Backlink["status"], number> = {
@@ -71,17 +83,25 @@ function computeMomentum(ranks: RankPoint[], healthScore: number): AuthorityMome
 @ApiTags("overview")
 @Controller("overview")
 export class OverviewController {
+  private readonly log = new Logger(OverviewController.name);
+
   constructor(@Inject(SEO_PROVIDER) private readonly seo: SeoDataProvider) {}
 
-  /** One aggregate round-trip for the Authority HQ landing (Authority HQ §Phase3). */
+  /** One aggregate round-trip for the Authority HQ landing (Authority HQ §Phase3).
+   *  Each provider degrades independently (allSettled) so one failure can't 500 the dashboard. */
   @Get("authority")
   async authority(): Promise<AuthorityOverview> {
-    const [health, backlinks, alerts, ranks] = await Promise.all([
+    const [healthR, backlinksR, alertsR, ranksR] = await Promise.allSettled([
       this.seo.getDomainHealth(),
       this.seo.getBacklinks(),
       this.seo.getAlerts(),
       this.seo.getRankSeries(),
     ]);
+    const warn = degradeLogger(this.log, "overview/authority");
+    const health = settled(healthR, NEUTRAL_HEALTH, warn("domain-health"));
+    const backlinks = settled(backlinksR, [], warn("backlinks"));
+    const alerts = settled(alertsR, [], warn("alerts"));
+    const ranks = settled(ranksR, [], warn("rank-series"));
 
     const open = alerts.filter((a) => !a.resolved);
     return {

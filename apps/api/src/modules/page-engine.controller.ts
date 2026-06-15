@@ -18,6 +18,7 @@ import { SettingsStore } from "./settings.service";
 import { CmsPublishStore } from "./cms-publish.service";
 import { Public } from "../common/public.decorator";
 import { validateBody, v } from "../common/validation";
+import { BlueprintUpdateSchema, PageEditSchema, IntegrationWriteSchema, LeadStatusUpdateSchema } from "../common/schemas";
 import { isDisposableEmail, refererAllowed } from "../common/public-ingest";
 import { resolveMode } from "../common/mode";
 
@@ -110,7 +111,7 @@ export class BlueprintsController {
   }
 
   @Put(":id")
-  update(@Param("id") id: string, @Body() body: Partial<PageBlueprint>) {
+  update(@Param("id") id: string, @Body(validateBody(BlueprintUpdateSchema)) body: Partial<PageBlueprint>) {
     const b = this.store.updateBlueprint(id, body ?? {});
     if (!b) throw new NotFoundException(`Blueprint ${id} not found`);
     return b;
@@ -224,7 +225,7 @@ export class PagesController {
   }
 
   @Put(":id")
-  update(@Param("id") id: string, @Body() body: PageEdit) {
+  update(@Param("id") id: string, @Body(validateBody(PageEditSchema)) body: PageEdit) {
     return this.must(this.store.updatePage(id, body ?? {}), id);
   }
 
@@ -265,7 +266,7 @@ export class LeadsController {
   }
 
   @Put(":id")
-  update(@Param("id") id: string, @Body() body: { status?: LeadStatus }) {
+  update(@Param("id") id: string, @Body(validateBody(LeadStatusUpdateSchema)) body: { status?: LeadStatus }) {
     if (!body?.status) throw new BadRequestException("status is required");
     const l = this.store.updateLeadStatus(id, body.status);
     if (!l) throw new NotFoundException(`Lead ${id} not found`);
@@ -318,7 +319,7 @@ export class PublishingController {
   }
 
   @Post("integrations")
-  upsert(@Body() body: { id?: string; status?: string; label?: string; description?: string }) {
+  upsert(@Body(validateBody(IntegrationWriteSchema)) body: { id?: string; status?: string; label?: string; description?: string }) {
     if (!body?.id) throw new BadRequestException("id is required");
     return this.settings.updateIntegration(body.id, body as never);
   }

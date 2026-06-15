@@ -1,6 +1,8 @@
 import { BadRequestException, Body, Controller, Get, Inject, Param, Post, Put } from "@nestjs/common";
 import { ApiTags } from "@nestjs/swagger";
 import type { Workspace } from "@geoseo/types";
+import { validateBody } from "../common/validation";
+import { WorkspaceCreateSchema, WorkspaceUpdateSchema } from "../common/schemas";
 import { WorkspaceStore } from "./workspace.service";
 
 @ApiTags("workspaces")
@@ -14,7 +16,7 @@ export class WorkspaceController {
   }
 
   @Post()
-  create(@Body() body: { name?: string; domain?: string; industry?: string }) {
+  create(@Body(validateBody(WorkspaceCreateSchema)) body: { name?: string; domain?: string; industry?: string }) {
     if (!body?.name?.trim() || !body?.domain?.trim()) {
       throw new BadRequestException("name and domain are required");
     }
@@ -27,7 +29,7 @@ export class WorkspaceController {
   }
 
   @Put(":id")
-  update(@Param("id") id: string, @Body() body: Partial<Workspace>) {
+  update(@Param("id") id: string, @Body(validateBody(WorkspaceUpdateSchema)) body: Partial<Workspace>) {
     return this.store.update(id, body ?? {});
   }
 }

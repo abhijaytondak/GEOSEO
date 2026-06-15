@@ -1,6 +1,7 @@
 import { Injectable, Logger, OnModuleInit } from "@nestjs/common";
 import type { Lead } from "@geoseo/types";
 import { DocStore } from "../db/db";
+import { fetchWithTimeout } from "../common/http";
 
 /** Record of a lead synced to an external CRM (additive side-store cx_crm_sync). */
 export interface CrmSyncResult {
@@ -75,16 +76,12 @@ export class CrmSyncStore implements OnModuleInit {
     if (lead.message) properties.message = lead.message.slice(0, 5000);
 
     try {
-      const ctrl = new AbortController();
-      const timer = setTimeout(() => ctrl.abort(), 12_000);
       // Idempotent upsert by email — no duplicate contacts on re-sync.
-      const res = await fetch(`${base}/crm/v3/objects/contacts/batch/upsert`, {
+      const res = await fetchWithTimeout(`${base}/crm/v3/objects/contacts/batch/upsert`, {
         method: "POST",
-        signal: ctrl.signal,
         headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
         body: JSON.stringify({ inputs: [{ idProperty: "email", id: lead.email, properties }] }),
       });
-      clearTimeout(timer);
       if (!res.ok) {
         const error = `HubSpot ${res.status}`;
         this.log.warn(`${error} — lead ${lead.id} kept local`);

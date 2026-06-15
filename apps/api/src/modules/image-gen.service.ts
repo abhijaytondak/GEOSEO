@@ -1,5 +1,6 @@
 import { Inject, Injectable, Logger, OnModuleInit } from "@nestjs/common";
 import { DocStore } from "../db/db";
+import { fetchWithTimeout } from "../common/http";
 import { BrandMemoryStore } from "./brand.service";
 import { SiteThemeStore } from "./site-theme.service";
 
@@ -132,15 +133,15 @@ export class ImageGenStore implements OnModuleInit {
     const base = (process.env.IMAGE_GEN_BASE_URL ?? "https://api.openai.com/v1").replace(/\/+$/, "");
     const model = process.env.IMAGE_GEN_MODEL ?? "gpt-image-1";
     try {
-      const ctrl = new AbortController();
-      const timer = setTimeout(() => ctrl.abort(), 30_000);
-      const res = await fetch(`${base}/images/generations`, {
-        method: "POST",
-        signal: ctrl.signal,
-        headers: { authorization: `Bearer ${process.env.IMAGE_GEN_API_KEY}`, "content-type": "application/json" },
-        body: JSON.stringify({ model, prompt, n: 1, size: "1024x1024" }),
-      });
-      clearTimeout(timer);
+      const res = await fetchWithTimeout(
+        `${base}/images/generations`,
+        {
+          method: "POST",
+          headers: { authorization: `Bearer ${process.env.IMAGE_GEN_API_KEY}`, "content-type": "application/json" },
+          body: JSON.stringify({ model, prompt, n: 1, size: "1024x1024" }),
+        },
+        30_000,
+      );
       if (!res.ok) {
         this.log.warn(`Image gen ${res.status} — using theme-aware placeholder`);
         return null;

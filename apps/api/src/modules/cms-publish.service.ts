@@ -1,6 +1,7 @@
 import { Injectable, Logger, OnModuleInit } from "@nestjs/common";
 import type { GeneratedPage } from "@geoseo/types";
 import { DocStore } from "../db/db";
+import { fetchWithTimeout } from "../common/http";
 
 /** Record of a page pushed to an external CMS (additive side-store cx_cms_publish). */
 export interface CmsPublishResult {
@@ -101,11 +102,8 @@ export class CmsPublishStore implements OnModuleInit {
       ? `${base}/wp-json/wp/v2/posts/${encodeURIComponent(existing.externalId)}`
       : `${base}/wp-json/wp/v2/posts`;
     try {
-      const ctrl = new AbortController();
-      const timer = setTimeout(() => ctrl.abort(), 12_000);
-      const res = await fetch(url, {
+      const res = await fetchWithTimeout(url, {
         method: "POST",
-        signal: ctrl.signal,
         headers: { authorization: `Basic ${auth}`, "content-type": "application/json" },
         body: JSON.stringify({
           title: page.metaTitle || page.title,
@@ -115,7 +113,6 @@ export class CmsPublishStore implements OnModuleInit {
           excerpt: page.metaDescription,
         }),
       });
-      clearTimeout(timer);
       if (!res.ok) {
         this.log.warn(`WordPress ${res.status} — keeping managed /feeds destination`);
         return null;
@@ -158,15 +155,11 @@ export class CmsPublishStore implements OnModuleInit {
     if (process.env.WEBFLOW_SUMMARY_FIELD) fieldData[process.env.WEBFLOW_SUMMARY_FIELD] = page.metaDescription;
 
     try {
-      const ctrl = new AbortController();
-      const timer = setTimeout(() => ctrl.abort(), 12_000);
-      const res = await fetch(`${base}/v2/collections/${encodeURIComponent(collectionId)}/items/live`, {
+      const res = await fetchWithTimeout(`${base}/v2/collections/${encodeURIComponent(collectionId)}/items/live`, {
         method: "POST",
-        signal: ctrl.signal,
         headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
         body: JSON.stringify({ isArchived: false, isDraft: false, fieldData }),
       });
-      clearTimeout(timer);
       if (!res.ok) {
         this.log.warn(`Webflow ${res.status} — keeping managed /feeds destination`);
         return null;
@@ -201,18 +194,14 @@ export class CmsPublishStore implements OnModuleInit {
     const handle = page.slug.replace(/^\//, "");
 
     try {
-      const ctrl = new AbortController();
-      const timer = setTimeout(() => ctrl.abort(), 12_000);
       // Online Store "Pages" via the Admin REST API.
-      const res = await fetch(`${adminBase}/admin/api/${version}/pages.json`, {
+      const res = await fetchWithTimeout(`${adminBase}/admin/api/${version}/pages.json`, {
         method: "POST",
-        signal: ctrl.signal,
         headers: { "x-shopify-access-token": token, "content-type": "application/json" },
         body: JSON.stringify({
           page: { title: page.metaTitle || page.title, handle, body_html: renderHtml(page), published: true },
         }),
       });
-      clearTimeout(timer);
       if (!res.ok) {
         this.log.warn(`Shopify ${res.status} — keeping managed /feeds destination`);
         return null;

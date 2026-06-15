@@ -1,5 +1,6 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { createSign } from "node:crypto";
+import { fetchWithTimeout } from "../common/http";
 
 /** A Search Analytics row from Google Search Console. */
 export interface GscRow {
@@ -60,7 +61,7 @@ export class GscService {
       );
       const signature = createSign("RSA-SHA256").update(`${header}.${claim}`).end().sign(key).toString("base64url");
       const assertion = `${header}.${claim}.${signature}`;
-      const res = await fetch("https://oauth2.googleapis.com/token", {
+      const res = await fetchWithTimeout("https://oauth2.googleapis.com/token", {
         method: "POST",
         headers: { "content-type": "application/x-www-form-urlencoded" },
         body: new URLSearchParams({ grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer", assertion }),
@@ -86,18 +87,14 @@ export class GscService {
     if (!token) return null;
     const days = RANGE_DAYS[range] ?? 30;
     try {
-      const ctrl = new AbortController();
-      const timer = setTimeout(() => ctrl.abort(), 12_000);
-      const res = await fetch(
+      const res = await fetchWithTimeout(
         `https://searchconsole.googleapis.com/webmasters/v3/sites/${encodeURIComponent(this.siteUrl!)}/searchAnalytics/query`,
         {
           method: "POST",
-          signal: ctrl.signal,
           headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
           body: JSON.stringify({ startDate: daysAgo(days), endDate: daysAgo(1), dimensions: [dimension], rowLimit: 200 }),
         },
       );
-      clearTimeout(timer);
       if (!res.ok) {
         this.log.warn(`GSC query ${res.status} — heuristic fallback`);
         return null;

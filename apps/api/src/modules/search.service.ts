@@ -1,4 +1,5 @@
-import { Inject, Injectable } from "@nestjs/common";
+import { Inject, Injectable, Logger } from "@nestjs/common";
+import { settled, degradeLogger } from "../common/async";
 import type {
   Alert,
   BacklinkProspect,
@@ -73,6 +74,8 @@ const nav = (href: string, label = "Open"): SearchResultAction => ({
  */
 @Injectable()
 export class SearchService {
+  private readonly log = new Logger(SearchService.name);
+
   constructor(
     @Inject(SEO_PROVIDER) private readonly seo: SeoDataProvider,
     @Inject(PageEngineStore) private readonly pageEngine: PageEngineStore,
@@ -118,12 +121,19 @@ export class SearchService {
   }
 
   private async index(): Promise<Indexed[]> {
-    const [prospectsBase, alerts, trackedPages, brandProfile] = await Promise.all([
+    // Per-provider degradation (allSettled): one failed store yields its slice of the
+    // index empty rather than 500-ing global search.
+    const [prospectsR, alertsR, trackedPagesR, brandProfileR] = await Promise.allSettled([
       this.seo.getProspects(),
       this.seo.getAlerts(),
       this.seo.getTrackedPages(),
       this.brand.getBrandProfile(),
     ]);
+    const warn = degradeLogger(this.log, "search index");
+    const prospectsBase = settled(prospectsR, [], warn("prospects"));
+    const alerts = settled(alertsR, [], warn("alerts"));
+    const trackedPages = settled(trackedPagesR, [], warn("tracked-pages"));
+    const brandProfile = settled<BrandProfile, BrandProfile | null>(brandProfileR, null, warn("brand-profile"));
     const prospects = this.prospects.list(prospectsBase);
     const items: Indexed[] = [];
 
@@ -321,23 +331,25 @@ export class SearchService {
       });
     }
 
-    // Brand memory (§7.6)
-    const b: BrandProfile = brandProfile;
-    items.push({
-      title: b.company,
-      haystack: norm([b.company, b.domain, b.industry, (b.topics ?? []).join(" "), (b.keywords ?? []).join(" "), b.audience ?? ""].join(" ")),
-      boost: 0,
-      result: {
-        id: "brand:current",
-        type: "brand",
-        title: `${b.company} — Brand Memory`,
-        subtitle: `${b.domain} · ${b.industry}`,
-        badges: (b.topics ?? []).slice(0, 3),
-        icon: "Sparkles",
-        href: "/brand",
-        actions: [nav("/brand", "Open Brand Memory")],
-      },
-    });
+    // Brand memory (§7.6) — skipped entirely if the brand provider was unavailable.
+    if (brandProfile) {
+      const b: BrandProfile = brandProfile;
+      items.push({
+        title: b.company,
+        haystack: norm([b.company, b.domain, b.industry, (b.topics ?? []).join(" "), (b.keywords ?? []).join(" "), b.audience ?? ""].join(" ")),
+        boost: 0,
+        result: {
+          id: "brand:current",
+          type: "brand",
+          title: `${b.company} — Brand Memory`,
+          subtitle: `${b.domain} · ${b.industry}`,
+          badges: (b.topics ?? []).slice(0, 3),
+          icon: "Sparkles",
+          href: "/brand",
+          actions: [nav("/brand", "Open Brand Memory")],
+        },
+      });
+    }
 
     // Content recommendations (§7.5) — internal-link suggestions
     for (const c of this.content.suggestions(trackedPages) as InternalLinkSuggestion[]) {

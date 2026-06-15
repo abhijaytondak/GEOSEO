@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Get,
@@ -17,11 +18,21 @@ import type {
   SeoDataProvider,
 } from "@geoseo/types";
 import { SEO_PROVIDER, BRAND_SOURCE, OUTREACH_DRAFTER } from "../seo/seo.module";
+import { validateBody, v } from "../common/validation";
 import { OutreachStore } from "./outreach.service";
 import { OpportunitiesStore } from "./opportunities.service";
 
 const VARIANTS = ["cold", "follow-up", "value-offer", "content-swap"] as const;
 type Variant = (typeof VARIANTS)[number];
+
+const OutreachCreateSchema = {
+  prospectId: v.string({ min: 1, max: 128 }),
+  variant: v.optional(v.enumOf(VARIANTS)),
+};
+const OutreachUpdateSchema = {
+  subject: v.optional(v.string({ max: 400 })),
+  body: v.optional(v.string({ max: 20000 })),
+};
 
 @ApiTags("outreach")
 @Controller("outreach/templates")
@@ -48,13 +59,13 @@ export class OutreachController {
   @Get()
   @ApiQuery({ name: "prospectId", required: true })
   async list(@Query("prospectId") prospectId?: string) {
-    if (!prospectId) throw new NotFoundException("prospectId is required");
+    if (!prospectId) throw new BadRequestException("prospectId is required");
     return { templates: await this.draftFor(prospectId) };
   }
 
   @Post()
-  async create(@Body() body: { prospectId: string; variant?: Variant }) {
-    if (!body?.prospectId) throw new NotFoundException("prospectId is required");
+  async create(@Body(validateBody(OutreachCreateSchema)) body: { prospectId: string; variant?: Variant }) {
+    if (!body?.prospectId) throw new BadRequestException("prospectId is required");
     const all = await this.draftFor(body.prospectId);
     if (body.variant) {
       const match = all.find((t) => t.variantName.toLowerCase() === body.variant);
@@ -65,7 +76,7 @@ export class OutreachController {
   }
 
   @Put(":id")
-  update(@Param("id") id: string, @Body() body: { subject?: string; body?: string }) {
+  update(@Param("id") id: string, @Body(validateBody(OutreachUpdateSchema)) body: { subject?: string; body?: string }) {
     const edit = this.store.saveEdit(id, { subject: body?.subject, body: body?.body });
     return { id, ...edit };
   }

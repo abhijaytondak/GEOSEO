@@ -1,3 +1,5 @@
+import { fetchWithTimeout } from "../common/http";
+
 /**
  * DeepSeek content drafter (OpenAI-compatible). Generates real page drafts.
  * Returns null on any failure (missing key, 402 balance, parse error) so the
@@ -35,20 +37,24 @@ Return JSON exactly matching:
 {"metaTitle": string (<=60 chars), "metaDescription": string (<=155 chars), "heroCopy": string (1-2 sentences), "sections": [{"heading": string, "body": string}] (3 items), "faqs": [{"q": string, "a": string}] (2 items)}`;
 
   try {
-    const res = await fetch(`${baseUrl}/chat/completions`, {
-      method: "POST",
-      headers: { authorization: `Bearer ${key}`, "content-type": "application/json" },
-      body: JSON.stringify({
-        model,
-        messages: [
-          { role: "system", content: system },
-          { role: "user", content: user },
-        ],
-        response_format: { type: "json_object" },
-        temperature: 0.7,
-        max_tokens: 1200,
-      }),
-    });
+    const res = await fetchWithTimeout(
+      `${baseUrl}/chat/completions`,
+      {
+        method: "POST",
+        headers: { authorization: `Bearer ${key}`, "content-type": "application/json" },
+        body: JSON.stringify({
+          model,
+          messages: [
+            { role: "system", content: system },
+            { role: "user", content: user },
+          ],
+          response_format: { type: "json_object" },
+          temperature: 0.7,
+          max_tokens: 1200,
+        }),
+      },
+      30_000,
+    );
     if (!res.ok) return null; // 402 insufficient balance, etc. → fallback
     const data = (await res.json()) as {
       choices?: { message?: { content?: string } }[];

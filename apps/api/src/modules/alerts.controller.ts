@@ -5,7 +5,7 @@ import { SEO_PROVIDER } from "../seo/seo.module";
 import { AlertsStore } from "./alerts.service";
 import { AuditStore } from "./audit.service";
 import { validateBody } from "../common/validation";
-import { AlertThresholdsSchema, AlertSnoozeSchema } from "../common/schemas";
+import { AlertThresholdsSchema, AlertSnoozeSchema, IdListSchema } from "../common/schemas";
 
 @ApiTags("alerts")
 @Controller("alerts")
@@ -38,7 +38,7 @@ export class AlertsController {
   }
 
   @Post("mark-all-read")
-  markAllRead(@Body() body: { ids?: string[] }) {
+  markAllRead(@Body(validateBody(IdListSchema)) body: { ids?: string[] }) {
     const ids = Array.isArray(body?.ids) ? body.ids.filter(Boolean) : [];
     return { ids: this.store.markAllRead(ids), read: true };
   }

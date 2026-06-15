@@ -1,4 +1,5 @@
 import { Injectable, Logger } from "@nestjs/common";
+import { fetchWithTimeout } from "../common/http";
 
 /** A single keyword idea from the research provider (normalized across sources). */
 export interface KeywordIdea {
@@ -102,22 +103,22 @@ export class KeywordResearchService {
     const base = (process.env.DATAFORSEO_BASE_URL ?? "https://api.dataforseo.com").replace(/\/+$/, "");
     const auth = Buffer.from(`${process.env.DATAFORSEO_LOGIN}:${process.env.DATAFORSEO_PASSWORD}`).toString("base64");
     try {
-      const ctrl = new AbortController();
-      const timer = setTimeout(() => ctrl.abort(), 15_000);
-      const res = await fetch(`${base}/v3/dataforseo_labs/google/keyword_ideas/live`, {
-        method: "POST",
-        signal: ctrl.signal,
-        headers: { authorization: `Basic ${auth}`, "content-type": "application/json" },
-        body: JSON.stringify([
-          {
-            keywords: terms,
-            location_name: opts.locationName ?? "United States",
-            language_code: opts.languageCode ?? "en",
-            limit,
-          },
-        ]),
-      });
-      clearTimeout(timer);
+      const res = await fetchWithTimeout(
+        `${base}/v3/dataforseo_labs/google/keyword_ideas/live`,
+        {
+          method: "POST",
+          headers: { authorization: `Basic ${auth}`, "content-type": "application/json" },
+          body: JSON.stringify([
+            {
+              keywords: terms,
+              location_name: opts.locationName ?? "United States",
+              language_code: opts.languageCode ?? "en",
+              limit,
+            },
+          ]),
+        },
+        15_000,
+      );
       if (!res.ok) {
         this.log.warn(`DataForSEO ${res.status} — trying free providers`);
         return [];
@@ -155,13 +156,11 @@ export class KeywordResearchService {
     const out = new Map<string, KeywordIdea>();
     for (const term of terms.slice(0, 6)) {
       try {
-        const ctrl = new AbortController();
-        const timer = setTimeout(() => ctrl.abort(), 6_000);
-        const res = await fetch(
+        const res = await fetchWithTimeout(
           `https://suggestqueries.google.com/complete/search?client=firefox&hl=en&q=${encodeURIComponent(term)}`,
-          { signal: ctrl.signal, headers: { accept: "application/json" } },
+          { headers: { accept: "application/json" } },
+          6_000,
         );
-        clearTimeout(timer);
         if (!res.ok) continue;
         const parsed = JSON.parse(await res.text()) as [string, string[]];
         const suggestions = Array.isArray(parsed?.[1]) ? parsed[1] : [];

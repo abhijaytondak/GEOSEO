@@ -1,5 +1,7 @@
 import { Body, Controller, Get, Inject, Put } from "@nestjs/common";
 import { ApiTags } from "@nestjs/swagger";
+import { validateBody } from "../common/validation";
+import { BrandLibrarySchema } from "../common/schemas";
 import { BrandLibraryStore, type BrandLibrary } from "./brand-library.service";
 import { AuditStore } from "./audit.service";
 
@@ -18,7 +20,7 @@ export class BrandLibraryController {
 
   /** Full-replace upsert of the structured brand library (products / personas / proof). */
   @Put()
-  replace(@Body() body: Partial<BrandLibrary>) {
+  replace(@Body(validateBody(BrandLibrarySchema)) body: Partial<BrandLibrary>) {
     const library = this.library.replace(body, new Date().toISOString());
     this.audit.record("update", "brand", "library");
     return { library, strength: this.library.strength() };

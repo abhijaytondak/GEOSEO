@@ -71,6 +71,20 @@ async function checkRejects(name, method, path, body) {
   }
 }
 
+/** Asserts an exact HTTP status (e.g. a missing param is a 400, not a 404). */
+async function checkStatus(name, method, path, expectedStatus, body) {
+  try {
+    const { status } = await req(method, path, body);
+    if (status !== expectedStatus) throw new Error(`expected HTTP ${expectedStatus}, got ${status}`);
+    pass += 1;
+    console.log(`  \x1b[32m✓\x1b[0m ${name} (HTTP ${expectedStatus})`);
+  } catch (err) {
+    fail += 1;
+    failures.push(`${name}: ${err.message}`);
+    console.log(`  \x1b[31m✗\x1b[0m ${name} — ${err.message}`);
+  }
+}
+
 function group(title) {
   console.log(`\n\x1b[1m${title}\x1b[0m`);
 }
@@ -428,6 +442,20 @@ async function main() {
   await checkRejects("POST /jobs rejects invalid type", "POST", "/jobs", { type: "bogus-type" });
   await checkRejects("PUT /alerts/thresholds rejects non-number", "PUT", "/alerts/thresholds", { rankDrop: "high" });
   await checkRejects("POST /backlink/opportunities/bulk rejects missing ids", "POST", "/backlink/opportunities/bulk", { action: "archive" });
+
+  group("Write-route validation (hardening pass)");
+  // Routes hardened to validate their body via the v.* schema (previously accepted raw input).
+  await checkRejects("POST /settings/team rejects malformed email", "POST", "/settings/team", { name: "X", email: "not-an-email", role: "admin" });
+  await checkRejects("POST /settings/team rejects unknown role", "POST", "/settings/team", { name: "X", email: "a@b.com", role: "wizard" });
+  await checkRejects("PUT /settings rejects bad billing.plan enum", "PUT", "/settings", { billing: { plan: "Mega" } });
+  await checkRejects("POST /content/refresh rejects non-array pageIds", "POST", "/content/refresh", { pageIds: "not-an-array" });
+  await checkRejects("POST /publishing/integrations rejects bad status enum", "POST", "/publishing/integrations", { id: "webflow", status: "bogus" });
+  await checkRejects("PUT /page-blueprints/:id rejects bad pageType", "PUT", "/page-blueprints/bp-2", { pageType: "banana" });
+  await checkRejects("PUT /pages/:id rejects non-array sections", "PUT", "/pages/pg-1", { sections: "nope" });
+  await checkRejects("PUT /leads/:id rejects unknown status enum", "PUT", "/leads/lead-1", { status: "garbage" });
+  // Status-code correctness: a missing required param is a 400, not a 404 (§4).
+  await checkStatus("GET /outreach/templates without prospectId → 400 (not 404)", "GET", "/outreach/templates", 400);
+  await checkStatus("POST /outreach/templates without prospectId → 400 (not 404)", "POST", "/outreach/templates", 400, {});
 
   console.log(`\n\x1b[1mResult:\x1b[0m ${pass} passed, ${fail} failed`);
   if (fail > 0) {

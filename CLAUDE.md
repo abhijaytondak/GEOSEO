@@ -106,6 +106,20 @@ same shape: env-gated, **return null/[] on any failure → safe fallback**, neve
 Vercel demo runs the real backend (with these seams active) instead of the mock fallback.
 
 ## Done recently (don't redo)
+- **API hardening pass (QA-audit follow-up; typecheck clean + smoke 109/109 + GET sweep 73/73 + live curl + /simplify pass):** closed every
+  robustness gap from the deep API audit. **(1) Outbound timeouts** — new `common/http.ts` `fetchWithTimeout(url, init?, ms=12s)`
+  is the single source of truth; migrated every seam fetch to it (gsc — incl. the previously-unguarded OAuth token mint —
+  cms-publish ×3, competitor-analysis ×2, image-gen, keyword-research ×2, crm-sync, deepseek, conversion-audit, lead-followup).
+  Only `ssrf.ts` keeps its own (it already had one). **(2) Input validation** — added `validateBody(v.* schema)` to all 16
+  previously-raw write routes (settings ×4, workspaces ×2, page-blueprints/pages/leads-status/publishing-integrations, outreach ×2,
+  content ×2, alerts mark-all-read, brand-library); shared schemas in `common/schemas.ts` (enum tuples `satisfies` their
+  `@geoseo/types` unions → drift is a compile error), nested `v.shape`+`v.optional` for partial PATCH. **(3) Graceful degradation** —
+  `common/async.ts` `settled()` + `degradeLogger()`; `overview/authority`, `performance/overview`, and `search.service.index()`
+  now `Promise.allSettled` + per-provider safe fallback (one provider failure degrades, never 500s). **(4)** outreach missing-param
+  now `400` not `404`. **(5)** `bearer.guard` uses `timingSafeEqual` over SHA-256 digests (constant-time, no length leak).
+  Extended `smoke-live.mjs` +10 (`checkStatus` helper added). Reusable `scripts/audit-get.mjs` (every-GET liveness sweep) left in
+  place. Known follow-ups (out of scope, noted by /simplify): `brand.controller` `PUT /brand-profile` still uses a bespoke
+  coercing validator (predates this pass) — could move to a schema. **Pushed to `main`.**
 - **Brand auto-analysis + free competitor intelligence + dashboard Scorecard (typecheck 4-pkg + web build + smoke 99/99 + live curl + Brave-parse asserts + screenshots):**
   closed the "land on the dashboard and see what's good/bad/improvable for *your* brand" loop. **Backend (additive, never-throws, per-tenant):**
   `CompetitorAnalysisService` (`competitor-analysis.service.ts`) — **100% free tiered SERP chain**: Brave Search API
@@ -134,8 +148,9 @@ Vercel demo runs the real backend (with these seams active) instead of the mock 
   **image-gen UI** (Brand → Assets tab over `/images/generate`); **team-member role edit** (PATCH /settings/team/:id +
   role select); **prospect restore** (GET /backlink/opportunities/archived + "Archived" toggle with Restore).
   Remaining audit items (lowest-pri, not done): lead-form field editor; surface read-only views for
-  audit-log / jobs / CMS publish status / GSC analytics (built, no UI); dead-code cleanup
-  (`syncLead`/`generateBlueprint`/`/leads/export`).
+  audit-log / jobs / CMS publish status / GSC analytics (built, no UI). (Dead-code cleanup is done:
+  `syncLead` + `/leads/export` were already removed; `generateBlueprint` is live via `POST /page-blueprints`,
+  not dead.)
 - **Multi-tenant: `conversion-audit` migrated as the reference per-tenant store (typecheck+smoke 95/95, isolation-verified):**
   `ConversionAuditStore` now keys state by tenant — `cache: Map<tenantId, AuditState>`, lazy `state(tenantId)` via
   `DocStore.loadForTenant`, `commit(tenantId,…)` via `saveForTenant`; `latest(tenantId)`/`run(tenantId,…)` take the tenant

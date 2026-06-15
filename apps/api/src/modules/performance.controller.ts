@@ -1,8 +1,9 @@
-import { Controller, Get, Inject, NotFoundException, Param, Query } from "@nestjs/common";
+import { Controller, Get, Inject, Logger, NotFoundException, Param, Query } from "@nestjs/common";
 import { ApiTags, ApiQuery } from "@nestjs/swagger";
 import type { SeoDataProvider, TrackedPage, PerformanceOverview } from "@geoseo/types";
 import { SEO_PROVIDER } from "../seo/seo.module";
 import { paginate } from "../common/pagination";
+import { settled, degradeLogger } from "../common/async";
 import { GscService } from "./gsc.service";
 
 type SortKey = "rankChange" | "impressions" | "clicks" | "rank";
@@ -34,6 +35,8 @@ function sortPages(pages: TrackedPage[], key?: SortKey): TrackedPage[] {
 @ApiTags("performance")
 @Controller("performance")
 export class PerformanceController {
+  private readonly log = new Logger(PerformanceController.name);
+
   constructor(
     @Inject(SEO_PROVIDER) private readonly seo: SeoDataProvider,
     @Inject(GscService) private readonly gsc: GscService,
@@ -58,12 +61,18 @@ export class PerformanceController {
   @ApiQuery({ name: "range", required: false, enum: ["7d", "30d", "8w", "quarter"] })
   async overview(@Query("range") range = "8w"): Promise<PerformanceOverview> {
     const days = RANGE_DAYS[range] ?? RANGE_DAYS["8w"];
-    const [ranks, impressions, signals, pages] = await Promise.all([
+    // Degrade per-provider (allSettled) so one failure can't 500 the whole overview.
+    const [ranksR, impressionsR, signalsR, pagesR] = await Promise.allSettled([
       this.seo.getRankSeries(),
       this.seo.getImpressionSeries(),
       this.seo.getAiVisibility(),
       this.seo.getTrackedPages(),
     ]);
+    const warn = degradeLogger(this.log, "performance/overview");
+    const ranks = settled(ranksR, [], warn("rank-series"));
+    const impressions = settled(impressionsR, [], warn("impression-series"));
+    const signals = settled(signalsR, [], warn("ai-visibility"));
+    const pages = settled(pagesR, [], warn("tracked-pages"));
 
     const window = ranks.slice(-days);
     const prior = ranks.slice(-days * 2, -days);

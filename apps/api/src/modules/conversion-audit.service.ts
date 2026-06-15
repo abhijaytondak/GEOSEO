@@ -1,5 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import { DocStore } from "../db/db";
+import { fetchWithTimeout } from "../common/http";
 
 export type AuditStatus = "pass" | "warn" | "fail";
 
@@ -96,14 +97,14 @@ export class ConversionAuditStore {
     let crawled = false;
     let error: string | undefined;
     try {
-      const ctrl = new AbortController();
-      const timer = setTimeout(() => ctrl.abort(), 8000);
-      const res = await fetch(url, {
-        signal: ctrl.signal,
-        redirect: "follow",
-        headers: { "user-agent": "GEOSEO-bot/1.0 (+conversion-audit)" },
-      });
-      clearTimeout(timer);
+      const res = await fetchWithTimeout(
+        url,
+        {
+          redirect: "follow",
+          headers: { "user-agent": "GEOSEO-bot/1.0 (+conversion-audit)" },
+        },
+        8000,
+      );
       if (res.ok) {
         html = (await res.text()).slice(0, 800_000);
         crawled = true;

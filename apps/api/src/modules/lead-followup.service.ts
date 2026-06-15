@@ -1,6 +1,7 @@
 import { Inject, Injectable, OnModuleInit } from "@nestjs/common";
 import type { BrandProfile, Lead } from "@geoseo/types";
 import { DocStore } from "../db/db";
+import { fetchWithTimeout } from "../common/http";
 import { PageEngineStore } from "./page-engine.service";
 import { BrandMemoryStore } from "./brand.service";
 
@@ -85,11 +86,8 @@ export class LeadFollowupStore implements OnModuleInit {
       `Keep it under 120 words, no fluff, one clear ask (a quick call). Reply as strict JSON: {"subject": "...", "body": "..."}.`,
     ].join("\n");
     try {
-      const ctrl = new AbortController();
-      const timer = setTimeout(() => ctrl.abort(), 12000);
-      const res = await fetch(`${base}/chat/completions`, {
+      const res = await fetchWithTimeout(`${base}/chat/completions`, {
         method: "POST",
-        signal: ctrl.signal,
         headers: { "content-type": "application/json", authorization: `Bearer ${key}` },
         body: JSON.stringify({
           model,
@@ -98,7 +96,6 @@ export class LeadFollowupStore implements OnModuleInit {
           response_format: { type: "json_object" },
         }),
       });
-      clearTimeout(timer);
       if (!res.ok) return null;
       const json = (await res.json()) as { choices?: { message?: { content?: string } }[] };
       const content = json.choices?.[0]?.message?.content;

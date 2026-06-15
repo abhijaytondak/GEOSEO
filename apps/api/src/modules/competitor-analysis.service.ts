@@ -6,6 +6,7 @@ import type {
   KeywordGap,
   SearchIntent,
 } from "@geoseo/types";
+import { fetchWithTimeout } from "../common/http";
 
 /** A target keyword with its estimated metrics, fed in by the orchestrator. */
 export interface KeywordSeed {
@@ -150,17 +151,17 @@ export class CompetitorAnalysisService {
   private async viaBrave(query: string): Promise<SerpHit[]> {
     const base = (process.env.BRAVE_SEARCH_BASE_URL ?? "https://api.search.brave.com/res/v1").replace(/\/+$/, "");
     try {
-      const ctrl = new AbortController();
-      const timer = setTimeout(() => ctrl.abort(), 8_000);
-      const res = await fetch(`${base}/web/search?q=${encodeURIComponent(query)}&count=20&result_filter=web`, {
-        signal: ctrl.signal,
-        headers: {
-          accept: "application/json",
-          "accept-encoding": "gzip",
-          "x-subscription-token": process.env.BRAVE_SEARCH_API_KEY ?? "",
+      const res = await fetchWithTimeout(
+        `${base}/web/search?q=${encodeURIComponent(query)}&count=20&result_filter=web`,
+        {
+          headers: {
+            accept: "application/json",
+            "accept-encoding": "gzip",
+            "x-subscription-token": process.env.BRAVE_SEARCH_API_KEY ?? "",
+          },
         },
-      });
-      clearTimeout(timer);
+        8_000,
+      );
       if (!res.ok) {
         this.log.warn(`Brave ${res.status} for "${query}"`);
         return [];
@@ -177,13 +178,11 @@ export class CompetitorAnalysisService {
   private async viaDuckDuckGo(query: string): Promise<SerpHit[]> {
     const base = (process.env.COMPETITOR_SERP_DDG_URL ?? "https://html.duckduckgo.com/html/").replace(/\/+$/, "/");
     try {
-      const ctrl = new AbortController();
-      const timer = setTimeout(() => ctrl.abort(), 8_000);
-      const res = await fetch(`${base}?q=${encodeURIComponent(query)}`, {
-        signal: ctrl.signal,
-        headers: { "user-agent": BROWSER_UA, accept: "text/html" },
-      });
-      clearTimeout(timer);
+      const res = await fetchWithTimeout(
+        `${base}?q=${encodeURIComponent(query)}`,
+        { headers: { "user-agent": BROWSER_UA, accept: "text/html" } },
+        8_000,
+      );
       if (!res.ok) {
         this.log.warn(`DuckDuckGo ${res.status} for "${query}"`);
         return [];

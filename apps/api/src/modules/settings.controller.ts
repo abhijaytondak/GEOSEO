@@ -1,6 +1,13 @@
 import { Body, Controller, Delete, Get, Inject, Param, Patch, Post, Put } from "@nestjs/common";
 import { ApiTags } from "@nestjs/swagger";
 import type { IntegrationStatus, TeamMember, WorkspaceIntegration, WorkspaceSettings } from "@geoseo/types";
+import { validateBody } from "../common/validation";
+import {
+  WorkspaceSettingsSchema,
+  TeamMemberCreateSchema,
+  TeamMemberPatchSchema,
+  IntegrationWriteSchema,
+} from "../common/schemas";
 import { JobsStore } from "./jobs.service";
 import { SettingsStore } from "./settings.service";
 import { AuditStore } from "./audit.service";
@@ -59,28 +66,28 @@ export class SettingsController {
   }
 
   @Put()
-  update(@Body() body: Partial<WorkspaceSettings>) {
+  update(@Body(validateBody(WorkspaceSettingsSchema)) body: Partial<WorkspaceSettings>) {
     const settings = this.settings.update(body);
     this.audit.record("update", "settings", "workspace");
     return { settings, job: this.jobs.create("settings-sync") };
   }
 
   @Patch("integrations/:id")
-  updateIntegration(@Param("id") id: string, @Body() body: Partial<WorkspaceIntegration>) {
+  updateIntegration(@Param("id") id: string, @Body(validateBody(IntegrationWriteSchema)) body: Partial<WorkspaceIntegration>) {
     const integration = this.settings.updateIntegration(id, body);
     this.audit.record("integration", "settings", id);
     return { integration, job: this.jobs.create("settings-sync") };
   }
 
   @Post("team")
-  addTeamMember(@Body() body: Omit<TeamMember, "id">) {
+  addTeamMember(@Body(validateBody(TeamMemberCreateSchema)) body: Omit<TeamMember, "id">) {
     const member = this.settings.addTeamMember(body);
     this.audit.record("create", "settings", member.id);
     return { member, settings: this.settings.get() };
   }
 
   @Patch("team/:id")
-  updateTeamMember(@Param("id") id: string, @Body() body: Partial<Omit<TeamMember, "id">>) {
+  updateTeamMember(@Param("id") id: string, @Body(validateBody(TeamMemberPatchSchema)) body: Partial<Omit<TeamMember, "id">>) {
     const member = this.settings.updateTeamMember(id, body);
     this.audit.record("update", "settings", id);
     return { member, settings: this.settings.get() };
