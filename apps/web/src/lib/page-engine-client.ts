@@ -270,13 +270,10 @@ export const pageEngineApi = {
     get<{ audit: AuditEntry[] }>("/audit", () => ({ audit: [] })).then((d) => d.audit),
 
   // leads ops
-  syncLead: (id: string) => send<Lead>("POST", `/leads/${id}/sync`),
   deleteLead: (id: string) => send<{ id: string; deleted: boolean }>("DELETE", `/leads/${id}`),
 
   // onboarding (brand)
   extractBrand: (url: string) => send<BrandDraft>("POST", "/brand-profile/extract-from-site", { url }),
   saveBrand: (profile: BrandProfile) =>
     send<{ completeness: number }>("PUT", "/brand-profile", profile),
-  generateBlueprint: (opportunityId: string) =>
-    send<PageBlueprint>("POST", "/page-blueprints", { opportunityId }),
 };

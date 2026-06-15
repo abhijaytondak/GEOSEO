@@ -596,14 +596,6 @@ export class PageEngineStore implements OnModuleInit {
     }
     return l;
   }
-  syncLead(id: string): Lead | undefined {
-    const l = this.getLead(id);
-    if (l) {
-      l.crmSyncStatus = "synced";
-      this.save(T.leads, l.id, l);
-    }
-    return l;
-  }
   removeLead(id: string): boolean {
     const i = this.leads.findIndex((l) => l.id === id);
     if (i < 0) return false;
@@ -612,16 +604,6 @@ export class PageEngineStore implements OnModuleInit {
     this.logAudit("delete", "lead", id);
     return true;
   }
-  exportLeadsCsv(): string {
-    const headers = ["Name", "Email", "Company", "Source Page", "Score", "Status", "Spam", "CRM", "Created"];
-    const rows = this.leads.map((l) => [
-      l.name, l.email, l.company, l.pageTitle, String(l.score), l.status, l.spamStatus, l.crmSyncStatus ?? "none", l.createdAt,
-    ]);
-    return [headers, ...rows]
-      .map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(","))
-      .join("\n");
-  }
-
   /* monitoring: refresh recommendations (PRD §7.8) */
   refreshRecommendations() {
     return this.pages

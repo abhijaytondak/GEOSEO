@@ -272,18 +272,6 @@ export class LeadsController {
     return l;
   }
 
-  @Post("export")
-  export() {
-    return { csv: this.store.exportLeadsCsv() };
-  }
-
-  @Post(":id/sync")
-  sync(@Param("id") id: string) {
-    const l = this.store.syncLead(id);
-    if (!l) throw new NotFoundException(`Lead ${id} not found`);
-    return l;
-  }
-
   @Delete(":id")
   remove(@Param("id") id: string) {
     if (!this.store.removeLead(id)) throw new NotFoundException(`Lead ${id} not found`);
