@@ -54,10 +54,8 @@ function themeStyle(t: SiteThemeProfile | null): React.CSSProperties | undefined
 
   if (bg && fg) {
     v["--background"] = c.background!;
-    v["--canvas"] = c.background!;
     v["--foreground"] = c.foreground!;
     v["--card-foreground"] = c.foreground!;
-    v["--body"] = c.foreground!;
     // Lift surfaces off the background toward the text color — works dark or light.
     v["--card"] = mix(bg, fg, 0.05);
     v["--muted"] = mix(bg, fg, 0.1);
@@ -65,15 +63,11 @@ function themeStyle(t: SiteThemeProfile | null): React.CSSProperties | undefined
     v["--border"] = mix(bg, fg, 0.14);
     v["--border-strong"] = mix(bg, fg, 0.22);
   } else {
-    // Partial palette — set whatever single tokens we have (legacy behavior).
-    if (c.background) {
-      v["--background"] = c.background;
-      v["--canvas"] = c.background;
-    }
+    // Partial palette — set whatever single tokens we have.
+    if (c.background) v["--background"] = c.background;
     if (c.foreground) {
       v["--foreground"] = c.foreground;
       v["--card-foreground"] = c.foreground;
-      v["--body"] = c.foreground;
     }
     if (c.border) {
       v["--border"] = c.border;
@@ -140,7 +134,7 @@ export default async function FeedPage({ params }: Params) {
   const canonical = page.publishedUrl ?? `https://${host}/feeds${page.slug}`;
 
   return (
-    <div className="min-h-dvh bg-canvas" style={themeStyle(theme)}>
+    <div className="min-h-dvh bg-background text-foreground" style={themeStyle(theme)}>
       {/* visitor journey tracking — fires a page_view so the lead-journey timeline is real */}
       <FeedTracker slug={page.slug} pageId={page.id} title={page.title} />
       {/* schema for traditional + AI crawlers */}
@@ -170,12 +164,12 @@ export default async function FeedPage({ params }: Params) {
             ))}
           </div>
           <h1 className="text-[34px] font-bold leading-tight tracking-[-0.02em] text-foreground">{page.title}</h1>
-          <p className="mt-3 text-[17px] leading-relaxed text-body">{page.heroCopy}</p>
+          <p className="mt-3 text-[17px] leading-relaxed text-foreground/80">{page.heroCopy}</p>
 
           {page.sections.map((s) => (
             <section key={s.heading} className="mt-8">
               <h2 className="text-[20px] font-semibold tracking-[-0.01em] text-foreground">{s.heading}</h2>
-              <p className="mt-2 text-[15px] leading-relaxed text-body">{s.body}</p>
+              <p className="mt-2 text-[15px] leading-relaxed text-foreground/80">{s.body}</p>
             </section>
           ))}
 
