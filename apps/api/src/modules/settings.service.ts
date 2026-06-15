@@ -110,6 +110,18 @@ export class SettingsStore implements OnModuleInit {
     return next;
   }
 
+  updateTeamMember(id: string, patch: Partial<Omit<TeamMember, "id">>) {
+    let updated: TeamMember | undefined;
+    this.settings.team = this.settings.team.map((member) => {
+      if (member.id !== id) return member;
+      updated = { ...member, ...patch, id };
+      return updated;
+    });
+    if (!updated) throw new NotFoundException(`Team member ${id} not found`);
+    this.db.save(this.settings);
+    return updated;
+  }
+
   removeTeamMember(id: string) {
     const before = this.settings.team.length;
     this.settings.team = this.settings.team.filter((member) => member.id !== id);

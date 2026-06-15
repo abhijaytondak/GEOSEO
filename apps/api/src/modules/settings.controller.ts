@@ -79,6 +79,13 @@ export class SettingsController {
     return { member, settings: this.settings.get() };
   }
 
+  @Patch("team/:id")
+  updateTeamMember(@Param("id") id: string, @Body() body: Partial<Omit<TeamMember, "id">>) {
+    const member = this.settings.updateTeamMember(id, body);
+    this.audit.record("update", "settings", id);
+    return { member, settings: this.settings.get() };
+  }
+
   @Delete("team/:id")
   removeTeamMember(@Param("id") id: string) {
     const result = this.settings.removeTeamMember(id);

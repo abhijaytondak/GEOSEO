@@ -120,6 +120,19 @@ export function SettingsView({ initial }: { initial: WorkspaceSettings }) {
     }
   }
 
+  async function updateRole(member: TeamMember, role: TeamMember["role"]) {
+    const previous = settings;
+    setSettings((current) => ({ ...current, team: current.team.map((m) => (m.id === member.id ? { ...m, role } : m)) }));
+    try {
+      const result = await api.updateTeamMember(member.id, { role });
+      setSettings(result.settings);
+      notify({ kind: "success", title: "Role updated", message: `${member.name} → ${role}` });
+    } catch (err) {
+      setSettings(previous);
+      notify({ kind: "error", title: "Could not update role", message: err instanceof Error ? err.message : "Try again." });
+    }
+  }
+
   async function removeMember(member: TeamMember) {
     if (member.role === "owner") {
       notify({ kind: "error", title: "Owner cannot be removed in the prototype" });
@@ -248,7 +261,20 @@ export function SettingsView({ initial }: { initial: WorkspaceSettings }) {
                   <div className="truncate text-[13px] font-semibold text-foreground">{member.name}</div>
                   <div className="truncate text-[12px] text-muted-foreground">{member.email}</div>
                 </div>
-                <span className="rounded-full bg-muted px-2 py-1 text-[11px] font-semibold capitalize text-muted-foreground">{member.role}</span>
+                {member.role === "owner" ? (
+                  <span className="rounded-full bg-muted px-2 py-1 text-[11px] font-semibold capitalize text-muted-foreground">{member.role}</span>
+                ) : (
+                  <select
+                    className="h-8 rounded-lg border border-border bg-surface-sunken px-2 text-[12px] font-medium capitalize outline-none focus:border-ring"
+                    value={member.role}
+                    onChange={(e) => updateRole(member, e.target.value as TeamMember["role"])}
+                    aria-label={`Role for ${member.name}`}
+                  >
+                    <option value="analyst">Analyst</option>
+                    <option value="marketer">Marketer</option>
+                    <option value="admin">Admin</option>
+                  </select>
+                )}
                 <button
                   className="flex size-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-negative/10 hover:text-negative disabled:opacity-40"
                   disabled={member.role === "owner"}

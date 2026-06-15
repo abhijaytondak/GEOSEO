@@ -502,6 +502,12 @@ export const api = {
     ),
   addTeamMember: (member: Omit<WorkspaceSettings["team"][number], "id">) =>
     send<{ member: WorkspaceSettings["team"][number]; settings: WorkspaceSettings }>("POST", "/settings/team", member),
+  updateTeamMember: (id: string, patch: Partial<Omit<WorkspaceSettings["team"][number], "id">>) =>
+    send<{ member: WorkspaceSettings["team"][number]; settings: WorkspaceSettings }>(
+      "PATCH",
+      `/settings/team/${encodeURIComponent(id)}`,
+      patch,
+    ),
   removeTeamMember: (id: string) =>
     send<{ id: string; removed: boolean; settings: WorkspaceSettings }>(
       "DELETE",
