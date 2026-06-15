@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Check, Loader2, Send } from "lucide-react";
 import { pageEngineApi } from "@/lib/page-engine-client";
+import { getVisitorId } from "@/lib/visitor";
 
 const inputCls =
   "h-10 w-full rounded-lg border border-border bg-surface-sunken px-3 text-sm outline-none focus:border-ring focus:bg-card";
@@ -25,7 +26,9 @@ export function LeadForm({ slug, sourceUrl, brandName = "us" }: { slug: string; 
     setState("sending");
     setError("");
     try {
-      await pageEngineApi.captureLead({ ...form, slug, sourceUrl });
+      const lead = await pageEngineApi.captureLead({ ...form, slug, sourceUrl });
+      // Tie this visitor's journey to the new lead so the Journey timeline is populated.
+      pageEngineApi.linkLeadVisitor(lead.id, getVisitorId()).catch(() => {});
       setState("done");
     } catch (err) {
       setState("error");

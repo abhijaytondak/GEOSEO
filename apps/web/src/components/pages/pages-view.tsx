@@ -251,6 +251,21 @@ export function PagesView({
 
   async function transition(id: string, to: PageStatus, label: string) {
     if (to === "published") {
+      // Pre-publish quality gate (PRD §12) — surface blockers before going live.
+      setBusy(id);
+      let gate: { blockers: string[]; canPublish: boolean };
+      try {
+        gate = await pageEngineApi.validatePage(id);
+      } catch (err) {
+        setBusy(null);
+        notify({ kind: "error", title: "Validation failed", message: err instanceof Error ? err.message : "Try again." });
+        return;
+      }
+      setBusy(null);
+      if (!gate.canPublish) {
+        notify({ kind: "error", title: "Resolve before publishing", message: gate.blockers.join(" · ") });
+        return;
+      }
       const ok = await confirm({
         title: "Publish this page?",
         message: "It will go live on your domain and become crawlable by search engines and AI answers.",
