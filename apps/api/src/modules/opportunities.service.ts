@@ -44,6 +44,13 @@ export class OpportunitiesStore implements OnModuleInit {
       .map((p) => ({ ...p, ...(this.updates.get(p.id) ?? {}) }));
   }
 
+  /** Archived prospects only — for the restore view. */
+  listArchived(base: BacklinkProspect[]): BacklinkProspect[] {
+    return [...this.discovered, ...base]
+      .filter((p) => this.archived.has(p.id))
+      .map((p) => ({ ...p, ...(this.updates.get(p.id) ?? {}) }));
+  }
+
   update(id: string, update: ProspectUpdate, base: BacklinkProspect[]): BacklinkProspect {
     const existing = this.list(base).find((p) => p.id === id);
     if (!existing) throw new NotFoundException(`No backlink opportunity '${id}'`);

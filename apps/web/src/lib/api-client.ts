@@ -385,6 +385,10 @@ export const api = {
     get<{ opportunities: BacklinkProspect[] }>("/backlink/opportunities?limit=100", async () => ({
       opportunities: await seoProvider.getProspects(),
     })).then((d) => d.opportunities),
+  getArchivedProspects: () =>
+    get<{ opportunities: BacklinkProspect[] }>("/backlink/opportunities/archived", () => ({ opportunities: [] })).then(
+      (d) => d.opportunities,
+    ),
   discoverProspect: () =>
     send<{ opportunity: BacklinkProspect; job: JobRun }>("POST", "/backlink/opportunities/discover"),
   updateProspect: (id: string, update: ProspectUpdate) =>

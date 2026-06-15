@@ -90,6 +90,36 @@ export function OpportunitiesView({
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkTag, setBulkTag] = useState("");
   const [highlightId, setHighlightId] = useState<string | null>(null);
+  const [showArchived, setShowArchived] = useState(false);
+  const [archived, setArchived] = useState<BacklinkProspect[]>([]);
+  const [loadingArchived, setLoadingArchived] = useState(false);
+
+  async function toggleArchived() {
+    const next = !showArchived;
+    setShowArchived(next);
+    if (next && archived.length === 0) {
+      setLoadingArchived(true);
+      try {
+        setArchived(await api.getArchivedProspects());
+      } catch {
+        notify({ kind: "error", title: "Couldn't load archived prospects" });
+      } finally {
+        setLoadingArchived(false);
+      }
+    }
+  }
+
+  async function restoreProspect(p: BacklinkProspect) {
+    setArchived((items) => items.filter((x) => x.id !== p.id));
+    try {
+      await api.restoreProspect(p.id);
+      setProspects((items) => [p, ...items]);
+      notify({ kind: "success", title: "Prospect restored", message: p.domain });
+    } catch (err) {
+      setArchived((items) => [p, ...items]);
+      notify({ kind: "error", title: "Restore failed", message: err instanceof Error ? err.message : "Try again." });
+    }
+  }
 
   // Discovery (header button) hands us the new prospect — prepend + highlight it
   // so it actually appears in this client-state list (§6.1).
@@ -406,7 +436,52 @@ export function OpportunitiesView({
             <span className="tnum rounded-full bg-brand/20 px-1.5 text-[11px] font-semibold">{advChips.length}</span>
           )}
         </button>
+
+        {/* archived view toggle (restore) */}
+        <button
+          onClick={toggleArchived}
+          aria-pressed={showArchived}
+          className={cn(
+            "inline-flex h-10 shrink-0 items-center gap-1.5 rounded-xl border px-3 text-[13px] font-medium transition-colors",
+            showArchived
+              ? "border-brand/40 bg-brand/10 text-brand"
+              : "border-border bg-card text-muted-foreground hover:bg-muted hover:text-foreground",
+          )}
+        >
+          <Archive className="size-4" />
+          Archived
+        </button>
       </div>
+
+      {showArchived && (
+        <div className="rounded-2xl border border-border bg-card p-4 shadow-card">
+          <div className="mb-2 flex items-center gap-2 text-[13px] font-semibold text-foreground">
+            <Archive className="size-4 text-muted-foreground" /> Archived prospects
+            <span className="tnum rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">{archived.length}</span>
+          </div>
+          {loadingArchived ? (
+            <p className="py-4 text-center text-[13px] text-muted-foreground">Loading…</p>
+          ) : archived.length === 0 ? (
+            <p className="py-4 text-center text-[13px] text-muted-foreground">No archived prospects.</p>
+          ) : (
+            <div className="divide-y divide-border">
+              {archived.map((p) => (
+                <div key={p.id} className="flex items-center gap-3 py-2.5">
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate text-[13px] font-medium text-foreground">{p.domain}</div>
+                    <div className="truncate text-[12px] text-muted-foreground">
+                      {p.industry} · DA {p.domainAuthority}
+                    </div>
+                  </div>
+                  <Button variant="outline" size="sm" className="h-8" onClick={() => restoreProspect(p)}>
+                    <RotateCw className="size-3.5" /> Restore
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* advanced filter panel (§8.4) */}
       {showFilters && (

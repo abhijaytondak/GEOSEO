@@ -49,6 +49,13 @@ export class BacklinkController {
     return { opportunities: items, total, limit: l, offset: o };
   }
 
+  /** Archived prospects only — powers the restore view (declared before :id so it isn't shadowed). */
+  @Get("archived")
+  async archived() {
+    const prospects = this.opportunities.listArchived(await this.seo.getProspects());
+    return { opportunities: prospects, total: prospects.length };
+  }
+
   @Get(":id")
   async detail(@Param("id") id: string) {
     const prospect = this.opportunities.list(await this.seo.getProspects()).find((p) => p.id === id);
