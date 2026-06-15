@@ -62,6 +62,26 @@ curl -s https://<railway-app>.up.railway.app/api/v1/health | jq
 curl -s https://<railway-app>.up.railway.app/api/v1/dashboard/kpis   # ⇒ 401 without a token (auth is on) ✓
 ```
 
+## Durable API host — Render (free tier, alternative to Railway)
+
+`render.yaml` (repo root) is a ready Blueprint. Render deploys straight from GitHub,
+so the only steps are in the dashboard:
+
+1. **Render → New → Blueprint** → pick this repo → it reads `render.yaml` and creates
+   the `geoseo-api` web service (Node, pnpm workspace install, start `pnpm --filter
+   @geoseo/api start`, healthcheck `/api/v1/health`).
+2. Fill the `sync: false` secrets (values from `apps/api/.env`): `DATABASE_URL`,
+   `REDIS_URL`, `DEEPSEEK_API_KEY` (+ any integration keys to activate seams).
+3. Deploy → Render gives `https://geoseo-api.onrender.com`. Verify:
+   `curl https://geoseo-api.onrender.com/api/v1/health` → `persistence:"postgres"` if
+   Supabase is reachable from Render.
+
+> **Free-tier caveat:** the service spins down after ~15 min idle; the next request
+> cold-starts ~30–60s (the web's "Demo data" banner covers that window gracefully).
+> Upgrade the Render plan for always-on. The Blueprint defaults to `GEOSEO_MODE=demo`
+> (open + persistence on); to go production set `GEOSEO_MODE=production` +
+> `API_AUTH_REQUIRED=true` + `DEV_API_TOKEN` (and mirror the token on Vercel).
+
 ## Point the Vercel web at the hosted API
 
 Set `API_INTERNAL_URL` to the Railway URL (build + runtime), then redeploy:

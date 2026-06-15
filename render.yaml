@@ -1,0 +1,58 @@
+# Render Blueprint for the GEOSEO API (apps/api).
+# Deploy: Render dashboard → New → Blueprint → pick this repo → it reads this file.
+# Then fill the `sync: false` secrets (values from apps/api/.env) in the dashboard.
+#
+# Notes:
+# - Free web services spin down after ~15 min idle (first request after that cold-starts
+#   ~30-60s; the web's degraded banner covers that gracefully). Upgrade the plan for always-on.
+# - The API reads $PORT and binds 0.0.0.0 automatically; tsx is a runtime dependency.
+# - pnpm is auto-detected from the root packageManager field; build installs the whole
+#   workspace (the API runs TS directly via tsx — no compile step needed).
+services:
+  - type: web
+    name: geoseo-api
+    runtime: node
+    plan: free
+    region: oregon
+    branch: main
+    autoDeploy: true
+    buildCommand: corepack enable && pnpm install --frozen-lockfile
+    startCommand: pnpm --filter @geoseo/api start
+    healthCheckPath: /api/v1/health
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      # --- Mode: demo = open + sales-safe + persistence on (simplest hosted deploy).
+      #     To go production (auth on), set GEOSEO_MODE=production, API_AUTH_REQUIRED=true,
+      #     and add DEV_API_TOKEN (then mirror it on the Vercel web). ---
+      - key: GEOSEO_MODE
+        value: demo
+      - key: WEB_ORIGIN
+        value: https://geoseo-tau.vercel.app
+      # --- LLM (content/page generation) ---
+      - key: LLM_PROVIDER
+        value: deepseek
+      - key: DEEPSEEK_BASE_URL
+        value: https://api.deepseek.com
+      - key: DEEPSEEK_MODEL
+        value: deepseek-chat
+      - key: DEEPSEEK_API_KEY
+        sync: false
+      # --- Persistence (copy from apps/api/.env) ---
+      - key: DATABASE_URL
+        sync: false
+      - key: REDIS_URL
+        sync: false
+      # --- Optional integration seams: set a value to flip demo→live (leave unset = demo) ---
+      - key: DATAFORSEO_LOGIN
+        sync: false
+      - key: DATAFORSEO_PASSWORD
+        sync: false
+      - key: HUBSPOT_ACCESS_TOKEN
+        sync: false
+      - key: GSC_SERVICE_ACCOUNT_JSON
+        sync: false
+      - key: GSC_SITE_URL
+        sync: false
+      - key: IMAGE_GEN_API_KEY
+        sync: false
