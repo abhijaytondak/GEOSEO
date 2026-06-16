@@ -72,8 +72,8 @@ export class AiMentionStore implements OnModuleInit {
    * `mentions` is the genuine count of cited answers per engine; `shareOfVoice` is that
    * engine's share of your tracked citations (distribution across engines, not a fabricated
    * competitor figure); `delta` compares the most-recent half of checks to the prior half.
-   * Returns `source: "none"` with no signals when nothing has been tracked yet — callers
-   * fall back to a clearly-labelled demo sample only in demo mode.
+   * Returns `source: "none"` with no signals when nothing has been tracked yet, so the
+   * UI shows an honest empty state instead of fabricated numbers.
    */
   visibility(): AiVisibilityResult {
     const cited = this.mentions.filter((m) => m.mentioned);
@@ -82,25 +82,25 @@ export class AiMentionStore implements OnModuleInit {
     // Split chronologically into prior vs recent halves for an honest delta.
     const byTime = [...cited].sort((a, b) => a.checkedAt.localeCompare(b.checkedAt));
     const mid = Math.floor(byTime.length / 2);
-    const prior = byTime.slice(0, mid);
-    const recent = byTime.slice(mid);
-    const countFor = (list: AiMention[], e: AiEngine) => list.filter((m) => m.engine === e).length;
+    // One pass per slice → per-engine counts (cheaper and clearer than re-filtering per engine).
+    const tally = (list: AiMention[]): Partial<Record<AiEngine, number>> => {
+      const t: Partial<Record<AiEngine, number>> = {};
+      for (const m of list) t[m.engine as AiEngine] = (t[m.engine as AiEngine] ?? 0) + 1;
+      return t;
+    };
+    const citedBy = tally(cited);
+    const recentBy = tally(byTime.slice(mid));
+    const priorBy = tally(byTime.slice(0, mid));
 
-    const total = VISIBILITY_ENGINES.reduce((a, { engine }) => a + countFor(cited, engine), 0);
+    const total = VISIBILITY_ENGINES.reduce((a, { engine }) => a + (citedBy[engine] ?? 0), 0);
     const signals: AiVisibilitySignal[] = VISIBILITY_ENGINES.map(({ engine, label }) => {
-      const mentions = countFor(cited, engine);
+      const mentions = citedBy[engine] ?? 0;
       const shareOfVoice = total ? Math.round((mentions / total) * 100) : 0;
-      const r = countFor(recent, engine);
-      const p = countFor(prior, engine);
+      const r = recentBy[engine] ?? 0;
+      const p = priorBy[engine] ?? 0;
       const pct = p > 0 ? Math.round(((r - p) / p) * 100) : r > 0 ? 100 : 0;
       const direction = pct > 0 ? "up" : pct < 0 ? "down" : "flat";
-      return {
-        engine,
-        label,
-        mentions,
-        shareOfVoice,
-        delta: { pct: Math.abs(pct), direction, goodWhen: "up" },
-      };
+      return { engine, label, mentions, shareOfVoice, delta: { pct: Math.abs(pct), direction, goodWhen: "up" } };
     });
     return { signals, source: "tracked" };
   }

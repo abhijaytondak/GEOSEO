@@ -377,6 +377,12 @@ export class PageEngineStore implements OnModuleInit {
    * (Page-engine-local; deliberately does not touch the contested jobs.service.)
    */
   startBatchGeneration(opportunityIds: string[]): PageBatchJob {
+    // Evict oldest handles so the in-memory map stays bounded (insertion-ordered).
+    while (this.batchJobs.size >= 50) {
+      const oldest = this.batchJobs.keys().next().value;
+      if (oldest === undefined) break;
+      this.batchJobs.delete(oldest);
+    }
     this.bseq += 1;
     const ids = [...new Set(opportunityIds)].filter((id) => this.getOpportunity(id));
     const job: PageBatchJob = {

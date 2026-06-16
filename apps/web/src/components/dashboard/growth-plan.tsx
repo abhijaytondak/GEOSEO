@@ -84,7 +84,8 @@ export function GrowthPlan() {
         message: "You can keep working — they'll appear in Pipeline as they're ready.",
       });
       let latest = job;
-      while (latest.status === "running") {
+      // Poll progress, capped (~5 min) so a stuck server can't hang the loop forever.
+      for (let polls = 0; latest.status === "running" && polls < 200; polls++) {
         await new Promise((r) => setTimeout(r, 1500));
         try {
           latest = await pageEngineApi.getBatchProgress(job.id);

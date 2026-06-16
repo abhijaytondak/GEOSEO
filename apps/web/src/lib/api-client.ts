@@ -517,7 +517,7 @@ export const api = {
     // No-Dummy-Data §7.6: AI-citation counts must be real. When the live API is
     // unreachable, return an empty set (UI shows an honest empty state) rather than
     // the fabricated mock sample. Real numbers come from recorded checks server-side.
-    get<{ signals: AiVisibilitySignal[] }>("/performance/ai-visibility", async () => ({ signals: [] as AiVisibilitySignal[] })).then((d) => d.signals),
+    get<{ signals: AiVisibilitySignal[] }>("/performance/ai-visibility", () => ({ signals: [] as AiVisibilitySignal[] })).then((d) => d.signals),
   getTrackedPages: () =>
     get<{ pages: TrackedPage[] }>("/performance/pages?limit=100", async () => ({ pages: await seoProvider.getTrackedPages() })).then((d) => d.pages),
   getPerformanceOverview: (range = "8w") =>

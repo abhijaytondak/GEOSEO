@@ -1,11 +1,10 @@
 import { Controller, Get, Inject, Logger, NotFoundException, Param, Query } from "@nestjs/common";
 import { ApiTags, ApiQuery } from "@nestjs/swagger";
-import type { SeoDataProvider, TrackedPage, PerformanceOverview, AiVisibilitySignal } from "@geoseo/types";
+import type { SeoDataProvider, TrackedPage, PerformanceOverview } from "@geoseo/types";
 import { SEO_PROVIDER } from "../seo/seo.module";
 import { paginate } from "../common/pagination";
 import { settled, degradeLogger } from "../common/async";
-import { resolveMode } from "../common/mode";
-import { AiMentionStore, type AiVisibilitySource } from "./ai-search.service";
+import { AiMentionStore } from "./ai-search.service";
 import { GscService } from "./gsc.service";
 
 type SortKey = "rankChange" | "impressions" | "clicks" | "rank";
@@ -45,17 +44,6 @@ export class PerformanceController {
     @Inject(AiMentionStore) private readonly mentions: AiMentionStore,
   ) {}
 
-  /**
-   * Honest AI-visibility signals (No-Dummy-Data §7.6): real recorded citation checks
-   * whenever any exist; otherwise the labelled demo sample in demo mode only, or an
-   * empty `none` source in production so the UI shows an honest empty state — never
-   * fabricated mention counts.
-   */
-  private aiSignals(): { signals: AiVisibilitySignal[]; source: AiVisibilitySource } {
-    // Real recorded citation checks only — never the fabricated mock sample, in any mode.
-    // No checks yet ⇒ `none` + empty, so the UI shows an honest empty state.
-    return this.mentions.visibility();
-  }
 
   @Get("pages")
   @ApiQuery({ name: "limit", required: false })
@@ -80,7 +68,7 @@ export class PerformanceController {
     const [ranksR, impressionsR, signalsR, pagesR] = await Promise.allSettled([
       this.seo.getRankSeries(),
       this.seo.getImpressionSeries(),
-      Promise.resolve(this.aiSignals().signals), // real recorded citation checks (never the mock sample)
+      Promise.resolve(this.mentions.visibility().signals), // real recorded citation checks (never the mock sample)
       this.seo.getTrackedPages(),
     ]);
     const warn = degradeLogger(this.log, "performance/overview");
@@ -175,16 +163,16 @@ export class PerformanceController {
   }
 
   @Get("ai-visibility")
-  async aiVisibility() {
-    // Honest source-tagged signals: real recorded checks › demo sample (demo only) › empty.
-    return this.aiSignals();
+  aiVisibility() {
+    // Real recorded citation checks (source: "tracked"), or an empty "none" set — never the mock sample.
+    return this.mentions.visibility();
   }
 
   @Get("pages/:id")
   async detail(@Param("id") id: string) {
     const page = (await this.seo.getTrackedPages()).find((p) => p.id === id);
     if (!page) throw new NotFoundException(`No tracked page '${id}'`);
-    const { signals: aiVisibility } = this.aiSignals();
+    const { signals: aiVisibility } = this.mentions.visibility();
     return { ...page, aiVisibility };
   }
 }
