@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import {
   Bell,
+  BrainCircuit,
   Check,
   CreditCard,
   Loader2,
@@ -12,17 +13,21 @@ import {
   UserPlus,
   Users,
 } from "lucide-react";
+import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import type { IntegrationStatus, TeamMember, WorkspaceSettings } from "@geoseo/types";
 import { api } from "@/lib/api-client";
 import { Panel } from "@/components/dashboard/panel";
+import { BrandScorecard } from "@/components/dashboard/brand-scorecard";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useAppFeedback } from "@/components/system/app-feedback";
 
-type Tab = "profile" | "integrations" | "team" | "notifications" | "billing";
+type Tab = "profile" | "brand" | "integrations" | "team" | "notifications" | "billing";
 
 const tabs: Array<{ id: Tab; label: string; icon: typeof Save }> = [
   { id: "profile", label: "Profile", icon: Save },
+  { id: "brand", label: "Brand Context", icon: BrainCircuit },
   { id: "integrations", label: "Integrations", icon: PlugZap },
   { id: "team", label: "Team", icon: Users },
   { id: "notifications", label: "Notifications", icon: Bell },
@@ -40,7 +45,9 @@ const inputCls =
 
 export function SettingsView({ initial }: { initial: WorkspaceSettings }) {
   const { notify, trackJob, confirm } = useAppFeedback();
-  const [tab, setTab] = useState<Tab>("profile");
+  const params = useSearchParams();
+  const initialTab = (tabs.find((t) => t.id === params.get("tab"))?.id ?? "profile") as Tab;
+  const [tab, setTab] = useState<Tab>(initialTab);
   const [settings, setSettings] = useState(initial);
   const [saving, setSaving] = useState(false);
   const [newMember, setNewMember] = useState<Omit<TeamMember, "id">>({
@@ -211,6 +218,29 @@ export function SettingsView({ initial }: { initial: WorkspaceSettings }) {
             </Button>
           </div>
         </Panel>
+      )}
+
+      {tab === "brand" && (
+        <div className="space-y-5">
+          <Panel
+            title="Brand Context"
+            description="The business facts every agent uses to ground generated pages, content, and outreach."
+          >
+            <p className="text-[13px] leading-relaxed text-muted-foreground">
+              Brand Memory is your workspace&apos;s source of truth — company, value proposition, products,
+              buyer personas, and proof points. Keeping it complete is what makes generated pages accurate and
+              on-brand instead of generic.
+            </p>
+            <Link
+              href="/brand"
+              className="mt-4 inline-flex items-center gap-1.5 rounded-xl border border-border bg-card px-4 py-2.5 text-[13px] font-semibold text-foreground transition-colors hover:bg-muted"
+            >
+              <BrainCircuit className="size-4 text-brand" />
+              Open Brand Memory
+            </Link>
+          </Panel>
+          <BrandScorecard />
+        </div>
       )}
 
       {tab === "integrations" && (
