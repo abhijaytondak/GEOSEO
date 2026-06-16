@@ -326,8 +326,10 @@ Vercel demo runs the real backend (with these seams active) instead of the mock 
   crawl/scan won't run; works locally (`:4000`) or once `apps/api` is hosted.
 - **Solution Parity PRD — Phase 1 truthful readiness layer (smoke 62/62 + screenshot-verified desktop+mobile):**
   `SolutionReadiness`/`SolutionCapability` types; `SolutionsController` `GET /solutions/readiness` (hand-curated,
-  honest, completeness % computed from capability statuses) → AI Search **partial 29%**, Lead Conversion **partial
-  57%**, Paid Boost **planned 0%**, each with capability matrix + safe/avoid claims. `api.getSolutionReadiness()`.
+  honest, completeness % computed from capability statuses) → at landing AI Search **29%**, Lead Conversion **57%**,
+  Paid Boost **0%**; **live values as of 2026-06-16: AI Search 42%, Lead Conversion 87%, Paid Boost 0%** (rises as
+  capabilities ship — `GET /solutions/readiness` is the live source of truth, not these notes). Each with capability
+  matrix + safe/avoid claims. `api.getSolutionReadiness()`.
   New `/solutions` page (`SolutionsView`) + nav link (`Boxes` icon under Workspace). Purpose: stop sales/marketing
   overclaiming. **Update capability statuses in `solutions.controller.ts` as features ship.**
 - **Leads PRD — frontend lead detail drawer (Gap 2, build+lint+typecheck clean):** new
@@ -440,8 +442,9 @@ Vercel demo runs the real backend (with these seams active) instead of the mock 
   SSR-seeded) + `components/search/search-results-view.tsx` — facet rail by type, live re-query
   (URL-synced), grouped results with icon/metrics/status, CSV export, empty state. Palette has a
   "View all results" footer → `/search?q=`.
-- **Saved searches (F5, verified):** `lib/saved-searches.ts` (localStorage); `/search` Save button +
-  removable saved chips; palette "Saved" section before typing → `/search?q=&type=`.
+- **Saved searches (F5) — NOT BUILT (corrected 2026-06-16):** an earlier note claimed this shipped
+  (`lib/saved-searches.ts` + `/search` Save button + palette "Saved" section), but that file/feature does
+  **not exist** in the tree (verified: no `SavedSearch`/`saved-searches` refs anywhere in `apps/web`). Still open.
 - **Search relevance fix:** `search.service.ts` appends `TYPE_KEYWORDS` to each item's haystack so
   category-name queries surface the right entities (`alert` 0→8, `leads`→12, `prospects`→26).
 - **Route loading skeletons (§15.1):** layout-matching `loading.tsx` for `/performance`,

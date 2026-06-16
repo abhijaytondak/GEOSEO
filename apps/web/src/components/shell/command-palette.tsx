@@ -22,7 +22,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import type { SearchResult, SearchEntityType } from "@geoseo/types";
-import { navSections } from "./nav-config";
+import { commandDestinations } from "./nav-config";
 import { api } from "@/lib/api-client";
 import { useAppFeedback } from "@/components/system/app-feedback";
 import { cn } from "@/lib/utils";
@@ -175,16 +175,14 @@ function Palette({ onClose }: { onClose: () => void }) {
   }, [query]);
 
   const commands = useMemo<Command[]>(() => {
-    const go: Command[] = navSections.flatMap((s) =>
-      s.items.map((item) => ({
-        id: `nav:${item.href}`,
-        label: item.label,
-        group: "Go to" as const,
-        icon: item.icon,
-        keywords: item.href,
-        run: () => router.push(item.href),
-      })),
-    );
+    const go: Command[] = commandDestinations.map((item) => ({
+      id: `nav:${item.href}`,
+      label: item.label,
+      group: "Go to" as const,
+      icon: item.icon,
+      keywords: `${item.keywords ?? ""} ${item.href}`.trim(),
+      run: () => router.push(item.href),
+    }));
     const actions: Command[] = [
       {
         id: "act:audit",

@@ -8,12 +8,13 @@ import { AnalyticsWorkspace } from "@/components/analytics/analytics-workspace";
 export const dynamic = "force-dynamic";
 
 export default async function AnalyticsPage() {
-  const [ranks, impressions, aiSignals, pages, leads] = await Promise.all([
+  const [ranks, impressions, aiSignals, pages, leads, authority] = await Promise.all([
     api.getRankSeries(),
     api.getImpressionSeries(),
     api.getAiVisibility(),
     api.getTrackedPages(),
     pageEngineApi.getLeads(),
+    api.getAuthorityOverview(),
   ]);
 
   return (
@@ -34,7 +35,14 @@ export default async function AnalyticsPage() {
       />
 
       <div className="p-6 sm:p-8">
-        <AnalyticsWorkspace ranks={ranks} impressions={impressions} aiSignals={aiSignals} pages={pages} leads={leads} />
+        <AnalyticsWorkspace
+          ranks={ranks}
+          impressions={impressions}
+          aiSignals={aiSignals}
+          pages={pages}
+          leads={leads}
+          authority={authority}
+        />
       </div>
     </>
   );

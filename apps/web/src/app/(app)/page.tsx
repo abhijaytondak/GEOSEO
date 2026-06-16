@@ -14,6 +14,8 @@ import { ActivityFeed } from "@/components/dashboard/activity-feed";
 import { AuthorityActions } from "@/components/dashboard/authority-actions";
 import { ActionCenter } from "@/components/dashboard/action-center";
 import { BrandScorecard } from "@/components/dashboard/brand-scorecard";
+import { OutcomeStrip } from "@/components/dashboard/outcome-strip";
+import { SetupHealth } from "@/components/dashboard/setup-health";
 import { OverviewExport, type SummaryRow } from "@/components/dashboard/overview-export";
 import { deriveAuthorityActions } from "@/lib/authority-actions";
 import { thousands } from "@/lib/format";
@@ -96,9 +98,9 @@ export default async function AuthorityHQ() {
   return (
     <>
       <PageHeader
-        eyebrow="Overview"
-        title="Authority HQ"
-        description="Your domain authority, backlink momentum, and what to act on next — at a glance."
+        eyebrow="Home"
+        title="Growth Command Center"
+        description="Your growth status, the next best actions, and what your agents did — at a glance."
         actions={
           <>
             <OverviewExport rows={summaryRows} />
@@ -110,6 +112,12 @@ export default async function AuthorityHQ() {
       <div className="space-y-5 p-6 sm:p-8">
         {/* Insight summary band (§7) */}
         <InsightBand status={insightStatus} headline={insightHeadline} source="Sample data" />
+
+        {/* Home cockpit — business outcome (leads-first) + setup health (nav-optimization PRD §6.1) */}
+        <div className="grid gap-5 lg:grid-cols-2">
+          <OutcomeStrip />
+          <SetupHealth />
+        </div>
 
         {/* Brand Scorecard — auto-analysis of the workspace's own domain (self-fetching) */}
         <BrandScorecard />

@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import {
   LayoutGrid,
   LineChart,
@@ -12,6 +13,11 @@ import {
   Gauge,
   ArrowRight,
   ExternalLink,
+  ShieldCheck,
+  TrendingUp,
+  TrendingDown,
+  Minus,
+  Target,
 } from "lucide-react";
 import type {
   RankPoint,
@@ -19,6 +25,7 @@ import type {
   AiVisibilitySignal,
   TrackedPage,
   Lead,
+  AuthorityOverview,
 } from "@geoseo/types";
 import { Panel } from "@/components/dashboard/panel";
 import { InsightBand, type InsightStatus } from "@/components/dashboard/insight-band";
@@ -28,12 +35,14 @@ import { TrackedPagesTable } from "@/components/performance/tracked-pages-table"
 import { compact } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
-type Tab = "overview" | "rankings" | "ai" | "content";
+type Tab = "overview" | "ai" | "rankings" | "pages" | "leads" | "authority";
 const TABS: { id: Tab; label: string; icon: typeof Gauge }[] = [
   { id: "overview", label: "Overview", icon: LayoutGrid },
-  { id: "rankings", label: "Search & Rankings", icon: LineChart },
   { id: "ai", label: "AI Visibility", icon: Sparkles },
-  { id: "content", label: "Content Performance", icon: FileText },
+  { id: "rankings", label: "Search Rankings", icon: LineChart },
+  { id: "pages", label: "Pages", icon: FileText },
+  { id: "leads", label: "Leads", icon: Users },
+  { id: "authority", label: "Authority", icon: ShieldCheck },
 ];
 
 interface Kpi {
@@ -49,14 +58,18 @@ export function AnalyticsWorkspace({
   aiSignals,
   pages,
   leads,
+  authority,
 }: {
   ranks: RankPoint[];
   impressions: ImpressionPoint[];
   aiSignals: AiVisibilitySignal[];
   pages: TrackedPage[];
   leads: Lead[];
+  authority: AuthorityOverview;
 }) {
-  const [tab, setTab] = useState<Tab>("overview");
+  const params = useSearchParams();
+  const initialTab = (TABS.find((t) => t.id === params.get("view"))?.id ?? "overview") as Tab;
+  const [tab, setTab] = useState<Tab>(initialTab);
 
   const m = useMemo(() => {
     const avgRank = ranks.length ? Math.round(ranks.reduce((a, p) => a + p.rank, 0) / ranks.length) : 0;
@@ -92,6 +105,40 @@ export function AnalyticsWorkspace({
     .filter((p) => p.currentRank > p.prevRank)
     .sort((a, b) => b.currentRank - b.prevRank - (a.currentRank - a.prevRank))
     .slice(0, 4);
+
+  // Lead analytics lens (PRD §6.5).
+  const cleanLeads = leads.filter((l) => l.spamStatus === "clean");
+  const qualifiedLeads = cleanLeads.filter((l) => l.score >= 70);
+  const avgLeadScore = cleanLeads.length
+    ? Math.round(cleanLeads.reduce((a, l) => a + l.score, 0) / cleanLeads.length)
+    : 0;
+  const leadsByStatus = Object.entries(
+    leads.reduce<Record<string, number>>((acc, l) => {
+      acc[l.status] = (acc[l.status] ?? 0) + 1;
+      return acc;
+    }, {}),
+  ).sort((a, b) => b[1] - a[1]);
+  const leadsByPage = Object.entries(
+    leads.reduce<Record<string, number>>((acc, l) => {
+      acc[l.pageTitle] = (acc[l.pageTitle] ?? 0) + 1;
+      return acc;
+    }, {}),
+  )
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5);
+  const leadStats: { label: string; value: number | string; def: string }[] = [
+    { label: "Qualified", value: qualifiedLeads.length, def: "Clean leads scoring ≥ 70." },
+    { label: "Clean leads", value: cleanLeads.length, def: "Leads passing spam + duplicate filtering." },
+    { label: "Total captured", value: leads.length, def: "All leads captured from published pages." },
+    { label: "Avg score", value: cleanLeads.length ? avgLeadScore : "—", def: "Mean lead score across clean leads." },
+  ];
+
+  const MomentumIcon =
+    authority.momentum.direction === "up"
+      ? TrendingUp
+      : authority.momentum.direction === "down"
+        ? TrendingDown
+        : Minus;
 
   return (
     <div className="space-y-5">
@@ -224,10 +271,129 @@ export function AnalyticsWorkspace({
         </div>
       )}
 
-      {tab === "content" && (
+      {tab === "pages" && (
         <Panel title="Content Performance" description="Every tracked page scored by rank movement — click to drill in" bodyClassName="px-1.5 pb-1.5">
           <TrackedPagesTable pages={pages} />
         </Panel>
+      )}
+
+      {tab === "leads" && (
+        <div className="space-y-5">
+          <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+            {leadStats.map((s) => (
+              <div key={s.label} className="rounded-2xl border border-border bg-card p-4 shadow-card">
+                <div className="flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  {s.label}
+                  <InfoHint>{s.def}</InfoHint>
+                </div>
+                <div className="tnum mt-1.5 text-2xl font-semibold text-foreground">{s.value}</div>
+              </div>
+            ))}
+          </div>
+          <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-2">
+            <Panel title="By status" description="Where leads sit in the funnel">
+              {leadsByStatus.length === 0 ? (
+                <div className="py-8 text-center text-[13px] text-muted-foreground">No leads captured yet.</div>
+              ) : (
+                <ul className="space-y-2">
+                  {leadsByStatus.map(([status, count]) => (
+                    <li key={status} className="flex items-center justify-between rounded-xl border border-border p-3 text-[13px]">
+                      <span className="capitalize text-foreground">{status.replace(/-/g, " ")}</span>
+                      <span className="tnum font-semibold text-muted-foreground">{count}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </Panel>
+            <Panel title="Top source pages" description="Pages capturing the most leads">
+              {leadsByPage.length === 0 ? (
+                <div className="py-8 text-center text-[13px] text-muted-foreground">No leads captured yet.</div>
+              ) : (
+                <ul className="space-y-2">
+                  {leadsByPage.map(([title, count]) => (
+                    <li key={title} className="flex items-center gap-3 rounded-xl border border-border p-3 text-[13px]">
+                      <Target className="size-4 shrink-0 text-brand" />
+                      <span className="min-w-0 flex-1 truncate text-foreground">{title}</span>
+                      <span className="tnum font-semibold text-muted-foreground">{count}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </Panel>
+          </div>
+          <Link href="/leads" className="inline-flex items-center gap-1 text-[12.5px] font-semibold text-brand hover:underline">
+            Open the leads inbox <ArrowRight className="size-3.5" />
+          </Link>
+        </div>
+      )}
+
+      {tab === "authority" && (
+        <div className="space-y-5">
+          <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+            <div className="rounded-2xl border border-border bg-card p-4 shadow-card">
+              <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Domain health</div>
+              <div className="tnum mt-1.5 text-2xl font-semibold text-foreground">
+                {authority.health.score}
+                <span className="ml-1 text-sm font-medium text-muted-foreground">/ 100 · {authority.health.grade}</span>
+              </div>
+            </div>
+            <div className="rounded-2xl border border-border bg-card p-4 shadow-card">
+              <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Backlink quality</div>
+              <div className="tnum mt-1.5 text-2xl font-semibold text-foreground">
+                {authority.backlinkQuality.score}
+                <span className="ml-1 text-sm font-medium text-muted-foreground">/ 100 · {authority.backlinkQuality.grade}</span>
+              </div>
+            </div>
+            <div className="rounded-2xl border border-border bg-card p-4 shadow-card">
+              <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Avg live DA</div>
+              <div className="tnum mt-1.5 text-2xl font-semibold text-foreground">{authority.backlinkQuality.avgLiveAuthority}</div>
+            </div>
+            <div className="rounded-2xl border border-border bg-card p-4 shadow-card">
+              <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Backlinks acquired</div>
+              <div className="tnum mt-1.5 text-2xl font-semibold text-foreground">
+                {authority.health.backlinksAcquired}
+                <span className="ml-1 text-sm font-medium text-muted-foreground">/ {authority.health.backlinksOpportunities}</span>
+              </div>
+            </div>
+          </div>
+          <div className="flex items-center gap-2.5 rounded-xl border border-border bg-card px-4 py-2.5 text-[13px] shadow-card">
+            <span
+              className={cn(
+                "flex size-7 shrink-0 items-center justify-center rounded-lg",
+                authority.momentum.direction === "up"
+                  ? "bg-positive/12 text-positive"
+                  : authority.momentum.direction === "down"
+                    ? "bg-negative/12 text-negative"
+                    : "bg-muted text-muted-foreground",
+              )}
+            >
+              <MomentumIcon className="size-4" />
+            </span>
+            <span className="font-medium text-foreground">Momentum</span>
+            <span className="text-muted-foreground">{authority.momentum.summary}</span>
+          </div>
+          <Panel title="Authority signals" description="The factors behind your domain health">
+            <ul className="space-y-3">
+              {authority.health.factors.map((f) => (
+                <li key={f.label}>
+                  <div className="mb-1.5 flex items-center justify-between text-[12.5px]">
+                    <span className="flex items-center gap-1 font-medium text-foreground">
+                      {f.label}
+                      {f.explanation && <InfoHint>{f.explanation}</InfoHint>}
+                    </span>
+                    <span className="tnum font-semibold text-muted-foreground">{f.score}</span>
+                  </div>
+                  <div className="h-2 overflow-hidden rounded-full bg-surface-sunken">
+                    <div className="h-full rounded-full bg-brand" style={{ width: `${f.score}%` }} />
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </Panel>
+          <Link href="/authority" className="inline-flex items-center gap-1 text-[12.5px] font-semibold text-brand hover:underline">
+            Open the Authority workspace <ArrowRight className="size-3.5" />
+          </Link>
+        </div>
       )}
     </div>
   );
