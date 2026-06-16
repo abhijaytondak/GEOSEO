@@ -25,6 +25,7 @@ import { Button } from "@/components/ui/button";
 import { ProgressBar } from "@/components/dashboard/progress-bar";
 import { cn } from "@/lib/utils";
 import { useAppFeedback } from "@/components/system/app-feedback";
+import { markOnboarded } from "@/components/system/onboarding-gate";
 
 const STEPS = ["Website", "Brand Memory", "Publishing", "Seeds", "Review", "Launch"];
 const inputCls =
@@ -210,6 +211,7 @@ export function OnboardingWizard() {
       // Non-fatal: launch even if the analysis is slow or unavailable.
       setAnalyzing(true);
       await api.runBrandAnalysis().catch(() => undefined);
+      markOnboarded(); // satisfy the first-run gate so the dashboard is now reachable
       notify({ kind: "success", title: "Workspace ready", message: `${brand.company || domain} is live on GEOSEO.` });
     } catch (err) {
       notify({ kind: "error", title: "Couldn't finalize setup", message: err instanceof Error ? err.message : "Try again." });
