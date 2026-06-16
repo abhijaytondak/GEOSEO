@@ -5,12 +5,24 @@ import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 import { AppModule } from "./app.module";
 import { EnvelopeInterceptor } from "./common/envelope.interceptor";
 import { HttpExceptionFilter } from "./common/http-exception.filter";
-import { resolveMode, persistenceKind, authRequired, assertModeConfig } from "./common/mode";
+import { resolveMode, persistenceKind, authRequired, assertModeConfig, assertPersistenceConfig } from "./common/mode";
+import { dbPing } from "./db/db";
 
 async function bootstrap() {
   const mode = resolveMode();
   // Abort a prod/staging boot that's missing required security config (PRD §3.2).
   assertModeConfig(mode);
+  // Abort a prod/staging boot that would run on in-memory state (No-Dummy-Data §6.4).
+  assertPersistenceConfig(mode);
+  if (mode !== "demo") {
+    const ping = await dbPing();
+    if (!ping.reachable) {
+      throw new Error(
+        `GEOSEO_MODE=${mode}: DATABASE_URL is set but unreachable (${ping.error ?? "no response"}). ` +
+          `Refusing to boot in-memory in production.`,
+      );
+    }
+  }
 
   const app = await NestFactory.create(AppModule, { cors: false });
 

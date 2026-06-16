@@ -11,6 +11,17 @@ const ENGINE_GRAD: Record<AiEngine, [string, string]> = {
 };
 
 export function AiVisibility({ signals }: { signals: AiVisibilitySignal[] }) {
+  if (signals.length === 0) {
+    return (
+      <p className="py-8 text-center text-[13px] text-muted-foreground">
+        No AI citations tracked yet. Run a check on the{" "}
+        <a href="/ai-search" className="font-medium text-foreground underline underline-offset-2">
+          AI Search
+        </a>{" "}
+        page (or connect a monitoring provider) and your real per-engine mentions appear here.
+      </p>
+    );
+  }
   return (
     <div className="space-y-4">
       {signals.map((s, i) => {
@@ -36,8 +47,9 @@ export function AiVisibility({ signals }: { signals: AiVisibilitySignal[] }) {
         );
       })}
       <p className="pt-1 text-[11.5px] leading-relaxed text-muted-foreground">
-        Share of voice = how often your brand is cited in AI answers vs. tracked
-        competitors for your core topics.
+        Share of voice = each engine&apos;s share of your tracked AI citations. Mentions and
+        deltas are counted from recorded citation checks; competitor share activates when a
+        monitoring provider is connected.
       </p>
     </div>
   );

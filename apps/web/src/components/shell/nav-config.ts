@@ -18,6 +18,8 @@ import {
   Home,
   Workflow,
   ShieldCheck,
+  CreditCard,
+  Wrench,
   type LucideIcon,
 } from "lucide-react";
 
@@ -87,4 +89,6 @@ export const commandDestinations: NavItem[] = [
   { label: "Alerts", href: "/alerts", icon: Bell, keywords: "notifications action inbox risks" },
   { label: "Onboarding", href: "/onboarding", icon: Rocket, keywords: "setup wizard getting started" },
   { label: "Solutions", href: "/solutions", icon: Boxes, keywords: "readiness ai search lead conversion paid boost" },
+  { label: "Billing & plans", href: "/billing", icon: CreditCard, keywords: "subscription stripe plan upgrade pricing seats limits" },
+  { label: "Admin & diagnostics", href: "/admin", icon: Wrench, keywords: "support provider health jobs errors audit internal status" },
 ];

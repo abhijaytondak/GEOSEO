@@ -163,6 +163,22 @@ export class PagesController {
     return page;
   }
 
+  /** Growth Plan "Initiate": draft N opportunities in the background, return a job handle. */
+  @Post("generate-batch")
+  generateBatch(@Body() body: { opportunityIds?: string[] }) {
+    const ids = Array.isArray(body?.opportunityIds) ? body.opportunityIds.filter((x) => typeof x === "string") : [];
+    if (!ids.length) throw new BadRequestException("opportunityIds[] is required");
+    return { job: this.store.startBatchGeneration(ids) };
+  }
+
+  /** Poll progress for an Initiate batch. */
+  @Get("generate-batch/:jobId")
+  batchStatus(@Param("jobId") jobId: string) {
+    const job = this.store.getBatchJob(jobId);
+    if (!job) throw new NotFoundException(`Batch job ${jobId} not found`);
+    return { job };
+  }
+
   @Get(":id")
   get(@Param("id") id: string) {
     const p = this.store.getPage(id);

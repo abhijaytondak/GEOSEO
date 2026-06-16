@@ -28,6 +28,19 @@ import type {
   PageVersion,
 } from "@geoseo/types";
 
+/** Progress handle for a background "Initiate" batch generation (mirrors the API's PageBatchJob). */
+export interface PageBatchJob {
+  id: string;
+  total: number;
+  done: number;
+  created: number;
+  failed: number;
+  pageIds: string[];
+  status: "running" | "completed";
+  startedAt: string;
+  finishedAt?: string;
+}
+
 export interface BrandDraft {
   draft: BrandProfile;
   completeness: number;
@@ -155,6 +168,13 @@ export const pageEngineApi = {
     ),
   generatePage: (opportunityId: string, content?: import("./puter-ai").PuterDraft) =>
     send<GeneratedPage>("POST", "/pages/generate", { opportunityId, content }),
+  /** Kick off background drafting of N opportunities; returns a poll-able job handle. */
+  generatePagesBatch: (opportunityIds: string[]) =>
+    send<{ job: PageBatchJob }>("POST", "/pages/generate-batch", { opportunityIds }).then((d) => d.job),
+  getBatchProgress: (jobId: string) =>
+    get<{ job: PageBatchJob }>(`/pages/generate-batch/${jobId}`, () => {
+      throw new Error("Batch progress unavailable");
+    }).then((d) => d.job),
   submitPage: (id: string) => send<GeneratedPage>("POST", `/pages/${id}/submit`),
   approvePage: (id: string) => send<GeneratedPage>("POST", `/pages/${id}/approve`),
   publishPage: (id: string) => send<GeneratedPage>("POST", `/pages/${id}/publish`),

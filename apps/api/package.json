@@ -8,6 +8,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@clerk/backend": "^3.7.1",
     "@geoseo/mock": "workspace:*",
     "@geoseo/types": "workspace:*",
     "@nestjs/common": "^11.0.0",

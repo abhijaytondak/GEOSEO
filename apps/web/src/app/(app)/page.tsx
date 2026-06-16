@@ -16,6 +16,7 @@ import { ActionCenter } from "@/components/dashboard/action-center";
 import { BrandScorecard } from "@/components/dashboard/brand-scorecard";
 import { OutcomeStrip } from "@/components/dashboard/outcome-strip";
 import { SetupHealth } from "@/components/dashboard/setup-health";
+import { GrowthPlan } from "@/components/dashboard/growth-plan";
 import { OverviewExport, type SummaryRow } from "@/components/dashboard/overview-export";
 import { deriveAuthorityActions } from "@/lib/authority-actions";
 import { thousands } from "@/lib/format";
@@ -112,6 +113,9 @@ export default async function AuthorityHQ() {
       <div className="space-y-5 p-6 sm:p-8">
         {/* Insight summary band (§7) */}
         <InsightBand status={insightStatus} headline={insightHeadline} source="Sample data" />
+
+        {/* Growth Plan — holistic, one-click actionable hub (nav-optimization PRD §6.1) */}
+        <GrowthPlan />
 
         {/* Home cockpit — business outcome (leads-first) + setup health (nav-optimization PRD §6.1) */}
         <div className="grid gap-5 lg:grid-cols-2">

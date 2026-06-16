@@ -1,6 +1,23 @@
 import { Injectable, OnModuleInit } from "@nestjs/common";
-import type { AiBotHit, AiCrawlerBot, AiMention, AiMentionEngine, AiVisibilitySignal } from "@geoseo/types";
+import type { AiBotHit, AiCrawlerBot, AiEngine, AiMention, AiMentionEngine, AiVisibilitySignal } from "@geoseo/types";
 import { DocStore } from "../db/db";
+
+/** The four engines the AI-visibility widget renders, with display labels. */
+const VISIBILITY_ENGINES: { engine: AiEngine; label: string }[] = [
+  { engine: "chatgpt", label: "ChatGPT" },
+  { engine: "perplexity", label: "Perplexity" },
+  { engine: "google-ai", label: "Google AI Overviews" },
+  { engine: "gemini", label: "Gemini" },
+];
+
+/** Where AI-visibility numbers came from — drives honest UI labelling (No-Dummy-Data §7.6). */
+export type AiVisibilitySource = "tracked" | "none";
+
+export interface AiVisibilityResult {
+  signals: AiVisibilitySignal[];
+  /** `tracked` ⇒ derived from real recorded checks; `none` ⇒ no checks yet (caller decides fallback). */
+  source: AiVisibilitySource;
+}
 
 type MentionState = { mentions: AiMention[]; seq: number };
 type BotState = { hits: AiBotHit[]; seq: number };
@@ -48,6 +65,44 @@ export class AiMentionStore implements OnModuleInit {
     this.mentions = [m, ...this.mentions].slice(0, 1000);
     this.db.save({ mentions: this.mentions, seq: this.seq });
     return m;
+  }
+
+  /**
+   * Real AI-visibility signals derived from recorded citation checks (No-Dummy-Data §7.6).
+   * `mentions` is the genuine count of cited answers per engine; `shareOfVoice` is that
+   * engine's share of your tracked citations (distribution across engines, not a fabricated
+   * competitor figure); `delta` compares the most-recent half of checks to the prior half.
+   * Returns `source: "none"` with no signals when nothing has been tracked yet — callers
+   * fall back to a clearly-labelled demo sample only in demo mode.
+   */
+  visibility(): AiVisibilityResult {
+    const cited = this.mentions.filter((m) => m.mentioned);
+    if (cited.length === 0) return { signals: [], source: "none" };
+
+    // Split chronologically into prior vs recent halves for an honest delta.
+    const byTime = [...cited].sort((a, b) => a.checkedAt.localeCompare(b.checkedAt));
+    const mid = Math.floor(byTime.length / 2);
+    const prior = byTime.slice(0, mid);
+    const recent = byTime.slice(mid);
+    const countFor = (list: AiMention[], e: AiEngine) => list.filter((m) => m.engine === e).length;
+
+    const total = VISIBILITY_ENGINES.reduce((a, { engine }) => a + countFor(cited, engine), 0);
+    const signals: AiVisibilitySignal[] = VISIBILITY_ENGINES.map(({ engine, label }) => {
+      const mentions = countFor(cited, engine);
+      const shareOfVoice = total ? Math.round((mentions / total) * 100) : 0;
+      const r = countFor(recent, engine);
+      const p = countFor(prior, engine);
+      const pct = p > 0 ? Math.round(((r - p) / p) * 100) : r > 0 ? 100 : 0;
+      const direction = pct > 0 ? "up" : pct < 0 ? "down" : "flat";
+      return {
+        engine,
+        label,
+        mentions,
+        shareOfVoice,
+        delta: { pct: Math.abs(pct), direction, goodWhen: "up" },
+      };
+    });
+    return { signals, source: "tracked" };
   }
 
   /**

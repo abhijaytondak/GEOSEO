@@ -1,5 +1,5 @@
 import { Module } from "@nestjs/common";
-import { APP_GUARD } from "@nestjs/core";
+import { APP_GUARD, APP_INTERCEPTOR } from "@nestjs/core";
 import { SeoModule } from "./seo/seo.module";
 import { BearerGuard } from "./common/bearer.guard";
 import { HealthController } from "./modules/health.controller";
@@ -78,6 +78,13 @@ import { GscController } from "./modules/gsc.controller";
 import { GscService } from "./modules/gsc.service";
 import { TenantController } from "./modules/tenant.controller";
 import { TenantGuard } from "./common/tenant.guard";
+// Greenfield production-readiness additions (Billing / Provider health / Admin / Observability).
+import { BillingController } from "./modules/billing.controller";
+import { BillingStore } from "./modules/billing.service";
+import { ProviderHealthController } from "./modules/provider-health.controller";
+import { AdminController } from "./modules/admin.controller";
+import { RequestLogInterceptor } from "./common/request-log.interceptor";
+import { RolesGuard } from "./common/roles.guard";
 
 @Module({
   imports: [SeoModule],
@@ -124,6 +131,9 @@ import { TenantGuard } from "./common/tenant.guard";
     CrmSyncController,
     GscController,
     TenantController,
+    BillingController,
+    ProviderHealthController,
+    AdminController,
   ],
   providers: [
     OutreachStore,
@@ -159,9 +169,12 @@ import { TenantGuard } from "./common/tenant.guard";
     ImageGenStore,
     CrmSyncStore,
     GscService,
+    BillingStore,
     { provide: APP_GUARD, useClass: TenantGuard },
     { provide: APP_GUARD, useClass: BearerGuard },
+    { provide: APP_GUARD, useClass: RolesGuard },
     { provide: APP_GUARD, useClass: PublicThrottleGuard },
+    { provide: APP_INTERCEPTOR, useClass: RequestLogInterceptor },
   ],
 })
 export class AppModule {}

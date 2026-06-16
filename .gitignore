@@ -20,3 +20,6 @@ npm-debug.log*
 coverage/
 next-env.d.ts
 .vercel
+
+# Local Claude Code agent scratch (not product code)
+.claude/

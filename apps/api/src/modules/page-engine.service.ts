@@ -75,6 +75,19 @@ function classifyKwIntent(keyword: string): SearchIntent {
   return "commercial";
 }
 
+/** Progress record for a background "Initiate" batch page-generation run. */
+export interface PageBatchJob {
+  id: string;
+  total: number;
+  done: number;
+  created: number;
+  failed: number;
+  pageIds: string[];
+  status: "running" | "completed";
+  startedAt: string;
+  finishedAt?: string;
+}
+
 /**
  * In-memory page-engine state (Research → Blueprint → Page → Leads).
  * Mirrors the existing store pattern; swaps for a DB-backed repo later.
@@ -93,6 +106,9 @@ export class PageEngineStore implements OnModuleInit {
   private aseq = 0;
   private pageVersions: Record<string, PageVersion[]> = {};
   private audit: AuditEntry[] = [];
+  /** In-flight one-click "Initiate" batch generations (Growth Plan → background drafting). */
+  private batchJobs = new Map<string, PageBatchJob>();
+  private bseq = 0;
 
   // fixed clock — keeps generated timestamps deterministic across reloads
   private now = "2026-06-12T00:00:00.000Z";
@@ -351,6 +367,56 @@ export class PageEngineStore implements OnModuleInit {
     this.save(T.opps, opp.id, opp);
     this.logAudit("generate", "page", page.id);
     return page;
+  }
+
+  /**
+   * One-click "Initiate" from the Growth Plan: kick off drafting the given
+   * opportunities **server-side in the background** and return a job handle
+   * immediately. The browser no longer holds an N-page loop open — it polls
+   * `getBatchJob` for progress while drafts persist and appear in Pipeline.
+   * (Page-engine-local; deliberately does not touch the contested jobs.service.)
+   */
+  startBatchGeneration(opportunityIds: string[]): PageBatchJob {
+    this.bseq += 1;
+    const ids = [...new Set(opportunityIds)].filter((id) => this.getOpportunity(id));
+    const job: PageBatchJob = {
+      id: `pgb-${this.bseq}`,
+      total: ids.length,
+      done: 0,
+      created: 0,
+      failed: 0,
+      pageIds: [],
+      status: ids.length ? "running" : "completed",
+      startedAt: new Date().toISOString(),
+    };
+    this.batchJobs.set(job.id, job);
+    if (ids.length) void this.runBatch(job, ids);
+    return { ...job };
+  }
+
+  private async runBatch(job: PageBatchJob, ids: string[]): Promise<void> {
+    for (const id of ids) {
+      try {
+        const page = await this.generatePage(id);
+        if (page) {
+          job.created += 1;
+          job.pageIds.push(page.id);
+        } else {
+          job.failed += 1;
+        }
+      } catch {
+        job.failed += 1; // skip individual failures, keep drafting the rest
+      }
+      job.done += 1;
+    }
+    job.status = "completed";
+    job.finishedAt = new Date().toISOString();
+  }
+
+  /** Progress snapshot for an Initiate batch (undefined if unknown/expired). */
+  getBatchJob(id: string): PageBatchJob | undefined {
+    const j = this.batchJobs.get(id);
+    return j ? { ...j } : undefined;
   }
 
   /** Auto-generate a blueprint from an opportunity (PRD §7.3); reuse if one exists. */

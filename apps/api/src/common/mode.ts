@@ -46,3 +46,25 @@ export function assertModeConfig(mode: AppMode = resolveMode()): void {
     );
   }
 }
+
+/**
+ * Fail-closed persistence (No-Dummy-Data PRD §6.4). In production/staging the API
+ * must NOT run on in-memory state: a missing `DATABASE_URL` aborts boot, and a
+ * missing `REDIS_URL` aborts unless `ALLOW_INMEMORY_QUEUE=true` is explicitly set
+ * (so jobs can't silently simulate completion). Demo mode is unaffected.
+ * (DB *reachability* is asserted separately in bootstrap via an async ping.)
+ */
+export function assertPersistenceConfig(mode: AppMode = resolveMode()): void {
+  if (mode === "demo") return;
+  if (!process.env.DATABASE_URL) {
+    throw new Error(
+      `GEOSEO_MODE=${mode} requires DATABASE_URL — refusing to run on in-memory state in production.`,
+    );
+  }
+  if (!process.env.REDIS_URL && process.env.ALLOW_INMEMORY_QUEUE !== "true") {
+    throw new Error(
+      `GEOSEO_MODE=${mode} requires REDIS_URL for durable jobs. Set REDIS_URL, or ` +
+        `ALLOW_INMEMORY_QUEUE=true to explicitly accept a non-durable in-memory queue.`,
+    );
+  }
+}

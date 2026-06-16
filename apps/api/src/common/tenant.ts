@@ -14,8 +14,8 @@ export const DEFAULT_TENANT_ID = "ws-default";
 /** Express request augmented with the resolved tenant (set by TenantGuard). */
 export type TenantRequest = Request & {
   tenantId?: string;
-  /** Populated once Clerk JWT verification lands in BearerGuard. */
-  auth?: { userId?: string; orgId?: string };
+  /** Populated by BearerGuard after Clerk JWT verification (verified claims). */
+  auth?: { userId?: string; orgId?: string; role?: string };
 };
 
 /** Normalize an arbitrary id into a safe tenant slug (lowercase, `[a-z0-9_-]`, ≤64). */
