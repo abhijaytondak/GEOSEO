@@ -17,21 +17,24 @@ export interface AuthoritySection {
  *  two separate sidebar destinations. */
 export const AUTHORITY_SECTIONS: AuthoritySection[] = [
   {
-    id: "competitors",
-    title: "Competitors",
-    focus: "See who outranks you for target keywords and where the visibility and keyword gaps are.",
-    icon: Swords,
-  },
-  {
     id: "opportunities",
     title: "Opportunities",
     focus: "Backlink and citation targets ranked by impact — with outreach drafts and archived-prospect restore.",
     icon: Link2,
   },
+  {
+    id: "competitors",
+    title: "Competitors",
+    focus: "See who outranks you for target keywords and where the visibility and keyword gaps are.",
+    icon: Swords,
+  },
 ];
 
+// Default to Opportunities — it always has prospect data, whereas Competitors is
+// empty until a Brave Search key or declared competitors exist (so it won't land
+// the user on an empty screen).
 export function resolveAuthorityView(raw: string | undefined): AuthorityViewId {
-  return AUTHORITY_SECTIONS.some((s) => s.id === raw) ? (raw as AuthorityViewId) : "competitors";
+  return AUTHORITY_SECTIONS.some((s) => s.id === raw) ? (raw as AuthorityViewId) : "opportunities";
 }
 
 /** Section switcher rendered under the Authority header. Each section links to

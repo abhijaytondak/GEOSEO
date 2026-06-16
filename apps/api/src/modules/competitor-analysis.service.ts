@@ -7,6 +7,15 @@ import type {
   SearchIntent,
 } from "@geoseo/types";
 import { fetchWithTimeout } from "../common/http";
+import { discoverCompetitors } from "../llm/competitors";
+
+/** Brand context for dynamic (LLM) competitor discovery. */
+export interface BrandContext {
+  company?: string;
+  industry?: string;
+  valueProp?: string;
+  domain?: string;
+}
 
 /** A target keyword with its estimated metrics, fed in by the orchestrator. */
 export interface KeywordSeed {
@@ -44,6 +53,25 @@ function normDomain(d: string): string {
     .replace(/^www\./, "")
     .replace(/\/.*$/, "")
     .trim();
+}
+
+/** Domains that are never competitors — search engines, social, encyclopedias,
+ *  marketplaces, and gov/edu — so keyless SERP results surface real brands only. */
+const NOISE_DOMAINS = new Set([
+  "duckduckgo.com", "google.com", "bing.com", "yahoo.com", "baidu.com", "yandex.com", "ecosia.org",
+  "wikipedia.org", "wikihow.com", "britannica.com", "fandom.com",
+  "youtube.com", "facebook.com", "instagram.com", "twitter.com", "x.com", "linkedin.com",
+  "reddit.com", "pinterest.com", "quora.com", "medium.com", "tiktok.com", "tumblr.com",
+  "amazon.com", "amazon.in", "flipkart.com", "ebay.com", "alibaba.com", "aliexpress.com",
+  "indiamart.com", "justdial.com", "walmart.com", "homedepot.com", "target.com", "bestbuy.com",
+  "springer.com", "researchgate.net", "sciencedirect.com", "semanticscholar.org",
+]);
+const NOISE_SUFFIXES = [".gov", ".edu", ".gov.in", ".ac.in", ".edu.in", ".mil", ".gov.uk"];
+
+function isNoiseDomain(d: string): boolean {
+  if (NOISE_SUFFIXES.some((s) => d.endsWith(s))) return true;
+  for (const n of NOISE_DOMAINS) if (d === n || d.endsWith("." + n)) return true;
+  return false;
 }
 
 /** Hostname → registrable-ish domain (drops protocol/www/path). Null if unparseable. */
@@ -115,20 +143,44 @@ export class CompetitorAnalysisService {
     keywords: KeywordSeed[],
     declaredCompetitors: string[],
     now: string,
+    brandContext?: BrandContext,
   ): Promise<CompetitorAnalysis> {
     const target = normDomain(domain);
     const ks = keywords.filter((k) => k.keyword?.trim()).slice(0, this.keywordCap);
     const provider = this.preferred();
 
-    if (provider !== "heuristic" && ks.length) {
-      const serp = await this.gatherSerp(provider, ks);
+    // 1. Brave Search API (reliable real SERP) wins when a key is present.
+    if (provider === "brave" && ks.length) {
+      const serp = await this.gatherSerp("brave", ks);
       if (serp.some((s) => s.hits.length)) {
-        this.last = provider;
-        return this.fromSerp(target, ks, serp, provider, now);
+        this.last = "brave";
+        return this.fromSerp(target, ks, serp, "brave", now);
       }
-      this.log.warn(`${provider} SERP returned nothing — falling back to heuristic`);
+      this.log.warn("Brave SERP returned nothing — falling back");
     }
 
+    // 2. Dynamic LLM discovery — works for ANY company from its brand context.
+    //    Preferred over keyless DuckDuckGo (which returns noisy, non-brand results).
+    if (brandContext?.company?.trim()) {
+      const discovered = await discoverCompetitors(brandContext);
+      if (discovered.length) {
+        this.last = "heuristic";
+        const merged = [...new Set([...declaredCompetitors, ...discovered.map((c) => c.domain)])];
+        return this.heuristic(target, ks, merged, now);
+      }
+    }
+
+    // 3. Keyless DuckDuckGo (noise-filtered) when forced or when there's no LLM/Brave.
+    if (provider === "duckduckgo" && ks.length) {
+      const serp = await this.gatherSerp("duckduckgo", ks);
+      if (serp.some((s) => s.hits.length)) {
+        this.last = "duckduckgo";
+        return this.fromSerp(target, ks, serp, "duckduckgo", now);
+      }
+      this.log.warn("DuckDuckGo SERP returned nothing — falling back to heuristic");
+    }
+
+    // 4. Heuristic from declared competitors (always succeeds; labelled "Estimated").
     this.last = "heuristic";
     return this.heuristic(target, ks, declaredCompetitors, now);
   }
@@ -214,7 +266,7 @@ export class CompetitorAnalysisService {
     const hits: SerpHit[] = [];
     for (const url of urls) {
       const domain = hostToDomain(url);
-      if (!domain || seen.has(domain)) continue;
+      if (!domain || seen.has(domain) || isNoiseDomain(domain)) continue;
       seen.add(domain);
       hits.push({ domain, position: hits.length + 1 });
       if (hits.length >= TOP_N) break;

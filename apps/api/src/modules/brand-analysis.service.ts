@@ -238,9 +238,14 @@ export class BrandAnalysisStore {
       .run(tenantId, brand.url || `https://${domain}`, now)
       .catch((): ConversionAudit => ({ url: brand.url, score: 0, grade: "D", findings: [], crawled: false, auditedAt: now }));
 
-    // 3. Competitor SERP over the free chain.
+    // 3. Competitor discovery: Brave SERP → dynamic LLM discovery → DDG → heuristic.
     const competitor = await this.competitor
-      .analyze(domain, targetSeeds, brand.competitors ?? [], now)
+      .analyze(domain, targetSeeds, brand.competitors ?? [], now, {
+        company: brand.company,
+        industry: brand.industry,
+        valueProp: brand.valueProp,
+        domain,
+      })
       .catch(
         (): CompetitorAnalysis => ({
           domain,

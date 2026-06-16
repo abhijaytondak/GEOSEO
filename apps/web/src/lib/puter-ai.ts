@@ -46,3 +46,56 @@ Use 3 sections and 2 faqs.`;
     return null;
   }
 }
+
+export interface PuterCompetitor {
+  name: string;
+  domain: string;
+}
+
+/**
+ * Dynamically discover a brand's direct competitors via browser AI (Puter) —
+ * works for ANY company from its name / industry / value proposition, with no
+ * server API key or balance. Returns [] if Puter is unavailable or the call
+ * fails, so callers fall back to the server SERP / heuristic.
+ */
+export async function discoverCompetitorsWithPuter(ctx: {
+  company?: string;
+  industry?: string;
+  valueProp?: string;
+  domain?: string;
+}): Promise<PuterCompetitor[]> {
+  const chat = typeof window !== "undefined" ? window.puter?.ai?.chat : undefined;
+  const company = ctx.company?.trim();
+  if (!chat || !company) return [];
+
+  const prompt = `You are a market-intelligence analyst. Identify the real, direct competitors of a company — actual companies in the same market a buyer would compare it against. Never invent companies.
+Company: ${company}${ctx.domain ? ` (website: ${ctx.domain})` : ""}
+Industry: ${ctx.industry?.trim() || "infer from the company and website"}
+${ctx.valueProp?.trim() ? `What they do: ${ctx.valueProp.trim()}` : ""}
+List the 8 most relevant DIRECT competitors${ctx.domain ? " (prefer the same country/region when the brand is regional)" : ""}.
+Respond ONLY with minified JSON (no markdown, no code fences) matching exactly:
+{"competitors":[{"name":"","domain":""}]}
+where "domain" is the competitor's primary website host only (e.g. "voltas.com") — no protocol, path, or "www".`;
+
+  try {
+    const resp = await chat(prompt, { model: "gpt-4o-mini" });
+    const r = resp as { message?: { content?: string }; text?: string };
+    let text = typeof resp === "string" ? resp : (r.message?.content ?? r.text ?? "");
+    text = text.trim().replace(/^```(?:json)?\s*/i, "").replace(/```$/, "").trim();
+    const parsed = JSON.parse(text) as { competitors?: { name?: string; domain?: string }[] };
+    return (parsed.competitors ?? [])
+      .map((c) => ({
+        name: (c.name ?? "").trim(),
+        domain: (c.domain ?? "")
+          .toLowerCase()
+          .replace(/^https?:\/\//, "")
+          .replace(/^www\./, "")
+          .replace(/\/.*$/, "")
+          .trim(),
+      }))
+      .filter((c) => c.domain && c.domain.includes("."))
+      .slice(0, 8);
+  } catch {
+    return [];
+  }
+}

@@ -6,8 +6,31 @@ import { Loader2, RefreshCw, Sparkles, Swords, ArrowUpRight, Info } from "lucide
 import type { CompetitorAnalysis, CompetitorSource } from "@geoseo/types";
 import { Panel } from "@/components/dashboard/panel";
 import { api } from "@/lib/api-client";
+import { puterReady, discoverCompetitorsWithPuter, type PuterCompetitor } from "@/lib/puter-ai";
 import { useAppFeedback } from "@/components/system/app-feedback";
 import { cn } from "@/lib/utils";
+
+/** Build a CompetitorAnalysis from AI-discovered competitors (browser Puter path).
+ *  Visibility is an estimate (ranked by discovery order); domains are real. */
+function buildFromPuter(domain: string, comps: PuterCompetitor[], keywords: string[]): CompetitorAnalysis {
+  const kw = keywords.slice(0, 6);
+  const competitors = comps.slice(0, 8).map((c, i) => ({
+    domain: c.domain,
+    appearances: Math.max(1, Math.min(kw.length || 3, 5 - Math.floor(i / 2))),
+    avgPosition: Math.min(10, i + 1),
+    overlapKeywords: kw.slice(0, 3),
+    visibilityScore: Math.max(20, 92 - i * 9),
+  }));
+  return {
+    domain,
+    keywords: kw,
+    competitors,
+    gaps: [],
+    yourVisibility: 0,
+    source: "heuristic",
+    generatedAt: new Date().toISOString(),
+  };
+}
 
 function sourceBadge(source: CompetitorSource): { label: string; live: boolean; hint: string } {
   if (source === "brave") return { label: "Live · Brave Search", live: true, hint: "Real organic SERP data from the Brave Search API." };
@@ -37,11 +60,43 @@ export function CompetitorAnalysisView() {
 
   useEffect(() => {
     let cancelled = false;
-    api
-      .getCompetitorAnalysis()
-      .then((res) => !cancelled && setData(res))
-      .catch(() => undefined)
-      .finally(() => !cancelled && setLoading(false));
+    (async () => {
+      let res: CompetitorAnalysis | null = null;
+      try {
+        res = await api.getCompetitorAnalysis();
+      } catch {
+        /* fall through to browser AI */
+      }
+      // Brave SERP is the only trustworthy server tier; for empty results or the
+      // noisy keyless DuckDuckGo/heuristic tiers, discover dynamically via browser
+      // AI (Puter) — works for any company, no server key needed.
+      if ((!res || res.competitors.length === 0 || res.source !== "brave") && puterReady()) {
+        try {
+          const brand = await api.getBrandProfile();
+          const comps = await discoverCompetitorsWithPuter({
+            company: brand.company,
+            industry: brand.industry,
+            valueProp: brand.valueProp,
+            domain: brand.domain,
+          });
+          if (comps.length && !cancelled) {
+            setData(
+              buildFromPuter(
+                brand.domain || res?.domain || "",
+                comps,
+                (brand.keywords?.length ? brand.keywords : res?.keywords) ?? [],
+              ),
+            );
+            return;
+          }
+        } catch {
+          /* keep the server result */
+        }
+      }
+      if (!cancelled) setData(res);
+    })().finally(() => {
+      if (!cancelled) setLoading(false);
+    });
     return () => {
       cancelled = true;
     };
@@ -50,6 +105,21 @@ export function CompetitorAnalysisView() {
   async function refresh() {
     setRunning(true);
     try {
+      // Prefer dynamic browser-AI discovery (works for any company, no key).
+      if (puterReady()) {
+        const brand = await api.getBrandProfile();
+        const comps = await discoverCompetitorsWithPuter({
+          company: brand.company,
+          industry: brand.industry,
+          valueProp: brand.valueProp,
+          domain: brand.domain,
+        });
+        if (comps.length) {
+          setData(buildFromPuter(brand.domain || "", comps, brand.keywords ?? []));
+          notify({ kind: "success", title: "Competitors found", message: `Discovered ${comps.length} competitors for ${brand.company}.` });
+          return;
+        }
+      }
       const res = await api.runBrandAnalysis();
       setData(res.competitor);
       notify({ kind: "success", title: "Refreshed", message: `Competitor analysis updated for ${res.domain}.` });
