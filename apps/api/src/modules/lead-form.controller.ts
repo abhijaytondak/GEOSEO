@@ -1,8 +1,9 @@
-import { Body, Controller, Delete, Get, Inject, Param, Patch, Post } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Inject, Param, Patch, Post, Req } from "@nestjs/common";
 import { ApiTags } from "@nestjs/swagger";
 import { LeadFormStore } from "./lead-form.service";
 import { AuditStore } from "./audit.service";
 import { validateBody, v } from "../common/validation";
+import { resolveTenantId, type TenantRequest } from "../common/tenant";
 
 const CreateSchema = {
   name: v.string({ min: 1, max: 120 }),
@@ -32,39 +33,39 @@ export class LeadFormController {
   ) {}
 
   @Get()
-  list() {
-    return { forms: this.store.list() };
+  async list(@Req() req: TenantRequest) {
+    return { forms: await this.store.list(resolveTenantId(req)) };
   }
 
   @Post()
-  create(@Body(validateBody(CreateSchema)) body: { name: string }) {
-    const form = this.store.create(body);
+  async create(@Req() req: TenantRequest, @Body(validateBody(CreateSchema)) body: { name: string }) {
+    const form = await this.store.create(resolveTenantId(req), body);
     this.audit.record("create", "settings", form.id);
     return { form };
   }
 
   @Get(":id")
-  get(@Param("id") id: string) {
-    return { form: this.store.get(id) };
+  async get(@Req() req: TenantRequest, @Param("id") id: string) {
+    return { form: await this.store.get(resolveTenantId(req), id) };
   }
 
   @Patch(":id")
-  update(@Param("id") id: string, @Body(validateBody(PatchSchema)) body: Record<string, unknown>) {
-    const form = this.store.update(id, body);
+  async update(@Req() req: TenantRequest, @Param("id") id: string, @Body(validateBody(PatchSchema)) body: Record<string, unknown>) {
+    const form = await this.store.update(resolveTenantId(req), id, body);
     this.audit.record("update", "settings", id);
     return { form };
   }
 
   @Delete(":id")
-  remove(@Param("id") id: string) {
-    const result = this.store.remove(id);
+  async remove(@Req() req: TenantRequest, @Param("id") id: string) {
+    const result = await this.store.remove(resolveTenantId(req), id);
     this.audit.record("delete", "settings", id);
     return result;
   }
 
   /** Returns the resolved form for preview (style flags + fields). */
   @Post(":id/preview")
-  preview(@Param("id") id: string) {
-    return { form: this.store.get(id) };
+  async preview(@Req() req: TenantRequest, @Param("id") id: string) {
+    return { form: await this.store.get(resolveTenantId(req), id) };
   }
 }

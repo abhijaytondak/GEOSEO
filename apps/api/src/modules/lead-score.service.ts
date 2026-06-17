@@ -1,4 +1,4 @@
-import { Injectable, OnModuleInit } from "@nestjs/common";
+import { Injectable } from "@nestjs/common";
 import type { Lead, LeadScore, LeadScoreReason, LeadJourneySummary } from "@geoseo/types";
 import { DocStore } from "../db/db";
 
@@ -96,24 +96,29 @@ export function computeLeadScore(lead: Lead, journey?: LeadJourneySummary): Lead
   return { total, fit, intent, engagement, spamRisk, confidence, reasons, recommendedAction };
 }
 
+/** Per-tenant lead-score store (P0-6). ws-default → legacy "state" row. */
 @Injectable()
-export class LeadScoreStore implements OnModuleInit {
-  private byLead: Record<string, LeadScore> = {};
+export class LeadScoreStore {
+  private cache = new Map<string, ScoreState>();
   private db = new DocStore<ScoreState>("cx_lead_score");
 
-  async onModuleInit() {
-    await this.db.init({ byLead: this.byLead }, (loaded) => {
-      this.byLead = loaded.byLead ?? {};
-    });
+  private async state(tenantId: string): Promise<ScoreState> {
+    const cached = this.cache.get(tenantId);
+    if (cached) return cached;
+    const loaded = (await this.db.loadForTenant(tenantId)) ?? { byLead: {} };
+    this.cache.set(tenantId, loaded);
+    return loaded;
   }
 
-  get(leadId: string): LeadScore | undefined {
-    return this.byLead[leadId];
+  async get(tenantId: string, leadId: string): Promise<LeadScore | undefined> {
+    return (await this.state(tenantId)).byLead[leadId];
   }
 
-  set(leadId: string, score: LeadScore): LeadScore {
-    this.byLead[leadId] = score;
-    this.db.save({ byLead: this.byLead });
+  async set(tenantId: string, leadId: string, score: LeadScore): Promise<LeadScore> {
+    const s = await this.state(tenantId);
+    s.byLead[leadId] = score;
+    this.cache.set(tenantId, s);
+    this.db.saveForTenant(tenantId, s);
     return score;
   }
 }

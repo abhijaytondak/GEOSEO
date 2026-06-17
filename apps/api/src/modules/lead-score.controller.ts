@@ -18,20 +18,22 @@ export class LeadScoreController {
 
   /** Stored score, or computed on the fly the first time (Leads PRD Gap 7). */
   @Get(":id/score")
-  get(@Req() req: TenantRequest, @Param("id") id: string) {
-    const cached = this.scores.get(id);
+  async get(@Req() req: TenantRequest, @Param("id") id: string) {
+    const t = resolveTenantId(req);
+    const cached = await this.scores.get(t, id);
     if (cached) return { score: cached };
-    const lead = this.pageEngine.getLead(resolveTenantId(req), id);
+    const lead = this.pageEngine.getLead(t, id);
     if (!lead) throw new NotFoundException(`Lead ${id} not found`);
-    const score = this.scores.set(id, computeLeadScore(lead, this.journey.journeyForLead(id).summary));
+    const score = await this.scores.set(t, id, computeLeadScore(lead, (await this.journey.journeyForLead(t, id)).summary));
     return { score };
   }
 
   @Post(":id/recalculate-score")
-  recalculate(@Req() req: TenantRequest, @Param("id") id: string) {
-    const lead = this.pageEngine.getLead(resolveTenantId(req), id);
+  async recalculate(@Req() req: TenantRequest, @Param("id") id: string) {
+    const t = resolveTenantId(req);
+    const lead = this.pageEngine.getLead(t, id);
     if (!lead) throw new NotFoundException(`Lead ${id} not found`);
-    const score = this.scores.set(id, computeLeadScore(lead, this.journey.journeyForLead(id).summary));
+    const score = await this.scores.set(t, id, computeLeadScore(lead, (await this.journey.journeyForLead(t, id)).summary));
     this.audit.record("update", "lead", id);
     return { score };
   }

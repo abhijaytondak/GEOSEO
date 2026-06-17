@@ -50,38 +50,39 @@ export class LeadRoutingController {
   ) {}
 
   @Get("rules")
-  rules() {
-    return { rules: this.routing.list() };
+  async rules(@Req() req: TenantRequest) {
+    return { rules: await this.routing.list(resolveTenantId(req)) };
   }
 
   @Post("rules")
-  create(@Body(validateBody(CreateRuleSchema)) body: RuleInput) {
-    return { rule: this.routing.create({ ...body, enabled: body.enabled ?? true }) };
+  async create(@Req() req: TenantRequest, @Body(validateBody(CreateRuleSchema)) body: RuleInput) {
+    return { rule: await this.routing.create(resolveTenantId(req), { ...body, enabled: body.enabled ?? true }) };
   }
 
   @Patch("rules/:id")
-  update(@Param("id") id: string, @Body(validateBody(UpdateRuleSchema)) body: Partial<RuleInput>) {
-    const rule = this.routing.update(id, body);
+  async update(@Req() req: TenantRequest, @Param("id") id: string, @Body(validateBody(UpdateRuleSchema)) body: Partial<RuleInput>) {
+    const rule = await this.routing.update(resolveTenantId(req), id, body);
     if (!rule) throw new NotFoundException(`Rule ${id} not found`);
     return { rule };
   }
 
   @Delete("rules/:id")
-  remove(@Param("id") id: string) {
-    this.routing.remove(id);
+  async remove(@Req() req: TenantRequest, @Param("id") id: string) {
+    await this.routing.remove(resolveTenantId(req), id);
     return { ok: true };
   }
 
   /** Apply rules to every currently-unassigned lead (PRD routing — backfill). */
   @Post("apply")
-  apply(@Req() req: TenantRequest) {
-    const assigned = new Set(this.assignments.all().map((a) => a.leadId));
+  async apply(@Req() req: TenantRequest) {
+    const t = resolveTenantId(req);
+    const assigned = new Set((await this.assignments.all(t)).map((a) => a.leadId));
     let routed = 0;
-    for (const lead of this.pages.listLeads(resolveTenantId(req))) {
+    for (const lead of this.pages.listLeads(t)) {
       if (assigned.has(lead.id)) continue;
-      const ownerId = this.routing.routeOwner(lead);
+      const ownerId = await this.routing.routeOwner(t, lead);
       if (ownerId) {
-        this.assignments.assign(lead.id, ownerId, "routing");
+        await this.assignments.assign(t, lead.id, ownerId, "routing");
         routed += 1;
       }
     }

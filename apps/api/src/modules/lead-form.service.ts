@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, OnModuleInit } from "@nestjs/common";
+import { Injectable, NotFoundException } from "@nestjs/common";
 import type { LeadFormConfig } from "@geoseo/types";
 import { DocStore } from "../db/db";
 
@@ -22,66 +22,74 @@ const DEFAULT_FORM: LeadFormConfig = {
   styleMode: "match_page_theme",
 };
 
-/** Per-workspace / per-page lead form configuration (Leads PRD Gap 11) — `cx_lead_forms`. */
+/** Per-tenant lead form configuration (Leads PRD Gap 11; P0-6) — `cx_lead_forms`. */
 @Injectable()
-export class LeadFormStore implements OnModuleInit {
-  private forms: Record<string, LeadFormConfig> = { [DEFAULT_FORM.id]: { ...DEFAULT_FORM } };
-  private seq = 0;
+export class LeadFormStore {
+  private cache = new Map<string, FormState>();
   private db = new DocStore<FormState>("cx_lead_forms");
 
-  async onModuleInit() {
-    await this.db.init(this.snapshot(), (loaded) => {
-      this.forms = loaded.forms && Object.keys(loaded.forms).length ? loaded.forms : { [DEFAULT_FORM.id]: { ...DEFAULT_FORM } };
-      this.seq = loaded.seq ?? 0;
-    });
+  private async state(tenantId: string): Promise<FormState> {
+    const cached = this.cache.get(tenantId);
+    if (cached) return cached;
+    const loaded = await this.db.loadForTenant(tenantId);
+    const s: FormState =
+      loaded && loaded.forms && Object.keys(loaded.forms).length
+        ? { forms: loaded.forms, seq: loaded.seq ?? 0 }
+        : { forms: { [DEFAULT_FORM.id]: { ...DEFAULT_FORM } }, seq: 0 };
+    this.cache.set(tenantId, s);
+    return s;
+  }
+  private persist(tenantId: string, s: FormState) {
+    this.cache.set(tenantId, s);
+    this.db.saveForTenant(tenantId, s);
   }
 
-  private snapshot(): FormState {
-    return { forms: this.forms, seq: this.seq };
+  async list(tenantId: string): Promise<LeadFormConfig[]> {
+    return Object.values((await this.state(tenantId)).forms);
   }
-
-  list(): LeadFormConfig[] {
-    return Object.values(this.forms);
-  }
-  get(id: string): LeadFormConfig {
-    const f = this.forms[id];
+  async get(tenantId: string, id: string): Promise<LeadFormConfig> {
+    const f = (await this.state(tenantId)).forms[id];
     if (!f) throw new NotFoundException(`No lead form '${id}'`);
     return f;
   }
 
-  create(input: Partial<LeadFormConfig> & { name: string }): LeadFormConfig {
-    this.seq += 1;
+  async create(tenantId: string, input: Partial<LeadFormConfig> & { name: string }): Promise<LeadFormConfig> {
+    const s = await this.state(tenantId);
+    s.seq += 1;
     const form: LeadFormConfig = {
       ...DEFAULT_FORM,
       ...input,
-      id: `form-${this.seq}`,
-      workspaceId: "ws-default",
+      id: `form-${s.seq}`,
+      workspaceId: tenantId,
       fields: input.fields?.length ? input.fields : DEFAULT_FORM.fields,
       spamProtection: { ...DEFAULT_FORM.spamProtection, ...(input.spamProtection ?? {}) },
     };
-    this.forms[form.id] = form;
-    this.db.save(this.snapshot());
+    s.forms[form.id] = form;
+    this.persist(tenantId, s);
     return form;
   }
 
-  update(id: string, patch: Partial<LeadFormConfig>): LeadFormConfig {
-    const existing = this.get(id);
-    this.forms[id] = {
+  async update(tenantId: string, id: string, patch: Partial<LeadFormConfig>): Promise<LeadFormConfig> {
+    const s = await this.state(tenantId);
+    const existing = s.forms[id];
+    if (!existing) throw new NotFoundException(`No lead form '${id}'`);
+    s.forms[id] = {
       ...existing,
       ...patch,
       id: existing.id,
       fields: patch.fields ?? existing.fields,
       spamProtection: { ...existing.spamProtection, ...(patch.spamProtection ?? {}) },
     };
-    this.db.save(this.snapshot());
-    return this.forms[id];
+    this.persist(tenantId, s);
+    return s.forms[id];
   }
 
-  remove(id: string): { id: string; deleted: boolean } {
+  async remove(tenantId: string, id: string): Promise<{ id: string; deleted: boolean }> {
     if (id === DEFAULT_FORM.id) throw new NotFoundException("The default form cannot be deleted");
-    if (!this.forms[id]) throw new NotFoundException(`No lead form '${id}'`);
-    delete this.forms[id];
-    this.db.save(this.snapshot());
+    const s = await this.state(tenantId);
+    if (!s.forms[id]) throw new NotFoundException(`No lead form '${id}'`);
+    delete s.forms[id];
+    this.persist(tenantId, s);
     return { id, deleted: true };
   }
 }

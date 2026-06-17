@@ -1,8 +1,9 @@
-import { Body, Controller, Get, Inject, Param, Post } from "@nestjs/common";
+import { Body, Controller, Get, Inject, Param, Post, Req } from "@nestjs/common";
 import { ApiTags } from "@nestjs/swagger";
 import { LeadAssignmentStore } from "./lead-assignment.service";
 import { AuditStore } from "./audit.service";
 import { validateBody, v } from "../common/validation";
+import { resolveTenantId, type TenantRequest } from "../common/tenant";
 
 const AssignSchema = { ownerId: v.string({ min: 1, max: 128 }) };
 const BulkAssignSchema = { ids: v.arrayOf(v.string({ min: 1 })), ownerId: v.string({ min: 1, max: 128 }) };
@@ -18,20 +19,21 @@ export class LeadAssignmentController {
   ) {}
 
   @Get("assign/workload")
-  workload() {
-    return { workload: this.assignments.workload(), assignments: this.assignments.all() };
+  async workload(@Req() req: TenantRequest) {
+    const t = resolveTenantId(req);
+    return { workload: await this.assignments.workload(t), assignments: await this.assignments.all(t) };
   }
 
   @Post(":id/assign")
-  assign(@Param("id") id: string, @Body(validateBody(AssignSchema)) body: { ownerId: string }) {
-    const assignment = this.assignments.assign(id, body.ownerId);
+  async assign(@Req() req: TenantRequest, @Param("id") id: string, @Body(validateBody(AssignSchema)) body: { ownerId: string }) {
+    const assignment = await this.assignments.assign(resolveTenantId(req), id, body.ownerId);
     this.audit.record("update", "lead", id);
     return { assignment };
   }
 
   @Post("bulk-assign")
-  bulkAssign(@Body(validateBody(BulkAssignSchema)) body: { ids: string[]; ownerId: string }) {
-    const assignments = this.assignments.bulkAssign(body.ids, body.ownerId);
+  async bulkAssign(@Req() req: TenantRequest, @Body(validateBody(BulkAssignSchema)) body: { ids: string[]; ownerId: string }) {
+    const assignments = await this.assignments.bulkAssign(resolveTenantId(req), body.ids, body.ownerId);
     assignments.forEach((a) => this.audit.record("update", "lead", a.leadId));
     return { assignments };
   }

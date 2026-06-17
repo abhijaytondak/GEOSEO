@@ -1,9 +1,10 @@
-import { Body, Controller, Get, Inject, Param, Post } from "@nestjs/common";
+import { Body, Controller, Get, Inject, Param, Post, Req } from "@nestjs/common";
 import { ApiTags } from "@nestjs/swagger";
 import type { LeadActivityType } from "@geoseo/types";
 import { LeadActivityStore } from "./lead-activity.service";
 import { AuditStore } from "./audit.service";
 import { validateBody, v } from "../common/validation";
+import { resolveTenantId, type TenantRequest } from "../common/tenant";
 
 const ACTIVITY_TYPES: LeadActivityType[] = [
   "note",
@@ -33,13 +34,13 @@ export class LeadActivityController {
   ) {}
 
   @Get(":id/activity")
-  list(@Param("id") id: string) {
-    return { activity: this.activity.list(id) };
+  async list(@Req() req: TenantRequest, @Param("id") id: string) {
+    return { activity: await this.activity.list(resolveTenantId(req), id) };
   }
 
   @Post(":id/activity")
-  add(@Param("id") id: string, @Body(validateBody(AddActivitySchema)) body: { type: LeadActivityType; body: string }) {
-    const entry = this.activity.add(id, body.type, body.body);
+  async add(@Req() req: TenantRequest, @Param("id") id: string, @Body(validateBody(AddActivitySchema)) body: { type: LeadActivityType; body: string }) {
+    const entry = await this.activity.add(resolveTenantId(req), id, body.type, body.body);
     this.audit.record("update", "lead", id);
     return { activity: entry };
   }

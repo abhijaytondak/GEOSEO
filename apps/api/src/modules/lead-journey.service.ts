@@ -1,4 +1,4 @@
-import { Injectable, OnModuleInit } from "@nestjs/common";
+import { Injectable } from "@nestjs/common";
 import type { LeadJourneyEvent, LeadJourneyEventType, LeadJourneySummary } from "@geoseo/types";
 import { DocStore } from "../db/db";
 
@@ -9,43 +9,45 @@ type JourneyState = {
 };
 
 /**
- * Visitor journey tracking (Leads PRD Gap 1 / §11). Stores anonymous page events
- * by visitor and links them to a lead on conversion — all additive (no change to
- * the core Lead record). Persisted to `cx_lead_journey`.
+ * Per-tenant visitor journey tracking (Leads PRD Gap 1 / §11; P0-6). Stores anonymous
+ * page events by visitor and links them to a lead on conversion — additive (no change
+ * to the Lead record). `cx_lead_journey`.
  */
 @Injectable()
-export class LeadJourneyStore implements OnModuleInit {
-  private events: LeadJourneyEvent[] = [];
-  private leadVisitor: Record<string, string> = {};
-  private seq = 0;
+export class LeadJourneyStore {
+  private cache = new Map<string, JourneyState>();
   private db = new DocStore<JourneyState>("cx_lead_journey");
 
-  async onModuleInit() {
-    await this.db.init(this.snapshot(), (loaded) => {
-      this.events = loaded.events ?? [];
-      this.leadVisitor = loaded.leadVisitor ?? {};
-      this.seq = loaded.seq ?? 0;
-    });
+  private async state(tenantId: string): Promise<JourneyState> {
+    const cached = this.cache.get(tenantId);
+    if (cached) return cached;
+    const loaded = (await this.db.loadForTenant(tenantId)) ?? { events: [], leadVisitor: {}, seq: 0 };
+    this.cache.set(tenantId, loaded);
+    return loaded;
+  }
+  private persist(tenantId: string, s: JourneyState) {
+    this.cache.set(tenantId, s);
+    this.db.saveForTenant(tenantId, s);
   }
 
-  private snapshot(): JourneyState {
-    return { events: this.events, leadVisitor: this.leadVisitor, seq: this.seq };
-  }
-
-  record(input: {
-    anonymousVisitorId: string;
-    sessionId: string;
-    type: LeadJourneyEventType;
-    url: string;
-    pageId?: string;
-    title?: string;
-    referrer?: string;
-    durationMs?: number;
-    leadId?: string;
-  }): LeadJourneyEvent {
-    this.seq += 1;
+  async record(
+    tenantId: string,
+    input: {
+      anonymousVisitorId: string;
+      sessionId: string;
+      type: LeadJourneyEventType;
+      url: string;
+      pageId?: string;
+      title?: string;
+      referrer?: string;
+      durationMs?: number;
+      leadId?: string;
+    },
+  ): Promise<LeadJourneyEvent> {
+    const s = await this.state(tenantId);
+    s.seq += 1;
     const event: LeadJourneyEvent = {
-      id: `lj-${this.seq}`,
+      id: `lj-${s.seq}`,
       anonymousVisitorId: input.anonymousVisitorId,
       sessionId: input.sessionId,
       type: input.type,
@@ -57,30 +59,32 @@ export class LeadJourneyStore implements OnModuleInit {
       leadId: input.leadId,
       occurredAt: new Date().toISOString(),
     };
-    this.events.unshift(event);
-    if (this.events.length > 5000) this.events.length = 5000;
-    this.db.save(this.snapshot());
+    s.events.unshift(event);
+    if (s.events.length > 5000) s.events.length = 5000;
+    this.persist(tenantId, s);
     return event;
   }
 
   /** Associate a visitor's event history with a converted lead. */
-  linkVisitor(leadId: string, anonymousVisitorId: string): void {
-    this.leadVisitor[leadId] = anonymousVisitorId;
+  async linkVisitor(tenantId: string, leadId: string, anonymousVisitorId: string): Promise<void> {
+    const s = await this.state(tenantId);
+    s.leadVisitor[leadId] = anonymousVisitorId;
     // Backfill leadId onto that visitor's existing events.
-    for (const e of this.events) if (e.anonymousVisitorId === anonymousVisitorId) e.leadId = leadId;
-    this.db.save(this.snapshot());
+    for (const e of s.events) if (e.anonymousVisitorId === anonymousVisitorId) e.leadId = leadId;
+    this.persist(tenantId, s);
   }
 
-  private eventsForLead(leadId: string): LeadJourneyEvent[] {
-    const visitorId = this.leadVisitor[leadId];
-    return this.events
+  private eventsForLead(s: JourneyState, leadId: string): LeadJourneyEvent[] {
+    const visitorId = s.leadVisitor[leadId];
+    return s.events
       .filter((e) => e.leadId === leadId || (visitorId && e.anonymousVisitorId === visitorId))
       .sort((a, b) => a.occurredAt.localeCompare(b.occurredAt));
   }
 
-  journeyForLead(leadId: string): { events: LeadJourneyEvent[]; summary: LeadJourneySummary } {
-    const events = this.eventsForLead(leadId);
-    return { events, summary: summarize(events, this.leadVisitor[leadId]) };
+  async journeyForLead(tenantId: string, leadId: string): Promise<{ events: LeadJourneyEvent[]; summary: LeadJourneySummary }> {
+    const s = await this.state(tenantId);
+    const events = this.eventsForLead(s, leadId);
+    return { events, summary: summarize(events, s.leadVisitor[leadId]) };
   }
 }
 

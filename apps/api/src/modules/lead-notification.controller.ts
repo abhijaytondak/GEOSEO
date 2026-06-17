@@ -32,25 +32,25 @@ export class LeadNotificationRulesController {
   ) {}
 
   @Get()
-  list() {
-    return { rules: this.store.listRules() };
+  async list(@Req() req: TenantRequest) {
+    return { rules: await this.store.listRules(resolveTenantId(req)) };
   }
 
   @Post()
-  create(@Body(validateBody(RuleSchema)) body: { name: string }) {
-    const rule = this.store.createRule(body);
+  async create(@Req() req: TenantRequest, @Body(validateBody(RuleSchema)) body: { name: string }) {
+    const rule = await this.store.createRule(resolveTenantId(req), body);
     this.audit.record("create", "settings", rule.id);
     return { rule };
   }
 
   @Patch(":id")
-  update(@Param("id") id: string, @Body(validateBody(RulePatchSchema)) body: Record<string, unknown>) {
-    return { rule: this.store.updateRule(id, body) };
+  async update(@Req() req: TenantRequest, @Param("id") id: string, @Body(validateBody(RulePatchSchema)) body: Record<string, unknown>) {
+    return { rule: await this.store.updateRule(resolveTenantId(req), id, body) };
   }
 
   @Delete(":id")
-  remove(@Param("id") id: string) {
-    const result = this.store.deleteRule(id);
+  async remove(@Req() req: TenantRequest, @Param("id") id: string) {
+    const result = await this.store.deleteRule(resolveTenantId(req), id);
     this.audit.record("delete", "settings", id);
     return result;
   }
@@ -67,16 +67,17 @@ export class LeadNotifyController {
   ) {}
 
   @Get(":id/notifications")
-  list(@Param("id") id: string) {
-    return { notifications: this.store.notificationsFor(id) };
+  async list(@Req() req: TenantRequest, @Param("id") id: string) {
+    return { notifications: await this.store.notificationsFor(resolveTenantId(req), id) };
   }
 
   /** Evaluate notification rules against a lead and record deliveries. */
   @Post(":id/notify")
-  notify(@Req() req: TenantRequest, @Param("id") id: string) {
-    const lead = this.pageEngine.getLead(resolveTenantId(req), id);
+  async notify(@Req() req: TenantRequest, @Param("id") id: string) {
+    const t = resolveTenantId(req);
+    const lead = this.pageEngine.getLead(t, id);
     if (!lead) throw new NotFoundException(`Lead ${id} not found`);
-    const result = this.store.notify(lead, this.scores.get(id));
+    const result = await this.store.notify(t, lead, await this.scores.get(t, id));
     if (result.delivered.length) this.audit.record("notification", "lead", id);
     return result;
   }

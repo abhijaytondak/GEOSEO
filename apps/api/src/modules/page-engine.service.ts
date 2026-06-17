@@ -682,6 +682,14 @@ export class PageEngineStore implements OnModuleInit {
     return DEFAULT_TENANT_ID;
   }
 
+  /** Public-surface tenant resolution: the workspace that owns a page (by id or slug),
+   *  for routing anonymous public events (journey/bots) to the right tenant (A5). */
+  publicTenantFor(opts: { pageId?: string; slug?: string }): string {
+    if (opts.pageId) return this.tenantForPageId(opts.pageId);
+    if (opts.slug) return this.tenantForSlug(opts.slug);
+    return DEFAULT_TENANT_ID;
+  }
+
   /** Which research source produced the last/next discovery (for operator visibility). */
   researchSource(): ResearchSource {
     return this.research.source;
