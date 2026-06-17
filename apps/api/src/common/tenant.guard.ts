@@ -4,11 +4,8 @@ import { resolveTenantId, type TenantRequest } from "./tenant";
 /**
  * Attaches the resolved tenant id to every request (`req.tenantId`) so controllers
  * and services can scope data per workspace. It is a context-attacher, not an
- * authorizer — it always allows the request through. Register it BEFORE the auth
- * guards so `req.tenantId` is available to them.
- *
- * Multi-tenant groundwork (docs/MULTI-TENANCY.md): once Clerk JWT verification sets
- * `req.auth.orgId` in BearerGuard, `resolveTenantId` picks it up automatically.
+ * authorizer — it always allows the request through. Registered AFTER BearerGuard so
+ * `req.auth` (verified Clerk org/user) is set when the tenant is derived (P0-5).
  */
 @Injectable()
 export class TenantGuard implements CanActivate {

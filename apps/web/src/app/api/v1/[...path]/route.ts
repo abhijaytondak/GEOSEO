@@ -29,9 +29,13 @@ function envelope(message: string, status: number): Response {
 }
 
 async function forward(req: NextRequest, path: string): Promise<Response> {
+  // Workspace derived from the VERIFIED Clerk session (never a client header), forwarded
+  // to the API as x-workspace-id on the trusted dev-token path so it scopes by tenant (P0-5).
+  let workspace: string | undefined;
   if (REQUIRE_AUTH && !isPublic(path)) {
-    const { userId } = await auth();
+    const { userId, orgId } = await auth();
     if (!userId) return envelope("Authentication required", 401);
+    workspace = orgId ?? `u-${userId}`;
   }
 
   const target = `${API}/api/v1/${path}${req.nextUrl.search}`;
@@ -39,6 +43,7 @@ async function forward(req: NextRequest, path: string): Promise<Response> {
   const contentType = req.headers.get("content-type");
   if (contentType) headers["content-type"] = contentType;
   if (TOKEN) headers.authorization = `Bearer ${TOKEN}`; // service auth to the API
+  if (workspace) headers["x-workspace-id"] = workspace; // verified tenant (trusted s2s)
 
   const body = req.method === "GET" || req.method === "HEAD" ? undefined : await req.text();
 

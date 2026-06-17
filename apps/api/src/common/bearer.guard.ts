@@ -37,9 +37,12 @@ export class BearerGuard implements CanActivate {
     const token = header.startsWith("Bearer ") ? header.slice(7).trim() : null;
     if (!token) throw new UnauthorizedException("Missing bearer token");
 
-    // 1. Server-to-server bridge (BFF → API). Constant-time compare.
+    // 1. Server-to-server bridge (BFF → API). Constant-time compare. Mark the request
+    //    `trusted` so resolveTenantId may honor a BFF-supplied `x-workspace-id` (the BFF
+    //    derives it from the user's verified Clerk session); external requests can't.
     const devToken = process.env.DEV_API_TOKEN;
     if (devToken && token.length === devToken.length && timingSafeEqual(sha256(token), sha256(devToken))) {
+      req.auth = { trusted: true };
       return true;
     }
 

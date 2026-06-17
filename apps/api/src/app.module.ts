@@ -170,8 +170,11 @@ import { RolesGuard } from "./common/roles.guard";
     CrmSyncStore,
     GscService,
     BillingStore,
-    { provide: APP_GUARD, useClass: TenantGuard },
+    // Order matters: BearerGuard verifies the Clerk JWT and sets req.auth FIRST, so
+    // TenantGuard can derive the tenant from the verified org (not a spoofable header),
+    // and RolesGuard can read the verified role. (P0-5.)
     { provide: APP_GUARD, useClass: BearerGuard },
+    { provide: APP_GUARD, useClass: TenantGuard },
     { provide: APP_GUARD, useClass: RolesGuard },
     { provide: APP_GUARD, useClass: PublicThrottleGuard },
     { provide: APP_INTERCEPTOR, useClass: RequestLogInterceptor },
