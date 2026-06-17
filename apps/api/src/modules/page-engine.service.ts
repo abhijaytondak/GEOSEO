@@ -169,9 +169,9 @@ export class PageEngineStore implements OnModuleInit {
     for (const p of s.pages) this.snapshot(tenantId, p, "Initial draft", "ai");
   }
 
-  /** Grounding hint for generation — Brand Memory + the structured product/persona/proof library. */
-  private brandHint(): string | undefined {
-    return composeBrandContext(this.brand.current(), this.library.get());
+  /** Grounding hint for generation — Brand Memory + the workspace's structured library. */
+  private async brandHint(tenantId: string): Promise<string | undefined> {
+    return composeBrandContext(this.brand.current(), await this.library.get(tenantId));
   }
 
   /**
@@ -391,7 +391,7 @@ export class PageEngineStore implements OnModuleInit {
     if (!opp) return undefined;
     this.seq += 1;
     const slug = `/${opp.query.replace(/\s+/g, "-").toLowerCase()}`;
-    const ai = content ?? (await draftPageContent(opp.query, opp.recommendedPageType, this.brandHint()));
+    const ai = content ?? (await draftPageContent(opp.query, opp.recommendedPageType, await this.brandHint(tenantId)));
     const title = opp.query.replace(/\b\w/g, (c) => c.toUpperCase());
     const company = this.brand.current()?.company?.trim();
     const metaTitle = ai?.metaTitle ?? (company ? `${title} | ${company}` : title);

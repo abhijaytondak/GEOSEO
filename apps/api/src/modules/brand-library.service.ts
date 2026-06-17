@@ -89,28 +89,37 @@ export function composeBrandContext(brand: BrandProfile | null | undefined, lib:
   return parts.join(" ").trim();
 }
 
+/** Per-tenant structured Brand library (multi-tenant pattern — docs/MULTI-TENANCY.md, P0-6).
+ *  Each workspace's products/personas/proof points are isolated; ws-default → legacy "state" row. */
 @Injectable()
-export class BrandLibraryStore implements OnModuleInit {
-  private lib: BrandLibrary = { products: [], personas: [], proofPoints: [], updatedAt: "" };
+export class BrandLibraryStore {
+  private cache = new Map<string, BrandLibrary>();
   private db = new DocStore<BrandLibrary>("cx_brand_library");
 
-  async onModuleInit() {
-    await this.db.init(this.lib, (loaded) => {
-      this.lib = {
-        products: loaded.products ?? [],
-        personas: loaded.personas ?? [],
-        proofPoints: loaded.proofPoints ?? [],
-        updatedAt: loaded.updatedAt ?? "",
-      };
-    });
+  private async state(tenantId: string): Promise<BrandLibrary> {
+    const cached = this.cache.get(tenantId);
+    if (cached) return cached;
+    const loaded = await this.db.loadForTenant(tenantId);
+    const s: BrandLibrary = {
+      products: loaded?.products ?? [],
+      personas: loaded?.personas ?? [],
+      proofPoints: loaded?.proofPoints ?? [],
+      updatedAt: loaded?.updatedAt ?? "",
+    };
+    this.cache.set(tenantId, s);
+    return s;
+  }
+  private persist(tenantId: string, s: BrandLibrary) {
+    this.cache.set(tenantId, s);
+    this.db.saveForTenant(tenantId, s);
   }
 
-  get(): BrandLibrary {
-    return this.lib;
+  async get(tenantId: string): Promise<BrandLibrary> {
+    return this.state(tenantId);
   }
 
   /** Full-replace upsert. Sanitizes every field so unvalidated client input can't poison the store. */
-  replace(next: Partial<BrandLibrary>, now: string): BrandLibrary {
+  async replace(tenantId: string, next: Partial<BrandLibrary>, now: string): Promise<BrandLibrary> {
     const products: BrandProduct[] = (Array.isArray(next.products) ? next.products : [])
       .slice(0, 100)
       .map((p, i) => ({
@@ -147,16 +156,17 @@ export class BrandLibraryStore implements OnModuleInit {
       })
       .filter((p) => p.label);
 
-    this.lib = { products, personas, proofPoints, updatedAt: now };
-    this.db.save(this.lib);
-    return this.lib;
+    const lib: BrandLibrary = { products, personas, proofPoints, updatedAt: now };
+    this.persist(tenantId, lib);
+    return lib;
   }
 
   /** Completeness signal for the Brand workspace (0–100). */
-  strength(): number {
-    const p = this.lib.products.length ? 40 : 0;
-    const a = this.lib.personas.length ? 35 : 0;
-    const f = this.lib.proofPoints.length ? 25 : 0;
+  async strength(tenantId: string): Promise<number> {
+    const lib = await this.state(tenantId);
+    const p = lib.products.length ? 40 : 0;
+    const a = lib.personas.length ? 35 : 0;
+    const f = lib.proofPoints.length ? 25 : 0;
     return p + a + f;
   }
 }
