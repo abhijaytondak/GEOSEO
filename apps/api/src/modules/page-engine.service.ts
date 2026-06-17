@@ -220,9 +220,15 @@ export class PageEngineStore implements OnModuleInit {
       // eslint-disable-next-line no-console
       console.log(`[page-engine] persistence ready (Supabase) · pages=${this.pages.length} leads=${this.leads.length}`);
     } catch (e) {
-      // never crash the API on DB issues — stay in-memory
-      // eslint-disable-next-line no-console
-      console.error("[page-engine] DB init failed, using in-memory:", (e as Error).message);
+      const msg = (e as Error).message;
+      // Fail closed (No-Dummy-Data §6.4, P0-7): production/staging must NOT silently run
+      // on in-memory state — abort boot. Demo stays in-memory for local resilience.
+      if (demo) {
+        // eslint-disable-next-line no-console
+        console.error("[page-engine] DB init failed, using in-memory (demo):", msg);
+      } else {
+        throw new Error(`[page-engine] DB init failed in ${resolveMode()} — refusing to run in-memory: ${msg}`);
+      }
     }
   }
 
