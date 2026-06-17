@@ -1,5 +1,6 @@
 import { Inject, Injectable, OnModuleInit } from "@nestjs/common";
 import { countRows, dbEnabled, ensureTable, loadAll, removeRow, upsert } from "../db/db";
+import { resolveMode } from "../common/mode";
 import { draftPageContent, type DraftContent } from "../llm/deepseek";
 import { BrandMemoryStore } from "./brand.service";
 import { BrandLibraryStore, composeBrandContext } from "./brand-library.service";
@@ -13,12 +14,6 @@ const T = {
   leads: "pe_leads",
   audit: "pe_audit",
 } as const;
-import {
-  generatedPages as seedPages,
-  keywordOpportunities as seedOpps,
-  leads as seedLeads,
-  pageBlueprints as seedBlueprints,
-} from "@geoseo/mock";
 import type {
   AuditEntry,
   GeneratedPage,
@@ -97,10 +92,11 @@ export interface PageBatchJob {
 @Injectable()
 export class PageEngineStore implements OnModuleInit {
   private ready = false;
-  private opportunities: KeywordOpportunity[] = clone(seedOpps);
-  private blueprints: PageBlueprint[] = clone(seedBlueprints);
-  private pages: GeneratedPage[] = clone(seedPages);
-  private leads: Lead[] = clone(seedLeads);
+  // Production starts EMPTY (No-Dummy-Data §6.1, P0-3); demo seeds via seedDemoData() on boot.
+  private opportunities: KeywordOpportunity[] = [];
+  private blueprints: PageBlueprint[] = [];
+  private pages: GeneratedPage[] = [];
+  private leads: Lead[] = [];
   private seq = 0;
   private vseq = 0;
   private aseq = 0;
@@ -117,8 +113,19 @@ export class PageEngineStore implements OnModuleInit {
     @Inject(BrandMemoryStore) private readonly brand: BrandMemoryStore,
     @Inject(BrandLibraryStore) private readonly library: BrandLibraryStore,
     @Inject(KeywordResearchService) private readonly research: KeywordResearchService,
-  ) {
-    // seed an initial version snapshot per seeded page
+  ) {}
+
+  /**
+   * Populate demo fixtures (demo mode only) from the allowlisted demo-seed module —
+   * dynamic import so `@geoseo/mock` is never loaded in production (No-Dummy-Data P0-3).
+   */
+  private async seedDemoData() {
+    const m = await import("./demo-seed");
+    this.opportunities = clone(m.keywordOpportunities);
+    this.blueprints = clone(m.pageBlueprints);
+    this.pages = clone(m.generatedPages);
+    this.leads = clone(m.leads);
+    // initial version snapshot per seeded page (save() is a no-op until ready)
     for (const p of this.pages) this.snapshot(p, "Initial draft", "ai");
   }
 
@@ -165,7 +172,13 @@ export class PageEngineStore implements OnModuleInit {
 
   /* ---- persistence: hydrate on boot, write-through on mutate ---- */
   async onModuleInit() {
-    if (!dbEnabled) return;
+    const demo = resolveMode() === "demo";
+    if (!dbEnabled) {
+      // No DB ⇒ pure in-memory (local/demo only; production fails closed in main.ts before
+      // this runs). Demo gets fixtures for a usable UI; production never reaches here.
+      if (demo) await this.seedDemoData();
+      return;
+    }
     try {
       await Promise.all(Object.values(T).map((t) => ensureTable(t)));
       const [oc, pc, lc] = await Promise.all([
@@ -189,8 +202,9 @@ export class PageEngineStore implements OnModuleInit {
         this.seq = 100_000;
         this.vseq = versions.length + 10_000;
         this.aseq = this.audit.length + 10_000;
-      } else {
-        // first boot: seed Supabase from the in-memory fixtures
+      } else if (demo) {
+        // first boot, demo: seed fixtures into memory, then persist them to Supabase
+        await this.seedDemoData();
         await Promise.all([
           ...this.opportunities.map((o) => upsert(T.opps, o.id, o)),
           ...this.blueprints.map((b) => upsert(T.blueprints, b.id, b)),
@@ -201,6 +215,7 @@ export class PageEngineStore implements OnModuleInit {
             .map((v) => upsert(T.versions, v.id, v)),
         ]);
       }
+      // Production first boot: stay EMPTY — onboarding/provider discovery creates real records.
       this.ready = true;
       // eslint-disable-next-line no-console
       console.log(`[page-engine] persistence ready (Supabase) · pages=${this.pages.length} leads=${this.leads.length}`);

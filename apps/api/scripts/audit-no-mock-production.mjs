@@ -24,8 +24,13 @@ const NEEDLE = "@geoseo/mock";
 const IMPORT_RE = /(?:from\s*|require\(\s*|import\(\s*)["']@geoseo\/mock["']/;
 
 // Files allowed to reference the mock package (must be test-only or demo-isolated, §6.1).
+// These are the ONLY production-tree files permitted to import @geoseo/mock: each is a
+// demo-isolated module loaded behind a demo-mode gate (web: FALLBACK_ALLOWED; API: dynamic
+// import only when resolveMode()==="demo"), so mock is never served/loaded in production.
 const ALLOWLIST = [
-  // e.g. "apps/web/src/lib/demo-api-client.ts",
+  "apps/web/src/lib/demo/demo-data.ts",
+  "apps/api/src/seo/providers/demo.providers.ts",
+  "apps/api/src/modules/demo-seed.ts",
 ];
 
 function walk(dir) {

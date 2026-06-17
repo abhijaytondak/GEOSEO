@@ -8,7 +8,9 @@
  * Every call unwraps the `{ success, data, errors }` envelope. If the API is
  * unreachable, it falls back to the bundled mock so the UI never hard-fails.
  */
-import { seoProvider, brandSource, outreachDrafter } from "@geoseo/mock";
+// Demo-only fallback data. Isolated in lib/demo (the sole allowlisted mock importer);
+// only reached when FALLBACK_ALLOWED (demo/build) — production surfaces real errors.
+import { seoProvider, brandSource, outreachDrafter } from "./demo/demo-data";
 import type {
   ActivityEvent,
   AiVisibilitySignal,

@@ -5,7 +5,9 @@
  * response unwraps the {success,data,errors} envelope, reads fall back to the
  * bundled mock so the UI never hard-fails.
  */
-import { pageEngine } from "@geoseo/mock";
+// Demo-only fallback data. Isolated in lib/demo (the sole allowlisted mock importer);
+// only reached when FALLBACK_ALLOWED (demo/build) — production surfaces real errors.
+import { pageEngine } from "./demo/demo-data";
 import type {
   AuditEntry,
   BrandProfile,
