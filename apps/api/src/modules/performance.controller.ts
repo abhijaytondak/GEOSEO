@@ -1,10 +1,11 @@
-import { Controller, Get, Inject, Logger, NotFoundException, Param, Query } from "@nestjs/common";
+import { Controller, Get, Inject, Logger, NotFoundException, Param, Query, Req } from "@nestjs/common";
 import { ApiTags, ApiQuery } from "@nestjs/swagger";
 import type { SeoDataProvider, TrackedPage, PerformanceOverview } from "@geoseo/types";
 import { SEO_PROVIDER } from "../seo/seo.module";
 import { paginate } from "../common/pagination";
 import { settled, degradeLogger } from "../common/async";
 import { AiMentionStore } from "./ai-search.service";
+import { resolveTenantId, type TenantRequest } from "../common/tenant";
 import { GscService } from "./gsc.service";
 
 type SortKey = "rankChange" | "impressions" | "clicks" | "rank";
@@ -62,13 +63,13 @@ export class PerformanceController {
 
   @Get("overview")
   @ApiQuery({ name: "range", required: false, enum: ["7d", "30d", "8w", "quarter"] })
-  async overview(@Query("range") range = "8w"): Promise<PerformanceOverview> {
+  async overview(@Req() req: TenantRequest, @Query("range") range = "8w"): Promise<PerformanceOverview> {
     const days = RANGE_DAYS[range] ?? RANGE_DAYS["8w"];
     // Degrade per-provider (allSettled) so one failure can't 500 the whole overview.
     const [ranksR, impressionsR, signalsR, pagesR] = await Promise.allSettled([
       this.seo.getRankSeries(),
       this.seo.getImpressionSeries(),
-      Promise.resolve(this.mentions.visibility().signals), // real recorded citation checks (never the mock sample)
+      this.mentions.visibility(resolveTenantId(req)).then((r) => r.signals), // real recorded checks (never the mock sample)
       this.seo.getTrackedPages(),
     ]);
     const warn = degradeLogger(this.log, "performance/overview");
@@ -163,16 +164,16 @@ export class PerformanceController {
   }
 
   @Get("ai-visibility")
-  aiVisibility() {
+  aiVisibility(@Req() req: TenantRequest) {
     // Real recorded citation checks (source: "tracked"), or an empty "none" set — never the mock sample.
-    return this.mentions.visibility();
+    return this.mentions.visibility(resolveTenantId(req));
   }
 
   @Get("pages/:id")
-  async detail(@Param("id") id: string) {
+  async detail(@Req() req: TenantRequest, @Param("id") id: string) {
     const page = (await this.seo.getTrackedPages()).find((p) => p.id === id);
     if (!page) throw new NotFoundException(`No tracked page '${id}'`);
-    const { signals: aiVisibility } = this.mentions.visibility();
+    const { signals: aiVisibility } = await this.mentions.visibility(resolveTenantId(req));
     return { ...page, aiVisibility };
   }
 }

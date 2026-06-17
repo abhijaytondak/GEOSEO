@@ -34,19 +34,19 @@ export class AiSearchController {
   ) {}
 
   @Get("mentions")
-  listMentions() {
-    return { mentions: this.mentions.list() };
+  async listMentions(@Req() req: TenantRequest) {
+    return { mentions: await this.mentions.list(resolveTenantId(req)) };
   }
 
   @Post("mentions")
-  recordMention(@Body(validateBody(MentionSchema)) body: { engine: AiMentionEngine; query: string }) {
-    return { mention: this.mentions.record(body) };
+  async recordMention(@Req() req: TenantRequest, @Body(validateBody(MentionSchema)) body: { engine: AiMentionEngine; query: string }) {
+    return { mention: await this.mentions.record(resolveTenantId(req), body) };
   }
 
   /** Heuristic citation check (provider tracking activates with a key). */
   @Post("mentions/check")
-  async check(@Body(validateBody(CheckSchema)) body: { query: string }) {
-    const result = this.mentions.check(body.query, await this.seo.getAiVisibility());
+  async check(@Req() req: TenantRequest, @Body(validateBody(CheckSchema)) body: { query: string }) {
+    const result = await this.mentions.check(resolveTenantId(req), body.query, await this.seo.getAiVisibility());
     this.audit.record("update", "content", "ai-mentions");
     return result;
   }
@@ -65,12 +65,13 @@ export class AiSearchController {
 
   @Get("overview")
   async overview(@Req() req: TenantRequest): Promise<AiSearchOverview> {
+    const t = resolveTenantId(req);
     const [backlinks, mentions, hits, pages, leads] = [
       await this.seo.getBacklinks(),
-      this.mentions.list(),
+      await this.mentions.list(t),
       this.bots.list(),
       this.pageEngine.listPublishedPages(),
-      this.pageEngine.listLeads(resolveTenantId(req)),
+      this.pageEngine.listLeads(t),
     ];
     const cited = mentions.filter((m) => m.mentioned);
     const byEngine = ENGINES.map((engine) => ({ engine, mentions: cited.filter((m) => m.engine === engine).length })).filter((e) => e.mentions > 0);

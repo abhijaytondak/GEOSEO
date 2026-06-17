@@ -31,27 +31,37 @@ function nowIso(): string {
  * manually or seeded heuristically from AI-visibility signals; real per-engine
  * citation tracking activates when a monitoring provider is connected. `cx_ai_mentions`.
  */
+/**
+ * Per-tenant AI mention/citation tracking (multi-tenant pattern — docs/MULTI-TENANCY.md,
+ * P0-6). Each workspace's recorded checks are isolated, so its AI-visibility numbers are
+ * its own. `cx_ai_mentions`; `ws-default` maps to the legacy "state" row.
+ */
 @Injectable()
-export class AiMentionStore implements OnModuleInit {
-  private mentions: AiMention[] = [];
-  private seq = 0;
+export class AiMentionStore {
+  private cache = new Map<string, MentionState>();
   private db = new DocStore<MentionState>("cx_ai_mentions");
 
-  async onModuleInit() {
-    await this.db.init({ mentions: this.mentions, seq: this.seq }, (loaded) => {
-      this.mentions = loaded.mentions ?? [];
-      this.seq = loaded.seq ?? 0;
-    });
+  private async state(tenantId: string): Promise<MentionState> {
+    const cached = this.cache.get(tenantId);
+    if (cached) return cached;
+    const loaded = (await this.db.loadForTenant(tenantId)) ?? { mentions: [], seq: 0 };
+    this.cache.set(tenantId, loaded);
+    return loaded;
+  }
+  private persist(tenantId: string, s: MentionState) {
+    this.cache.set(tenantId, s);
+    this.db.saveForTenant(tenantId, s);
   }
 
-  list(): AiMention[] {
-    return [...this.mentions].sort((a, b) => b.checkedAt.localeCompare(a.checkedAt));
+  async list(tenantId: string): Promise<AiMention[]> {
+    return [...(await this.state(tenantId)).mentions].sort((a, b) => b.checkedAt.localeCompare(a.checkedAt));
   }
 
-  record(input: Partial<AiMention> & { engine: AiMentionEngine; query: string }): AiMention {
-    this.seq += 1;
+  async record(tenantId: string, input: Partial<AiMention> & { engine: AiMentionEngine; query: string }): Promise<AiMention> {
+    const s = await this.state(tenantId);
+    s.seq += 1;
     const m: AiMention = {
-      id: `aim-${this.seq}`,
+      id: `aim-${s.seq}`,
       engine: input.engine,
       query: input.query,
       mentioned: input.mentioned ?? true,
@@ -62,8 +72,8 @@ export class AiMentionStore implements OnModuleInit {
       source: input.source ?? "manual",
       checkedAt: nowIso(),
     };
-    this.mentions = [m, ...this.mentions].slice(0, 1000);
-    this.db.save({ mentions: this.mentions, seq: this.seq });
+    s.mentions = [m, ...s.mentions].slice(0, 1000);
+    this.persist(tenantId, s);
     return m;
   }
 
@@ -75,8 +85,8 @@ export class AiMentionStore implements OnModuleInit {
    * Returns `source: "none"` with no signals when nothing has been tracked yet, so the
    * UI shows an honest empty state instead of fabricated numbers.
    */
-  visibility(): AiVisibilityResult {
-    const cited = this.mentions.filter((m) => m.mentioned);
+  async visibility(tenantId: string): Promise<AiVisibilityResult> {
+    const cited = (await this.state(tenantId)).mentions.filter((m) => m.mentioned);
     if (cited.length === 0) return { signals: [], source: "none" };
 
     // Split chronologically into prior vs recent halves for an honest delta.
@@ -109,18 +119,21 @@ export class AiMentionStore implements OnModuleInit {
    * Heuristic check: derive starting mentions from AI-visibility signals until a
    * real provider is wired. Returns the newly recorded mentions + whether live.
    */
-  check(query: string, signals: AiVisibilitySignal[]): { recorded: AiMention[]; live: boolean } {
+  async check(tenantId: string, query: string, signals: AiVisibilitySignal[]): Promise<{ recorded: AiMention[]; live: boolean }> {
     const engineMap: Record<string, AiMentionEngine> = { chatgpt: "chatgpt", perplexity: "perplexity", gemini: "gemini", "google-ai": "google-ai" };
-    const recorded = signals.map((s) =>
-      this.record({
-        engine: engineMap[s.engine] ?? "chatgpt",
-        query,
-        mentioned: s.mentions > 0,
-        position: s.mentions > 0 ? Math.max(1, Math.round(10 - s.shareOfVoice / 12)) : undefined,
-        snippet: s.mentions > 0 ? `Cited in ~${s.mentions} ${s.label} answers (heuristic).` : undefined,
-        source: "heuristic",
-      }),
-    );
+    const recorded: AiMention[] = [];
+    for (const s of signals) {
+      recorded.push(
+        await this.record(tenantId, {
+          engine: engineMap[s.engine] ?? "chatgpt",
+          query,
+          mentioned: s.mentions > 0,
+          position: s.mentions > 0 ? Math.max(1, Math.round(10 - s.shareOfVoice / 12)) : undefined,
+          snippet: s.mentions > 0 ? `Cited in ~${s.mentions} ${s.label} answers (heuristic).` : undefined,
+          source: "heuristic",
+        }),
+      );
+    }
     return { recorded, live: false };
   }
 }
