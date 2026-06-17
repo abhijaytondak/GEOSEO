@@ -1,4 +1,4 @@
-import { Injectable, Logger, OnModuleInit } from "@nestjs/common";
+import { Injectable, Logger } from "@nestjs/common";
 import type { GeneratedPage } from "@geoseo/types";
 import { DocStore } from "../db/db";
 import { fetchWithTimeout } from "../common/http";
@@ -37,15 +37,21 @@ function renderHtml(page: GeneratedPage): string {
  * Never throws — failures fall back to managed publishing.
  */
 @Injectable()
-export class CmsPublishStore implements OnModuleInit {
+export class CmsPublishStore {
   private readonly log = new Logger(CmsPublishStore.name);
-  private byPage: Record<string, CmsPublishResult> = {};
+  private cache = new Map<string, CmsState>();
   private db = new DocStore<CmsState>("cx_cms_publish");
 
-  async onModuleInit() {
-    await this.db.init({ byPage: this.byPage }, (loaded) => {
-      this.byPage = loaded.byPage ?? {};
-    });
+  private async state(tenantId: string): Promise<CmsState> {
+    const cached = this.cache.get(tenantId);
+    if (cached) return cached;
+    const loaded = (await this.db.loadForTenant(tenantId)) ?? { byPage: {} };
+    this.cache.set(tenantId, loaded);
+    return loaded;
+  }
+  private persist(tenantId: string, s: CmsState) {
+    this.cache.set(tenantId, s);
+    this.db.saveForTenant(tenantId, s);
   }
 
   /** Active CMS provider — explicit `CMS_PROVIDER` override, else auto-detected from creds. */
@@ -71,32 +77,32 @@ export class CmsPublishStore implements OnModuleInit {
     return this.provider !== "none";
   }
 
-  get(pageId: string): CmsPublishResult | null {
-    return this.byPage[pageId] ?? null;
+  async get(tenantId: string, pageId: string): Promise<CmsPublishResult | null> {
+    return (await this.state(tenantId)).byPage[pageId] ?? null;
   }
 
-  list(): CmsPublishResult[] {
-    return Object.values(this.byPage);
+  async list(tenantId: string): Promise<CmsPublishResult[]> {
+    return Object.values((await this.state(tenantId)).byPage);
   }
 
   /** Push a page to the active CMS. Returns null when unconfigured or on any failure. */
-  async publish(page: GeneratedPage, now: string): Promise<CmsPublishResult | null> {
+  async publish(tenantId: string, page: GeneratedPage, now: string): Promise<CmsPublishResult | null> {
     switch (this.provider) {
       case "wordpress":
-        return this.publishWordPress(page, now);
+        return this.publishWordPress(tenantId, page, now);
       case "webflow":
-        return this.publishWebflow(page, now);
+        return this.publishWebflow(tenantId, page, now);
       case "shopify":
-        return this.publishShopify(page, now);
+        return this.publishShopify(tenantId, page, now);
       default:
         return null;
     }
   }
 
-  private async publishWordPress(page: GeneratedPage, now: string): Promise<CmsPublishResult | null> {
+  private async publishWordPress(tenantId: string, page: GeneratedPage, now: string): Promise<CmsPublishResult | null> {
     const base = process.env.WORDPRESS_BASE_URL!.replace(/\/+$/, "");
     const auth = Buffer.from(`${process.env.WORDPRESS_USERNAME}:${process.env.WORDPRESS_APP_PASSWORD}`).toString("base64");
-    const existing = this.byPage[page.id];
+    const existing = (await this.state(tenantId)).byPage[page.id];
     // Update in place if we've published this page before, else create.
     const url = existing
       ? `${base}/wp-json/wp/v2/posts/${encodeURIComponent(existing.externalId)}`
@@ -127,8 +133,9 @@ export class CmsPublishStore implements OnModuleInit {
         status: json.status ?? "publish",
         publishedAt: now,
       };
-      this.byPage[page.id] = result;
-      this.db.save({ byPage: this.byPage });
+      const s = await this.state(tenantId);
+      s.byPage[page.id] = result;
+      this.persist(tenantId, s);
       return result;
     } catch (err) {
       this.log.warn(`WordPress publish failed (${err instanceof Error ? err.message : "unknown"}) — managed fallback`);
@@ -136,7 +143,7 @@ export class CmsPublishStore implements OnModuleInit {
     }
   }
 
-  private async publishWebflow(page: GeneratedPage, now: string): Promise<CmsPublishResult | null> {
+  private async publishWebflow(tenantId: string, page: GeneratedPage, now: string): Promise<CmsPublishResult | null> {
     const token = process.env.WEBFLOW_API_TOKEN!;
     const collectionId = process.env.WEBFLOW_COLLECTION_ID!;
     const base = (process.env.WEBFLOW_BASE_URL ?? "https://api.webflow.com").replace(/\/+$/, "");
@@ -175,8 +182,9 @@ export class CmsPublishStore implements OnModuleInit {
         status: "published",
         publishedAt: now,
       };
-      this.byPage[page.id] = result;
-      this.db.save({ byPage: this.byPage });
+      const s = await this.state(tenantId);
+      s.byPage[page.id] = result;
+      this.persist(tenantId, s);
       return result;
     } catch (err) {
       this.log.warn(`Webflow publish failed (${err instanceof Error ? err.message : "unknown"}) — managed fallback`);
@@ -184,7 +192,7 @@ export class CmsPublishStore implements OnModuleInit {
     }
   }
 
-  private async publishShopify(page: GeneratedPage, now: string): Promise<CmsPublishResult | null> {
+  private async publishShopify(tenantId: string, page: GeneratedPage, now: string): Promise<CmsPublishResult | null> {
     const storeDomain = process.env.SHOPIFY_STORE_DOMAIN!.replace(/^https?:\/\//, "").replace(/\/+$/, "");
     const token = process.env.SHOPIFY_ACCESS_TOKEN!;
     const version = process.env.SHOPIFY_API_VERSION ?? "2024-10";
@@ -218,8 +226,9 @@ export class CmsPublishStore implements OnModuleInit {
         status: "published",
         publishedAt: now,
       };
-      this.byPage[page.id] = result;
-      this.db.save({ byPage: this.byPage });
+      const s = await this.state(tenantId);
+      s.byPage[page.id] = result;
+      this.persist(tenantId, s);
       return result;
     } catch (err) {
       this.log.warn(`Shopify publish failed (${err instanceof Error ? err.message : "unknown"}) — managed fallback`);

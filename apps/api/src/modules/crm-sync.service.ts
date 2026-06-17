@@ -1,4 +1,4 @@
-import { Injectable, Logger, OnModuleInit } from "@nestjs/common";
+import { Injectable, Logger } from "@nestjs/common";
 import type { Lead } from "@geoseo/types";
 import { DocStore } from "../db/db";
 import { fetchWithTimeout } from "../common/http";
@@ -24,15 +24,17 @@ type CrmState = { byLead: Record<string, CrmSyncResult> };
  * provider failures degrade to a `failed` result the UI can retry.
  */
 @Injectable()
-export class CrmSyncStore implements OnModuleInit {
+export class CrmSyncStore {
   private readonly log = new Logger(CrmSyncStore.name);
-  private byLead: Record<string, CrmSyncResult> = {};
+  private cache = new Map<string, CrmState>();
   private db = new DocStore<CrmState>("cx_crm_sync");
 
-  async onModuleInit() {
-    await this.db.init({ byLead: this.byLead }, (loaded) => {
-      this.byLead = loaded.byLead ?? {};
-    });
+  private async state(tenantId: string): Promise<CrmState> {
+    const cached = this.cache.get(tenantId);
+    if (cached) return cached;
+    const loaded = (await this.db.loadForTenant(tenantId)) ?? { byLead: {} };
+    this.cache.set(tenantId, loaded);
+    return loaded;
   }
 
   /** Active CRM provider — auto-detected from creds (extensible to Salesforce/Pipedrive). */
@@ -43,28 +45,30 @@ export class CrmSyncStore implements OnModuleInit {
     return this.provider !== "none";
   }
 
-  get(leadId: string): CrmSyncResult | null {
-    return this.byLead[leadId] ?? null;
+  async get(tenantId: string, leadId: string): Promise<CrmSyncResult | null> {
+    return (await this.state(tenantId)).byLead[leadId] ?? null;
   }
-  list(): CrmSyncResult[] {
-    return Object.values(this.byLead);
+  async list(tenantId: string): Promise<CrmSyncResult[]> {
+    return Object.values((await this.state(tenantId)).byLead);
   }
 
-  private record(result: CrmSyncResult): CrmSyncResult {
-    this.byLead[result.leadId] = result;
-    this.db.save({ byLead: this.byLead });
+  private async record(tenantId: string, result: CrmSyncResult): Promise<CrmSyncResult> {
+    const s = await this.state(tenantId);
+    s.byLead[result.leadId] = result;
+    this.cache.set(tenantId, s);
+    this.db.saveForTenant(tenantId, s);
     return result;
   }
 
   /** Sync a lead to the active CRM. Returns a result (never throws). */
-  async sync(lead: Lead, now: string): Promise<CrmSyncResult> {
+  async sync(tenantId: string, lead: Lead, now: string): Promise<CrmSyncResult> {
     if (this.provider !== "hubspot") {
-      return this.record({ leadId: lead.id, provider: "none", status: "skipped", syncedAt: now });
+      return this.record(tenantId, { leadId: lead.id, provider: "none", status: "skipped", syncedAt: now });
     }
-    return this.syncHubspot(lead, now);
+    return this.syncHubspot(tenantId, lead, now);
   }
 
-  private async syncHubspot(lead: Lead, now: string): Promise<CrmSyncResult> {
+  private async syncHubspot(tenantId: string, lead: Lead, now: string): Promise<CrmSyncResult> {
     const token = process.env.HUBSPOT_ACCESS_TOKEN!;
     const base = (process.env.HUBSPOT_BASE_URL ?? "https://api.hubapi.com").replace(/\/+$/, "");
     const portalId = process.env.HUBSPOT_PORTAL_ID;
@@ -85,11 +89,11 @@ export class CrmSyncStore implements OnModuleInit {
       if (!res.ok) {
         const error = `HubSpot ${res.status}`;
         this.log.warn(`${error} — lead ${lead.id} kept local`);
-        return this.record({ leadId: lead.id, provider: "hubspot", status: "failed", error, syncedAt: now });
+        return this.record(tenantId, { leadId: lead.id, provider: "hubspot", status: "failed", error, syncedAt: now });
       }
       const json = (await res.json()) as { results?: { id?: string }[] };
       const externalId = json.results?.[0]?.id;
-      return this.record({
+      return this.record(tenantId, {
         leadId: lead.id,
         provider: "hubspot",
         status: "synced",
@@ -100,7 +104,7 @@ export class CrmSyncStore implements OnModuleInit {
     } catch (err) {
       const error = err instanceof Error ? err.message : "unknown";
       this.log.warn(`HubSpot sync failed for lead ${lead.id} (${error})`);
-      return this.record({ leadId: lead.id, provider: "hubspot", status: "failed", error, syncedAt: now });
+      return this.record(tenantId, { leadId: lead.id, provider: "hubspot", status: "failed", error, syncedAt: now });
     }
   }
 }

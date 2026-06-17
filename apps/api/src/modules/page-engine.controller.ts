@@ -212,7 +212,7 @@ export class PagesController {
     }
     const page = this.must(this.store.transitionPage(t, id, "published"), id);
     // Push to the connected CMS when configured; otherwise keep the managed /feeds URL.
-    const cms = await this.cms.publish(page, new Date().toISOString());
+    const cms = await this.cms.publish(t, page, new Date().toISOString());
     return cms ? (this.store.attachCmsUrl(t, id, cms.externalUrl) ?? page) : page;
   }
 
@@ -228,8 +228,8 @@ export class PagesController {
 
   /** CMS publishing status + recorded pushes (PRD §8.3). */
   @Get("cms/status")
-  cmsStatus() {
-    return { provider: this.cms.provider, configured: this.cms.configured, published: this.cms.list() };
+  async cmsStatus(@Req() req: TenantRequest) {
+    return { provider: this.cms.provider, configured: this.cms.configured, published: await this.cms.list(resolveTenantId(req)) };
   }
 
   /** Non-mutating publish quality-gate check (Page-Engine PRD §12). */

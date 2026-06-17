@@ -15,16 +15,17 @@ export class CrmSyncController {
   ) {}
 
   @Get(":id/crm-sync")
-  status(@Param("id") id: string) {
-    return { provider: this.crm.provider, result: this.crm.get(id) };
+  async status(@Req() req: TenantRequest, @Param("id") id: string) {
+    return { provider: this.crm.provider, result: await this.crm.get(resolveTenantId(req), id) };
   }
 
   /** Upsert the lead into the configured CRM (HubSpot when keyed; else skipped). */
   @Post(":id/crm-sync")
   async sync(@Req() req: TenantRequest, @Param("id") id: string) {
-    const lead = this.pageEngine.getLead(resolveTenantId(req), id);
+    const t = resolveTenantId(req);
+    const lead = this.pageEngine.getLead(t, id);
     if (!lead) throw new NotFoundException(`Lead ${id} not found`);
-    const result = await this.crm.sync(lead, new Date().toISOString());
+    const result = await this.crm.sync(t, lead, new Date().toISOString());
     if (result.status === "synced") this.audit.record("integration", "lead", id);
     return { result, provider: this.crm.provider };
   }
