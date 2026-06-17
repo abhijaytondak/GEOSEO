@@ -9,6 +9,7 @@ import {
   Param,
   Post,
   Put,
+  Req,
   UnprocessableEntityException,
 } from "@nestjs/common";
 import type { LeadStatus, PageBlueprint, PageEdit } from "@geoseo/types";
@@ -17,6 +18,7 @@ import { PageEngineStore } from "./page-engine.service";
 import { SettingsStore } from "./settings.service";
 import { CmsPublishStore } from "./cms-publish.service";
 import { Public } from "../common/public.decorator";
+import { resolveTenantId, type TenantRequest } from "../common/tenant";
 import { validateBody, v } from "../common/validation";
 import { BlueprintUpdateSchema, PageEditSchema, IntegrationWriteSchema, LeadStatusUpdateSchema } from "../common/schemas";
 import { isDisposableEmail, refererAllowed } from "../common/public-ingest";
@@ -43,44 +45,45 @@ export class OpportunitiesController {
   constructor(@Inject(PageEngineStore) private readonly store: PageEngineStore) {}
 
   @Get()
-  list() {
-    return { opportunities: this.store.listOpportunities() };
+  list(@Req() req: TenantRequest) {
+    return { opportunities: this.store.listOpportunities(resolveTenantId(req)) };
   }
 
   @Get(":id")
-  get(@Param("id") id: string) {
-    const o = this.store.getOpportunity(id);
+  get(@Req() req: TenantRequest, @Param("id") id: string) {
+    const o = this.store.getOpportunity(resolveTenantId(req), id);
     if (!o) throw new NotFoundException(`Opportunity ${id} not found`);
     return o;
   }
 
   @Post(":id/approve")
-  approve(@Param("id") id: string) {
-    const o = this.store.setOpportunityStatus(id, "approved");
+  approve(@Req() req: TenantRequest, @Param("id") id: string) {
+    const o = this.store.setOpportunityStatus(resolveTenantId(req), id, "approved");
     if (!o) throw new NotFoundException(`Opportunity ${id} not found`);
     return o;
   }
 
   @Post(":id/reject")
-  reject(@Param("id") id: string) {
-    const o = this.store.setOpportunityStatus(id, "rejected");
+  reject(@Req() req: TenantRequest, @Param("id") id: string) {
+    const o = this.store.setOpportunityStatus(resolveTenantId(req), id, "rejected");
     if (!o) throw new NotFoundException(`Opportunity ${id} not found`);
     return o;
   }
 
   @Post(":id/defer")
-  defer(@Param("id") id: string) {
-    const o = this.store.setOpportunityStatus(id, "deferred");
+  defer(@Req() req: TenantRequest, @Param("id") id: string) {
+    const o = this.store.setOpportunityStatus(resolveTenantId(req), id, "deferred");
     if (!o) throw new NotFoundException(`Opportunity ${id} not found`);
     return o;
   }
 
   @Post("discover")
-  async discover(@Body() body: { seeds?: string[]; intent?: string }) {
+  async discover(@Req() req: TenantRequest, @Body() body: { seeds?: string[]; intent?: string }) {
+    const t = resolveTenantId(req);
     const seeds = Array.isArray(body?.seeds) ? body.seeds.filter((s) => typeof s === "string") : [];
     if (seeds.length === 0) throw new BadRequestException("seeds[] is required");
-    const created = await this.store.discover({ seeds, intent: body.intent as never });
-    return { created, opportunities: this.store.listOpportunities(), source: this.store.researchSource() };
+    const created = await this.store.discover(t, { seeds, intent: body.intent as never });
+    return { created, opportunities: this.store.listOpportunities(t), source: this.store.researchSource() };
   }
 }
 
@@ -91,35 +94,35 @@ export class BlueprintsController {
   constructor(@Inject(PageEngineStore) private readonly store: PageEngineStore) {}
 
   @Get()
-  list() {
-    return { blueprints: this.store.listBlueprints() };
+  list(@Req() req: TenantRequest) {
+    return { blueprints: this.store.listBlueprints(resolveTenantId(req)) };
   }
 
   @Post()
-  create(@Body() body: { opportunityId?: string }) {
+  create(@Req() req: TenantRequest, @Body() body: { opportunityId?: string }) {
     if (!body?.opportunityId) throw new BadRequestException("opportunityId is required");
-    const bp = this.store.generateBlueprint(body.opportunityId);
+    const bp = this.store.generateBlueprint(resolveTenantId(req), body.opportunityId);
     if (!bp) throw new NotFoundException(`Opportunity ${body.opportunityId} not found`);
     return bp;
   }
 
   @Get(":id")
-  get(@Param("id") id: string) {
-    const b = this.store.getBlueprint(id);
+  get(@Req() req: TenantRequest, @Param("id") id: string) {
+    const b = this.store.getBlueprint(resolveTenantId(req), id);
     if (!b) throw new NotFoundException(`Blueprint ${id} not found`);
     return b;
   }
 
   @Put(":id")
-  update(@Param("id") id: string, @Body(validateBody(BlueprintUpdateSchema)) body: Partial<PageBlueprint>) {
-    const b = this.store.updateBlueprint(id, body ?? {});
+  update(@Req() req: TenantRequest, @Param("id") id: string, @Body(validateBody(BlueprintUpdateSchema)) body: Partial<PageBlueprint>) {
+    const b = this.store.updateBlueprint(resolveTenantId(req), id, body ?? {});
     if (!b) throw new NotFoundException(`Blueprint ${id} not found`);
     return b;
   }
 
   @Post(":id/approve")
-  approve(@Param("id") id: string) {
-    const b = this.store.approveBlueprint(id);
+  approve(@Req() req: TenantRequest, @Param("id") id: string) {
+    const b = this.store.approveBlueprint(resolveTenantId(req), id);
     if (!b) throw new NotFoundException(`Blueprint ${id} not found`);
     return b;
   }
@@ -135,12 +138,13 @@ export class PagesController {
   ) {}
 
   @Get()
-  list() {
-    return { pages: this.store.listPages() };
+  list(@Req() req: TenantRequest) {
+    return { pages: this.store.listPages(resolveTenantId(req)) };
   }
 
   @Post("generate")
   async generate(
+    @Req() req: TenantRequest,
     @Body()
     body: {
       opportunityId?: string;
@@ -158,17 +162,17 @@ export class PagesController {
       body.content &&
       typeof body.content.metaTitle === "string" &&
       Array.isArray(body.content.sections);
-    const page = await this.store.generatePage(body.opportunityId, valid ? body.content : undefined);
+    const page = await this.store.generatePage(resolveTenantId(req), body.opportunityId, valid ? body.content : undefined);
     if (!page) throw new NotFoundException(`Opportunity ${body.opportunityId} not found`);
     return page;
   }
 
   /** Growth Plan "Initiate": draft N opportunities in the background, return a job handle. */
   @Post("generate-batch")
-  generateBatch(@Body() body: { opportunityIds?: string[] }) {
+  generateBatch(@Req() req: TenantRequest, @Body() body: { opportunityIds?: string[] }) {
     const ids = Array.isArray(body?.opportunityIds) ? body.opportunityIds.filter((x) => typeof x === "string") : [];
     if (!ids.length) throw new BadRequestException("opportunityIds[] is required");
-    return { job: this.store.startBatchGeneration(ids) };
+    return { job: this.store.startBatchGeneration(resolveTenantId(req), ids) };
   }
 
   /** Poll progress for an Initiate batch. */
@@ -180,45 +184,46 @@ export class PagesController {
   }
 
   @Get(":id")
-  get(@Param("id") id: string) {
-    const p = this.store.getPage(id);
+  get(@Req() req: TenantRequest, @Param("id") id: string) {
+    const p = this.store.getPage(resolveTenantId(req), id);
     if (!p) throw new NotFoundException(`Page ${id} not found`);
     return p;
   }
 
   @Post(":id/approve")
-  approve(@Param("id") id: string) {
-    return this.must(this.store.transitionPage(id, "approved"), id);
+  approve(@Req() req: TenantRequest, @Param("id") id: string) {
+    return this.must(this.store.transitionPage(resolveTenantId(req), id, "approved"), id);
   }
 
   @Post(":id/submit")
-  submit(@Param("id") id: string) {
-    return this.must(this.store.transitionPage(id, "in-review"), id);
+  submit(@Req() req: TenantRequest, @Param("id") id: string) {
+    return this.must(this.store.transitionPage(resolveTenantId(req), id, "in-review"), id);
   }
 
   @Post(":id/publish")
-  async publish(@Param("id") id: string) {
-    const blockers = this.store.publishBlockers(id);
+  async publish(@Req() req: TenantRequest, @Param("id") id: string) {
+    const t = resolveTenantId(req);
+    const blockers = this.store.publishBlockers(t, id);
     if (blockers.length > 0) {
       throw new UnprocessableEntityException({
         message: "SEO validation failed — resolve before publishing",
         blockers,
       });
     }
-    const page = this.must(this.store.transitionPage(id, "published"), id);
+    const page = this.must(this.store.transitionPage(t, id, "published"), id);
     // Push to the connected CMS when configured; otherwise keep the managed /feeds URL.
     const cms = await this.cms.publish(page, new Date().toISOString());
-    return cms ? (this.store.attachCmsUrl(id, cms.externalUrl) ?? page) : page;
+    return cms ? (this.store.attachCmsUrl(t, id, cms.externalUrl) ?? page) : page;
   }
 
   @Post(":id/unpublish")
-  unpublish(@Param("id") id: string) {
-    return this.must(this.store.unpublish(id), id);
+  unpublish(@Req() req: TenantRequest, @Param("id") id: string) {
+    return this.must(this.store.unpublish(resolveTenantId(req), id), id);
   }
 
   @Post(":id/duplicate")
-  duplicate(@Param("id") id: string) {
-    return this.must(this.store.duplicate(id), id);
+  duplicate(@Req() req: TenantRequest, @Param("id") id: string) {
+    return this.must(this.store.duplicate(resolveTenantId(req), id), id);
   }
 
   /** CMS publishing status + recorded pushes (PRD §8.3). */
@@ -229,30 +234,31 @@ export class PagesController {
 
   /** Non-mutating publish quality-gate check (Page-Engine PRD §12). */
   @Post(":id/validate")
-  validate(@Param("id") id: string) {
-    if (!this.store.getPage(id)) throw new NotFoundException(`Page ${id} not found`);
-    const blockers = this.store.publishBlockers(id);
+  validate(@Req() req: TenantRequest, @Param("id") id: string) {
+    const t = resolveTenantId(req);
+    if (!this.store.getPage(t, id)) throw new NotFoundException(`Page ${id} not found`);
+    const blockers = this.store.publishBlockers(t, id);
     return { blockers, canPublish: blockers.length === 0 };
   }
 
   @Post(":id/refresh")
-  refresh(@Param("id") id: string) {
-    return this.must(this.store.transitionPage(id, "needs-refresh"), id);
+  refresh(@Req() req: TenantRequest, @Param("id") id: string) {
+    return this.must(this.store.transitionPage(resolveTenantId(req), id, "needs-refresh"), id);
   }
 
   @Put(":id")
-  update(@Param("id") id: string, @Body(validateBody(PageEditSchema)) body: PageEdit) {
-    return this.must(this.store.updatePage(id, body ?? {}), id);
+  update(@Req() req: TenantRequest, @Param("id") id: string, @Body(validateBody(PageEditSchema)) body: PageEdit) {
+    return this.must(this.store.updatePage(resolveTenantId(req), id, body ?? {}), id);
   }
 
   @Get(":id/versions")
-  versions(@Param("id") id: string) {
-    return { versions: this.store.listVersions(id) };
+  versions(@Req() req: TenantRequest, @Param("id") id: string) {
+    return { versions: this.store.listVersions(resolveTenantId(req), id) };
   }
 
   @Post(":id/rollback/:versionId")
-  rollback(@Param("id") id: string, @Param("versionId") versionId: string) {
-    const p = this.store.rollbackPage(id, versionId);
+  rollback(@Req() req: TenantRequest, @Param("id") id: string, @Param("versionId") versionId: string) {
+    const p = this.store.rollbackPage(resolveTenantId(req), id, versionId);
     if (!p) throw new NotFoundException(`Page ${id} or version ${versionId} not found`);
     return p;
   }
@@ -270,28 +276,28 @@ export class LeadsController {
   constructor(@Inject(PageEngineStore) private readonly store: PageEngineStore) {}
 
   @Get()
-  list() {
-    return { leads: this.store.listLeads() };
+  list(@Req() req: TenantRequest) {
+    return { leads: this.store.listLeads(resolveTenantId(req)) };
   }
 
   @Get(":id")
-  get(@Param("id") id: string) {
-    const l = this.store.getLead(id);
+  get(@Req() req: TenantRequest, @Param("id") id: string) {
+    const l = this.store.getLead(resolveTenantId(req), id);
     if (!l) throw new NotFoundException(`Lead ${id} not found`);
     return l;
   }
 
   @Put(":id")
-  update(@Param("id") id: string, @Body(validateBody(LeadStatusUpdateSchema)) body: { status?: LeadStatus }) {
+  update(@Req() req: TenantRequest, @Param("id") id: string, @Body(validateBody(LeadStatusUpdateSchema)) body: { status?: LeadStatus }) {
     if (!body?.status) throw new BadRequestException("status is required");
-    const l = this.store.updateLeadStatus(id, body.status);
+    const l = this.store.updateLeadStatus(resolveTenantId(req), id, body.status);
     if (!l) throw new NotFoundException(`Lead ${id} not found`);
     return l;
   }
 
   @Delete(":id")
-  remove(@Param("id") id: string) {
-    if (!this.store.removeLead(id)) throw new NotFoundException(`Lead ${id} not found`);
+  remove(@Req() req: TenantRequest, @Param("id") id: string) {
+    if (!this.store.removeLead(resolveTenantId(req), id)) throw new NotFoundException(`Lead ${id} not found`);
     return { id, deleted: true };
   }
 }
@@ -303,20 +309,21 @@ export class MonitoringController {
   constructor(@Inject(PageEngineStore) private readonly store: PageEngineStore) {}
 
   @Get("recommendations/refresh")
-  refreshRecs() {
-    return { recommendations: this.store.refreshRecommendations() };
+  refreshRecs(@Req() req: TenantRequest) {
+    return { recommendations: this.store.refreshRecommendations(resolveTenantId(req)) };
   }
 
   @Get("audit")
-  audit() {
-    return { audit: this.store.listAudit() };
+  audit(@Req() req: TenantRequest) {
+    return { audit: this.store.listAudit(resolveTenantId(req)) };
   }
 
   @Get("monitoring/pages/:pageId")
-  page(@Param("pageId") pageId: string) {
-    const p = this.store.getPage(pageId);
+  page(@Req() req: TenantRequest, @Param("pageId") pageId: string) {
+    const t = resolveTenantId(req);
+    const p = this.store.getPage(t, pageId);
     if (!p) throw new NotFoundException(`Page ${pageId} not found`);
-    return { page: p, versions: this.store.listVersions(pageId) };
+    return { page: p, versions: this.store.listVersions(t, pageId) };
   }
 }
 

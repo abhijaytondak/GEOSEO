@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Inject, Post } from "@nestjs/common";
+import { Body, Controller, Get, Inject, Post, Req } from "@nestjs/common";
 import { ApiTags } from "@nestjs/swagger";
 import type { AiCrawlerBot, AiMentionEngine, AiSearchOverview, SeoDataProvider } from "@geoseo/types";
 import { SEO_PROVIDER } from "../seo/seo.module";
@@ -6,6 +6,7 @@ import { AiMentionStore, AiBotActivityStore } from "./ai-search.service";
 import { PageEngineStore } from "./page-engine.service";
 import { AuditStore } from "./audit.service";
 import { validateBody, v } from "../common/validation";
+import { resolveTenantId, type TenantRequest } from "../common/tenant";
 
 const ENGINES: AiMentionEngine[] = ["chatgpt", "perplexity", "gemini", "claude", "copilot", "grok", "google-ai"];
 const BOTS: AiCrawlerBot[] = ["GPTBot", "OAI-SearchBot", "PerplexityBot", "ClaudeBot", "Google-Extended", "Bingbot", "Other"];
@@ -63,13 +64,13 @@ export class AiSearchController {
   }
 
   @Get("overview")
-  async overview(): Promise<AiSearchOverview> {
+  async overview(@Req() req: TenantRequest): Promise<AiSearchOverview> {
     const [backlinks, mentions, hits, pages, leads] = [
       await this.seo.getBacklinks(),
       this.mentions.list(),
       this.bots.list(),
       this.pageEngine.listPublishedPages(),
-      this.pageEngine.listLeads(),
+      this.pageEngine.listLeads(resolveTenantId(req)),
     ];
     const cited = mentions.filter((m) => m.mentioned);
     const byEngine = ENGINES.map((engine) => ({ engine, mentions: cited.filter((m) => m.engine === engine).length })).filter((e) => e.mentions > 0);

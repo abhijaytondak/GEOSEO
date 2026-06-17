@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Inject, NotFoundException, Param, Patch, Post } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Inject, NotFoundException, Param, Patch, Post, Req } from "@nestjs/common";
 import { ApiTags } from "@nestjs/swagger";
 import type { LeadNotificationChannel } from "@geoseo/types";
 import { LeadNotificationStore } from "./lead-notification.service";
@@ -6,6 +6,7 @@ import { LeadScoreStore } from "./lead-score.service";
 import { PageEngineStore } from "./page-engine.service";
 import { AuditStore } from "./audit.service";
 import { validateBody, v } from "../common/validation";
+import { resolveTenantId, type TenantRequest } from "../common/tenant";
 
 const CHANNELS: LeadNotificationChannel[] = ["in_app", "email", "slack", "webhook"];
 
@@ -72,8 +73,8 @@ export class LeadNotifyController {
 
   /** Evaluate notification rules against a lead and record deliveries. */
   @Post(":id/notify")
-  notify(@Param("id") id: string) {
-    const lead = this.pageEngine.getLead(id);
+  notify(@Req() req: TenantRequest, @Param("id") id: string) {
+    const lead = this.pageEngine.getLead(resolveTenantId(req), id);
     if (!lead) throw new NotFoundException(`Lead ${id} not found`);
     const result = this.store.notify(lead, this.scores.get(id));
     if (result.delivered.length) this.audit.record("notification", "lead", id);

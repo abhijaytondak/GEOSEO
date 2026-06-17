@@ -1,8 +1,9 @@
-import { Controller, Get, Inject, NotFoundException, Param, Post } from "@nestjs/common";
+import { Controller, Get, Inject, NotFoundException, Param, Post, Req } from "@nestjs/common";
 import { ApiTags } from "@nestjs/swagger";
 import { CrmSyncStore } from "./crm-sync.service";
 import { PageEngineStore } from "./page-engine.service";
 import { AuditStore } from "./audit.service";
+import { resolveTenantId, type TenantRequest } from "../common/tenant";
 
 @ApiTags("leads")
 @Controller("leads")
@@ -20,8 +21,8 @@ export class CrmSyncController {
 
   /** Upsert the lead into the configured CRM (HubSpot when keyed; else skipped). */
   @Post(":id/crm-sync")
-  async sync(@Param("id") id: string) {
-    const lead = this.pageEngine.getLead(id);
+  async sync(@Req() req: TenantRequest, @Param("id") id: string) {
+    const lead = this.pageEngine.getLead(resolveTenantId(req), id);
     if (!lead) throw new NotFoundException(`Lead ${id} not found`);
     const result = await this.crm.sync(lead, new Date().toISOString());
     if (result.status === "synced") this.audit.record("integration", "lead", id);
@@ -29,7 +30,7 @@ export class CrmSyncController {
   }
 
   @Post(":id/crm-sync/retry")
-  async retry(@Param("id") id: string) {
-    return this.sync(id);
+  async retry(@Req() req: TenantRequest, @Param("id") id: string) {
+    return this.sync(req, id);
   }
 }

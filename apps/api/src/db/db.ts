@@ -61,6 +61,26 @@ export async function loadAll<T>(table: string): Promise<T[]> {
   return out;
 }
 
+/** Like loadAll, but also returns each row's id — needed to partition multi-row tables
+ *  by tenant (per-tenant row ids are prefixed `t:<tenant>:<id>`; default is un-prefixed). */
+export async function loadAllWithIds<T>(table: string): Promise<{ id: string; data: T }[]> {
+  if (!sql) return [];
+  const rows = await sql`select id, data from ${sql(table)} order by updated_at asc`;
+  const out: { id: string; data: T }[] = [];
+  for (const r of rows) {
+    let v: unknown = r.data;
+    if (typeof v === "string") {
+      try {
+        v = JSON.parse(v);
+      } catch {
+        continue;
+      }
+    }
+    if (v && typeof v === "object") out.push({ id: r.id as string, data: v as T });
+  }
+  return out;
+}
+
 export async function upsert(table: string, id: string, data: unknown): Promise<void> {
   if (!sql) return;
   // `sql.json` lets postgres.js serialize the value exactly once into the jsonb

@@ -120,7 +120,7 @@ export class SearchService {
     return { interp: { raw, terms, filters }, scope, minDa };
   }
 
-  private async index(): Promise<Indexed[]> {
+  private async index(tenantId: string): Promise<Indexed[]> {
     // Per-provider degradation (allSettled): one failed store yields its slice of the
     // index empty rather than 500-ing global search.
     const [prospectsR, alertsR, trackedPagesR, brandProfileR] = await Promise.allSettled([
@@ -213,7 +213,7 @@ export class SearchService {
     }
 
     // Generated pages (§7.9)
-    for (const g of this.pageEngine.listPages() as GeneratedPage[]) {
+    for (const g of this.pageEngine.listPages(tenantId) as GeneratedPage[]) {
       const seoPass = (g.seoChecks ?? []).filter((c) => c.pass).length;
       const seoTotal = (g.seoChecks ?? []).length;
       const boost = g.status === "needs-refresh" || g.status === "in-review" ? 0.16 : g.status === "approved" ? 0.12 : 0;
@@ -237,7 +237,7 @@ export class SearchService {
     }
 
     // Page-engine opportunities (§7.8)
-    for (const o of this.pageEngine.listOpportunities() as KeywordOpportunity[]) {
+    for (const o of this.pageEngine.listOpportunities(tenantId) as KeywordOpportunity[]) {
       items.push({
         title: o.query,
         haystack: norm([o.query, o.clusterLabel, o.intent, o.status, o.evidence].join(" ")),
@@ -261,7 +261,7 @@ export class SearchService {
     }
 
     // Leads (§7.10)
-    for (const l of this.pageEngine.listLeads() as Lead[]) {
+    for (const l of this.pageEngine.listLeads(tenantId) as Lead[]) {
       items.push({
         title: l.name,
         haystack: norm([l.name, l.email, l.company, l.pageTitle, l.status, l.spamStatus].join(" ")),
@@ -371,7 +371,7 @@ export class SearchService {
     }
 
     // Audit / activity (§7.12)
-    for (const e of this.pageEngine.listAudit(60) as AuditEntry[]) {
+    for (const e of this.pageEngine.listAudit(tenantId, 60) as AuditEntry[]) {
       items.push({
         title: `${e.action} ${e.entity}`,
         haystack: norm([e.action, e.entity, e.entityId, e.actor].join(" ")),
@@ -416,7 +416,7 @@ export class SearchService {
     return Math.min(0.95, score);
   }
 
-  async search(rawQuery: string, opts: { type?: string; limit: number; offset: number }): Promise<SearchResponse> {
+  async search(tenantId: string, rawQuery: string, opts: { type?: string; limit: number; offset: number }): Promise<SearchResponse> {
     const { interp, scope, minDa } = this.interpret(rawQuery);
     const explicitScope = (opts.type as SearchEntityType | undefined) ?? scope;
 
@@ -425,7 +425,7 @@ export class SearchService {
       return { results: [], total: 0, facets: [], suggestions: this.suggestions(), interpretedQuery: interp };
     }
 
-    const index = await this.index();
+    const index = await this.index(tenantId);
     const scored = index
       .filter((it) => (explicitScope ? it.result.type === explicitScope : true))
       .filter((it) => {

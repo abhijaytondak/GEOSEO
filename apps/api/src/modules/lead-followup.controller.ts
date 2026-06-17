@@ -1,6 +1,7 @@
-import { Controller, Get, Inject, Param, Post } from "@nestjs/common";
+import { Controller, Get, Inject, Param, Post, Req } from "@nestjs/common";
 import { ApiTags } from "@nestjs/swagger";
 import { LeadFollowupStore } from "./lead-followup.service";
+import { resolveTenantId, type TenantRequest } from "../common/tenant";
 
 @ApiTags("leads")
 @Controller("leads")
@@ -13,8 +14,8 @@ export class LeadFollowupController {
   }
 
   @Post(":id/followup")
-  async generate(@Param("id") id: string) {
-    const draft = await this.followup.generate(id, new Date().toISOString());
+  async generate(@Req() req: TenantRequest, @Param("id") id: string) {
+    const draft = await this.followup.generate(resolveTenantId(req), id, new Date().toISOString());
     return { draft };
   }
 }

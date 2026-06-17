@@ -8,12 +8,14 @@ import {
   Param,
   Patch,
   Post,
+  Req,
 } from "@nestjs/common";
 import { ApiTags } from "@nestjs/swagger";
 import { LeadRoutingStore, type LeadRoutingRule } from "./lead-routing.service";
 import { PageEngineStore } from "./page-engine.service";
 import { LeadAssignmentStore } from "./lead-assignment.service";
 import { validateBody, v } from "../common/validation";
+import { resolveTenantId, type TenantRequest } from "../common/tenant";
 
 type RuleInput = Omit<LeadRoutingRule, "id">;
 
@@ -72,10 +74,10 @@ export class LeadRoutingController {
 
   /** Apply rules to every currently-unassigned lead (PRD routing — backfill). */
   @Post("apply")
-  apply() {
+  apply(@Req() req: TenantRequest) {
     const assigned = new Set(this.assignments.all().map((a) => a.leadId));
     let routed = 0;
-    for (const lead of this.pages.listLeads()) {
+    for (const lead of this.pages.listLeads(resolveTenantId(req))) {
       if (assigned.has(lead.id)) continue;
       const ownerId = this.routing.routeOwner(lead);
       if (ownerId) {

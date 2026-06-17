@@ -63,8 +63,8 @@ export class LeadFollowupStore implements OnModuleInit {
     return this.byLead[leadId] ?? null;
   }
 
-  async generate(leadId: string, now: string): Promise<FollowupDraft> {
-    const lead = this.pages.getLead(leadId);
+  async generate(tenantId: string, leadId: string, now: string): Promise<FollowupDraft> {
+    const lead = this.pages.getLead(tenantId, leadId);
     if (!lead) throw new Error(`Lead ${leadId} not found`);
     const brand = this.brand.current();
 
