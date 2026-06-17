@@ -25,6 +25,14 @@ export class JobQueue implements OnModuleDestroy {
       this.logger.log("REDIS_URL unset — jobs run in-memory");
       return;
     }
+    // Kill-switch: ALLOW_INMEMORY_QUEUE=true skips Redis entirely (no connection, no
+    // polling worker) — jobs run in-memory. Use this on metered/free Redis (e.g. Upstash
+    // free tier) to avoid the worker's blocking-poll loop burning the request quota. It is
+    // the same flag the fail-closed boot gate accepts, so the API still boots in production.
+    if (process.env.ALLOW_INMEMORY_QUEUE === "true") {
+      this.logger.warn("ALLOW_INMEMORY_QUEUE=true — Redis queue disabled, jobs run in-memory (no Redis traffic)");
+      return;
+    }
     try {
       // BullMQ requires maxRetriesPerRequest: null; rediss:// auto-enables TLS.
       this.connection = new Redis(url, { maxRetriesPerRequest: null });
@@ -34,7 +42,18 @@ export class JobQueue implements OnModuleDestroy {
         async (job) => {
           await handler(job.data.jobRunId as string);
         },
-        { connection: this.connection },
+        {
+          connection: this.connection,
+          // Minimize Redis request volume on metered providers (Upstash bills per request):
+          // long block-poll (fewer idle bzpopmin cycles), infrequent stalled checks, single
+          // concurrency, and aggressive auto-removal so completed/failed sets stay tiny.
+          concurrency: 1,
+          drainDelay: 60, // seconds to block waiting for a job (default 5 → 12×/min idle)
+          stalledInterval: 300_000, // check stalled jobs every 5 min (default 30s)
+          maxStalledCount: 1,
+          removeOnComplete: { count: 20 },
+          removeOnFail: { count: 50 },
+        },
       );
       this.worker.on("failed", (job, err) =>
         this.logger.error(`job ${job?.id} failed: ${err.message}`),
@@ -54,7 +73,7 @@ export class JobQueue implements OnModuleDestroy {
     await this.queue.add(
       type,
       { jobRunId },
-      { attempts: 2, backoff: { type: "exponential", delay: 1000 }, removeOnComplete: 200, removeOnFail: 100 },
+      { attempts: 2, backoff: { type: "exponential", delay: 1000 }, removeOnComplete: 20, removeOnFail: 50 },
     );
   }
 
