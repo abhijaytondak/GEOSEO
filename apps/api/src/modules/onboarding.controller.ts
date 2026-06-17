@@ -36,14 +36,14 @@ export class OnboardingController {
   ) {}
 
   @Get("status")
-  status() {
-    return { onboarding: this.onboarding.get() };
+  async status(@Req() req: TenantRequest) {
+    return { onboarding: await this.onboarding.get(resolveTenantId(req)) };
   }
 
   /** Save step progress mid-flow (e.g. after website scan / brand save). */
   @Post("progress")
-  progress(@Body(validateBody(PatchSchema)) body: Partial<OnboardingStatus>) {
-    return { onboarding: this.onboarding.patch(body) };
+  async progress(@Req() req: TenantRequest, @Body(validateBody(PatchSchema)) body: Partial<OnboardingStatus>) {
+    return { onboarding: await this.onboarding.patch(resolveTenantId(req), body) };
   }
 
   /**
@@ -53,7 +53,7 @@ export class OnboardingController {
    * during the flow — this ties identity + completion together.
    */
   @Post("complete")
-  complete(
+  async complete(
     @Req() req: TenantRequest,
     @Body(validateBody(CompleteSchema))
     body: {
@@ -82,7 +82,7 @@ export class OnboardingController {
         // Unknown integration id — ignore; capture intent in onboarding state below.
       }
     }
-    const onboarding = this.onboarding.complete({
+    const onboarding = await this.onboarding.complete(resolveTenantId(req), {
       workspaceName: body.workspaceName,
       domain: body.domain,
       websiteUrl: body.websiteUrl,

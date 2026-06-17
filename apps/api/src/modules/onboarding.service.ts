@@ -1,4 +1,4 @@
-import { Injectable, OnModuleInit } from "@nestjs/common";
+import { Injectable } from "@nestjs/common";
 import type { OnboardingStatus } from "@geoseo/types";
 import { DocStore } from "../db/db";
 
@@ -19,51 +19,66 @@ const EMPTY: OnboardingStatus = {
  * Tracks the company's captured identity, requested integrations, and which
  * setup steps are done so the platform knows a company is live (not seed data).
  */
+/**
+ * Per-tenant onboarding state (multi-tenant pattern — docs/MULTI-TENANCY.md, P0-6).
+ * Each workspace tracks its own setup progress; `ws-default` maps to the legacy "state" row.
+ */
 @Injectable()
-export class OnboardingStore implements OnModuleInit {
-  private state: OnboardingStatus = { ...EMPTY };
+export class OnboardingStore {
+  private cache = new Map<string, OnboardingStatus>();
   private db = new DocStore<OnboardingStatus>("cx_onboarding");
 
-  async onModuleInit() {
-    await this.db.init(this.state, (loaded) => {
-      this.state = { ...EMPTY, ...loaded, steps: { ...EMPTY.steps, ...(loaded.steps ?? {}) } };
-    });
+  private async state(tenantId: string): Promise<OnboardingStatus> {
+    const cached = this.cache.get(tenantId);
+    if (cached) return cached;
+    const loaded = await this.db.loadForTenant(tenantId);
+    const s: OnboardingStatus = loaded
+      ? { ...EMPTY, ...loaded, steps: { ...EMPTY.steps, ...(loaded.steps ?? {}) } }
+      : { ...EMPTY, steps: { ...EMPTY.steps } };
+    this.cache.set(tenantId, s);
+    return s;
+  }
+  private persist(tenantId: string, s: OnboardingStatus) {
+    this.cache.set(tenantId, s);
+    this.db.saveForTenant(tenantId, s);
   }
 
-  get(): OnboardingStatus {
-    return this.state;
+  async get(tenantId: string): Promise<OnboardingStatus> {
+    return this.state(tenantId);
   }
 
   /** Merge partial progress (called as the company advances through steps). */
-  patch(update: Partial<OnboardingStatus>): OnboardingStatus {
-    this.state = {
-      ...this.state,
+  async patch(tenantId: string, update: Partial<OnboardingStatus>): Promise<OnboardingStatus> {
+    const cur = await this.state(tenantId);
+    const next: OnboardingStatus = {
+      ...cur,
       ...update,
-      steps: { ...this.state.steps, ...(update.steps ?? {}) },
-      requestedIntegrations: update.requestedIntegrations ?? this.state.requestedIntegrations,
+      steps: { ...cur.steps, ...(update.steps ?? {}) },
+      requestedIntegrations: update.requestedIntegrations ?? cur.requestedIntegrations,
     };
-    if (!this.state.startedAt) this.state.startedAt = new Date().toISOString();
-    this.db.save(this.state);
-    return this.state;
+    if (!next.startedAt) next.startedAt = new Date().toISOString();
+    this.persist(tenantId, next);
+    return next;
   }
 
-  complete(update: Partial<OnboardingStatus>): OnboardingStatus {
-    this.state = {
-      ...this.state,
+  async complete(tenantId: string, update: Partial<OnboardingStatus>): Promise<OnboardingStatus> {
+    const cur = await this.state(tenantId);
+    const next: OnboardingStatus = {
+      ...cur,
       ...update,
       completed: true,
       completedAt: new Date().toISOString(),
-      startedAt: this.state.startedAt ?? new Date().toISOString(),
-      steps: { ...this.state.steps, ...(update.steps ?? {}) },
-      requestedIntegrations: update.requestedIntegrations ?? this.state.requestedIntegrations,
+      startedAt: cur.startedAt ?? new Date().toISOString(),
+      steps: { ...cur.steps, ...(update.steps ?? {}) },
+      requestedIntegrations: update.requestedIntegrations ?? cur.requestedIntegrations,
     };
-    this.db.save(this.state);
-    return this.state;
+    this.persist(tenantId, next);
+    return next;
   }
 
-  reset(): OnboardingStatus {
-    this.state = { ...EMPTY, steps: { ...EMPTY.steps } };
-    this.db.save(this.state);
-    return this.state;
+  async reset(tenantId: string): Promise<OnboardingStatus> {
+    const next: OnboardingStatus = { ...EMPTY, steps: { ...EMPTY.steps } };
+    this.persist(tenantId, next);
+    return next;
   }
 }
