@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, OnModuleInit } from "@nestjs/common";
+import { Injectable, NotFoundException } from "@nestjs/common";
 import type { SiteThemeProfile, ThemeFidelity } from "@geoseo/types";
 import { DocStore } from "../db/db";
 import { safeFetchText } from "../common/ssrf";
@@ -95,52 +95,55 @@ function pickColors(t: ReturnType<typeof extractTokens>): SiteThemeProfile["colo
   };
 }
 
+/**
+ * Per-tenant site-theme store (multi-tenant pattern — docs/MULTI-TENANCY.md, P0-6).
+ * State lazily hydrates per `tenantId` into a cache, backed by
+ * `DocStore.loadForTenant/saveForTenant`; `ws-default` maps to the legacy "state" row.
+ */
 @Injectable()
-export class SiteThemeStore implements OnModuleInit {
-  private profiles: Record<string, SiteThemeProfile> = {};
-  private seq = 0;
+export class SiteThemeStore {
+  private cache = new Map<string, ThemeState>();
   private db = new DocStore<ThemeState>("cx_site_theme");
 
-  async onModuleInit() {
-    await this.db.init(this.snapshot(), (loaded) => {
-      this.profiles = loaded.profiles ?? {};
-      this.seq = loaded.seq ?? 0;
-    });
+  private async state(tenantId: string): Promise<ThemeState> {
+    const cached = this.cache.get(tenantId);
+    if (cached) return cached;
+    const loaded = (await this.db.loadForTenant(tenantId)) ?? { profiles: {}, seq: 0 };
+    this.cache.set(tenantId, loaded);
+    return loaded;
+  }
+  private persist(tenantId: string, s: ThemeState) {
+    this.cache.set(tenantId, s);
+    this.db.saveForTenant(tenantId, s);
   }
 
-  private snapshot(): ThemeState {
-    return { profiles: this.profiles, seq: this.seq };
+  async list(tenantId: string): Promise<SiteThemeProfile[]> {
+    return Object.values((await this.state(tenantId)).profiles).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
   }
-  private persist() {
-    this.db.save(this.snapshot());
-  }
-
-  list(): SiteThemeProfile[] {
-    return Object.values(this.profiles).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
-  }
-  get(id: string): SiteThemeProfile {
-    const profile = this.profiles[id];
+  async get(tenantId: string, id: string): Promise<SiteThemeProfile> {
+    const profile = (await this.state(tenantId)).profiles[id];
     if (!profile) throw new NotFoundException(`No site theme profile '${id}'`);
     return profile;
   }
 
   /** The active profile — most recent confirmed, else most recent overall. */
-  latest(): SiteThemeProfile | null {
-    const all = this.list();
+  async latest(tenantId: string): Promise<SiteThemeProfile | null> {
+    const all = await this.list(tenantId);
     return all.find((p) => p.status === "confirmed") ?? all[0] ?? null;
   }
 
   /** SSRF-guarded scan → heuristic draft profile. */
-  async scan(rawUrl: string): Promise<SiteThemeProfile> {
+  async scan(tenantId: string, rawUrl: string): Promise<SiteThemeProfile> {
     const { url, html } = await safeFetchText(rawUrl, { maxBytes: 1_200_000, timeoutMs: 8000 });
     const tokens = extractTokens(html);
     const found = [tokens.colors.length > 0, tokens.fonts.length > 0, !!tokens.themeColor, !!tokens.favicon].filter(Boolean).length;
     const confidence = Math.min(95, 35 + found * 15 + Math.min(tokens.colors.length, 6) * 2);
-    this.seq += 1;
-    const id = `theme-${this.seq}`;
+    const s = await this.state(tenantId);
+    s.seq += 1;
+    const id = `theme-${s.seq}`;
     const profile: SiteThemeProfile = {
       id,
-      workspaceId: "ws-default",
+      workspaceId: tenantId,
       sourceUrls: [url],
       status: confidence >= 60 ? "draft" : "needs-review",
       colors: pickColors(tokens),
@@ -162,13 +165,15 @@ export class SiteThemeStore implements OnModuleInit {
       createdAt: nowIso(),
       updatedAt: nowIso(),
     };
-    this.profiles[id] = profile;
-    this.persist();
+    s.profiles[id] = profile;
+    this.persist(tenantId, s);
     return profile;
   }
 
-  update(id: string, patch: Partial<SiteThemeProfile>): SiteThemeProfile {
-    const existing = this.get(id);
+  async update(tenantId: string, id: string, patch: Partial<SiteThemeProfile>): Promise<SiteThemeProfile> {
+    const s = await this.state(tenantId);
+    const existing = s.profiles[id];
+    if (!existing) throw new NotFoundException(`No site theme profile '${id}'`);
     const next: SiteThemeProfile = {
       ...existing,
       ...patch,
@@ -180,12 +185,12 @@ export class SiteThemeStore implements OnModuleInit {
       assets: { ...existing.assets, ...(patch.assets ?? {}) },
       updatedAt: nowIso(),
     };
-    this.profiles[id] = next;
-    this.persist();
+    s.profiles[id] = next;
+    this.persist(tenantId, s);
     return next;
   }
 
-  confirm(id: string): SiteThemeProfile {
-    return this.update(id, { status: "confirmed" });
+  async confirm(tenantId: string, id: string): Promise<SiteThemeProfile> {
+    return this.update(tenantId, id, { status: "confirmed" });
   }
 }

@@ -1,10 +1,11 @@
-import { Body, Controller, Get, Inject, Param, Post, Put } from "@nestjs/common";
+import { Body, Controller, Get, Inject, Param, Post, Put, Req } from "@nestjs/common";
 import { ApiTags } from "@nestjs/swagger";
 import type { SiteThemeProfile } from "@geoseo/types";
 import { SiteThemeStore, computeThemeFidelity } from "./site-theme.service";
 import { JobsStore } from "./jobs.service";
 import { AuditStore } from "./audit.service";
 import { validateBody, v } from "../common/validation";
+import { resolveTenantId, type TenantRequest } from "../common/tenant";
 
 const ScanSchema = { url: v.string({ min: 3, max: 2048 }) };
 
@@ -45,46 +46,51 @@ export class SiteThemeController {
   ) {}
 
   @Get()
-  list() {
-    return { profiles: this.themes.list() };
+  async list(@Req() req: TenantRequest) {
+    return { profiles: await this.themes.list(resolveTenantId(req)) };
   }
 
   /** SSRF-guarded site scan → heuristic draft theme profile (PRD §7.1, §19). */
   @Post("scan")
-  async scan(@Body(validateBody(ScanSchema)) body: { url: string }) {
-    const profile = await this.themes.scan(body.url);
+  async scan(@Req() req: TenantRequest, @Body(validateBody(ScanSchema)) body: { url: string }) {
+    const profile = await this.themes.scan(resolveTenantId(req), body.url);
     this.audit.record("create", "brand", profile.id);
     return { profile, job: this.jobs.create("settings-sync", `Theme scan: ${body.url}`) };
   }
 
   /** Theme-fidelity score for the active (latest confirmed) profile — for the page-list badge (PRD §13). */
   @Get("fidelity")
-  workspaceFidelity() {
-    const theme = this.themes.latest();
+  async workspaceFidelity(@Req() req: TenantRequest) {
+    const theme = await this.themes.latest(resolveTenantId(req));
     return { themeId: theme?.id ?? null, fidelity: computeThemeFidelity(theme) };
   }
 
   @Get(":id")
-  get(@Param("id") id: string) {
-    return { profile: this.themes.get(id) };
+  async get(@Req() req: TenantRequest, @Param("id") id: string) {
+    return { profile: await this.themes.get(resolveTenantId(req), id) };
   }
 
   /** Theme-fidelity score for a specific profile — how natively pages render to the site (PRD §13). */
   @Get(":id/fidelity")
-  fidelity(@Param("id") id: string) {
-    return { themeId: id, fidelity: computeThemeFidelity(this.themes.get(id)) };
+  async fidelity(@Req() req: TenantRequest, @Param("id") id: string) {
+    const theme = await this.themes.get(resolveTenantId(req), id);
+    return { themeId: id, fidelity: computeThemeFidelity(theme) };
   }
 
   @Put(":id")
-  update(@Param("id") id: string, @Body(validateBody(UpdateThemeSchema)) body: Partial<SiteThemeProfile>) {
-    const profile = this.themes.update(id, body);
+  async update(
+    @Req() req: TenantRequest,
+    @Param("id") id: string,
+    @Body(validateBody(UpdateThemeSchema)) body: Partial<SiteThemeProfile>,
+  ) {
+    const profile = await this.themes.update(resolveTenantId(req), id, body);
     this.audit.record("update", "brand", id);
     return { profile };
   }
 
   @Post(":id/confirm")
-  confirm(@Param("id") id: string) {
-    const profile = this.themes.confirm(id);
+  async confirm(@Req() req: TenantRequest, @Param("id") id: string) {
+    const profile = await this.themes.confirm(resolveTenantId(req), id);
     this.audit.record("approve", "brand", id);
     return { profile };
   }
