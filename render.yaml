@@ -43,6 +43,12 @@ services:
         sync: false
       - key: REDIS_URL
         sync: false
+      # Upstash free tier (500K req/mo) CANNOT sustain the BullMQ worker's poll loop — it
+      # exhausts the quota and the API starts erroring. Default to the in-memory queue (jobs
+      # run in-process, no Redis traffic). Set to "false" only with a paid/uncapped Redis.
+      # (Also set this in the Render dashboard env for the EXISTING service to take effect.)
+      - key: ALLOW_INMEMORY_QUEUE
+        value: "true"
       # --- Optional integration seams: set a value to flip demo→live (leave unset = demo) ---
       - key: DATAFORSEO_LOGIN
         sync: false
