@@ -5,6 +5,8 @@ import { OnboardingStore } from "./onboarding.service";
 import { SettingsStore } from "./settings.service";
 import { AuditStore } from "./audit.service";
 import { BrandAnalysisStore } from "./brand-analysis.service";
+import { BrandLibraryStore } from "./brand-library.service";
+import { crawlBrandDraft } from "./brand-library.extract";
 import { validateBody, v } from "../common/validation";
 import { resolveTenantId, type TenantRequest } from "../common/tenant";
 
@@ -33,6 +35,7 @@ export class OnboardingController {
     @Inject(SettingsStore) private readonly settings: SettingsStore,
     @Inject(AuditStore) private readonly audit: AuditStore,
     @Inject(BrandAnalysisStore) private readonly brandAnalysis: BrandAnalysisStore,
+    @Inject(BrandLibraryStore) private readonly library: BrandLibraryStore,
   ) {}
 
   @Get("status")
@@ -99,6 +102,15 @@ export class OnboardingController {
     // Auto-analyze the brand in the background so the dashboard Scorecard is warm on first load.
     // Fire-and-forget: never block or fail the onboarding response on the network-bound analysis.
     void this.brandAnalysis.run(resolveTenantId(req), new Date().toISOString()).catch(() => undefined);
+    // Dynamic Brand Memory: auto-extract the company's real products / personas / proof / tone of
+    // voice / images from its OWN website (the onboarded URL) and replace the sample library — so
+    // onboarding ANY company populates Brand Memory from that company's site. Fire-and-forget (never
+    // blocks onboarding); only overwrites when the crawl actually reached the site (no clobber-with-empty).
+    const brandTenant = resolveTenantId(req);
+    const siteUrl = (body.websiteUrl?.trim() || body.domain).trim();
+    void crawlBrandDraft(siteUrl)
+      .then((r) => (r.crawled ? this.library.replace(brandTenant, r.draft, new Date().toISOString()) : undefined))
+      .catch(() => undefined);
     return { onboarding, settings: this.settings.get() };
   }
 }
