@@ -50,7 +50,7 @@ function htmlToText(html: string): string {
     .trim();
 }
 
-const MAX_IMAGES = 30;
+const MAX_IMAGES = 60;
 
 /** From a responsive `srcset`, pick the highest-resolution candidate (sharper than a tiny default src). */
 function largestFromSrcset(srcset: string): string | undefined {
@@ -129,7 +129,7 @@ export async function crawlBrandDraft(
   let html = "";
   let crawled = false;
   try {
-    const { html: fetched } = await safeFetchText(normalized, { maxBytes: 800_000, timeoutMs: 9000 });
+    const { html: fetched } = await safeFetchText(normalized, { maxBytes: 1_800_000, timeoutMs: 10_000 });
     html = fetched;
     crawled = Boolean(html);
   } catch (err) {
