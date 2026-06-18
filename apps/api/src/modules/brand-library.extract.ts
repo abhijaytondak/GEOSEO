@@ -50,37 +50,69 @@ function htmlToText(html: string): string {
     .trim();
 }
 
-/** Real brand images from the page: og/twitter image, apple-touch-icon, logo + content imgs. */
+const MAX_IMAGES = 30;
+
+/** From a responsive `srcset`, pick the highest-resolution candidate (sharper than a tiny default src). */
+function largestFromSrcset(srcset: string): string | undefined {
+  let best: { url: string; weight: number } | undefined;
+  for (const part of srcset.split(",")) {
+    const [url, descriptor] = part.trim().split(/\s+/, 2);
+    if (!url) continue;
+    const w = descriptor?.match(/(\d+)w/);
+    const x = descriptor?.match(/([\d.]+)x/);
+    const weight = w ? Number(w[1]) : x ? Number(x[1]) * 1000 : 1;
+    if (!best || weight > best.weight) best = { url, weight };
+  }
+  return best?.url;
+}
+
+/** Real brand images from the page: og/twitter share image + meaningful content imgs.
+ *  Skips tiny icons/sprites/avatars/placeholders and prefers the largest responsive variant. */
 function extractImages(html: string, baseUrl: string): string[] {
   const out: string[] = [];
+  const seen = new Set<string>();
   const push = (raw?: string | null) => {
-    if (!raw || out.length >= 12) return;
+    if (!raw || out.length >= MAX_IMAGES) return;
     try {
       // Decode HTML entities in the URL (e.g. `&amp;` in query strings) so the image actually loads.
       const u = new URL(decodeEntities(raw).trim(), baseUrl);
       if (u.protocol !== "http:" && u.protocol !== "https:") return;
       const s = u.toString();
-      if (!out.includes(s)) out.push(s);
+      if (!seen.has(s)) {
+        seen.add(s);
+        out.push(s);
+      }
     } catch {
       /* skip malformed URLs */
     }
   };
   const grab = (re: RegExp) => html.match(re)?.[1];
 
+  // Social-share images first — the site's own chosen, full-size brand visuals.
   push(grab(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i));
   push(grab(/<meta[^>]+name=["']twitter:image["'][^>]+content=["']([^"']+)["']/i));
-  push(grab(/<link[^>]+rel=["'][^"']*apple-touch-icon[^"']*["'][^>]+href=["']([^"']+)["']/i));
 
   for (const m of html.matchAll(/<img\b[^>]*>/gi)) {
     const tag = m[0];
-    const src = tag.match(/\bsrc=["']([^"']+)["']/i)?.[1];
+    // Skip images that declare tiny dimensions — icons/spacers, not brand imagery.
+    const w = Number(tag.match(/\bwidth=["']?(\d+)/i)?.[1] ?? "");
+    const h = Number(tag.match(/\bheight=["']?(\d+)/i)?.[1] ?? "");
+    if ((w && w < 64) || (h && h < 64)) continue;
+    // Prefer the largest responsive variant; fall back to src / lazy-loaded data-src.
+    const srcset = tag.match(/\bsrcset=["']([^"']+)["']/i)?.[1];
+    const src =
+      (srcset && largestFromSrcset(srcset)) ||
+      tag.match(/\bsrc=["']([^"']+)["']/i)?.[1] ||
+      tag.match(/\bdata-src=["']([^"']+)["']/i)?.[1];
     if (!src || /^data:/i.test(src)) continue;
-    // Drop obvious non-brand assets (tracking pixels, sprites, tiny spacers).
-    if (/sprite|pixel|tracking|spacer|1x1|blank\.|\.gif(\?|$)/i.test(src)) continue;
-    // Keep SVGs only when they look like a logo (icons are usually noise).
-    if (/\.svg(\?|$)/i.test(src) && !/logo/i.test(tag)) continue;
+    // Drop non-brand assets (tracking pixels, sprites, icons, avatars, placeholders, spinners).
+    if (/sprite|pixel|tracking|spacer|1x1|blank|favicon|avatar|placeholder|loader|spinner|emoji|\bflag|hamburger|burger|chevron|caret|arrow-/i.test(src)) continue;
+    // Keep SVGs only when they look like a logo (icon sprites are noise).
+    if (/\.svg(\?|$)/i.test(src) && !/logo/i.test(tag + " " + src)) continue;
     push(src);
   }
+  // apple-touch-icon is an icon — only include if we found little else.
+  if (out.length < 4) push(grab(/<link[^>]+rel=["'][^"']*apple-touch-icon[^"']*["'][^>]+href=["']([^"']+)["']/i));
   return out;
 }
 
@@ -112,6 +144,9 @@ export async function crawlBrandDraft(
     grab(/<meta[^>]+name=["']description["'][^>]+content=["']([^"']+)["']/i) ||
     grab(/<meta[^>]+property=["']og:description["'][^>]+content=["']([^"']+)["']/i);
   const company = siteName || title.split(/[|\-–·:]/)[0].trim() || (domain.split(".")[0] || "Company").replace(/\b\w/g, (c) => c.toUpperCase());
+  // First H1 as a tagline fallback when there's no meta description (used by the heuristic product).
+  const h1 = decodeEntities((html.match(/<h1[^>]*>([\s\S]*?)<\/h1>/i)?.[1] ?? "").replace(/<[^>]+>/g, " ")).replace(/\s+/g, " ").trim();
+  const tagline = description || h1 || title.replace(company, "").replace(/^[\s|\-–·:]+/, "").trim();
 
   const images = crawled ? extractImages(html, normalized) : [];
   const text = crawled ? htmlToText(html) : "";
@@ -176,8 +211,8 @@ export async function crawlBrandDraft(
   // Heuristic fallback (no LLM key / call failed): never fabricate — seed only what
   // the page literally gives us (a product from the value prop + tone + real images).
   const draft: BrandLibraryDraft = {
-    products: description
-      ? [{ id: "prod-1", name: company, description: clip(description, 1200), category: undefined, pricing: undefined, url: normalized }]
+    products: crawled && company
+      ? [{ id: "prod-1", name: company, description: clip(tagline, 1200), category: undefined, pricing: undefined, url: normalized }]
       : [],
     personas: [],
     proofPoints: [],

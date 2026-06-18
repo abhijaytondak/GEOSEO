@@ -239,9 +239,9 @@ export function BrandLibrary() {
         ) : (
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
             {lib.images.map((src) => (
-              <div key={src} className="group relative aspect-video overflow-hidden rounded-xl border border-border bg-surface-sunken">
+              <div key={src} className="group relative flex aspect-video items-center justify-center overflow-hidden rounded-xl border border-border bg-white p-2">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={src} alt="Brand image from site" className="h-full w-full object-cover" loading="lazy" />
+                <img src={src} alt="Brand image from site" className="max-h-full max-w-full object-contain" loading="lazy" />
                 <button
                   onClick={() => mutate({ ...lib, images: lib.images.filter((x) => x !== src) })}
                   className="absolute right-1.5 top-1.5 rounded-md bg-background/85 p-1.5 text-muted-foreground opacity-0 transition-opacity hover:text-destructive group-hover:opacity-100"
