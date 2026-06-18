@@ -56,7 +56,8 @@ function extractImages(html: string, baseUrl: string): string[] {
   const push = (raw?: string | null) => {
     if (!raw || out.length >= 12) return;
     try {
-      const u = new URL(raw, baseUrl);
+      // Decode HTML entities in the URL (e.g. `&amp;` in query strings) so the image actually loads.
+      const u = new URL(decodeEntities(raw).trim(), baseUrl);
       if (u.protocol !== "http:" && u.protocol !== "https:") return;
       const s = u.toString();
       if (!out.includes(s)) out.push(s);
