@@ -1,15 +1,18 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Loader2, Plus, Trash2, Package, Users, Award, Check } from "lucide-react";
+import { Loader2, Plus, Trash2, Package, Users, Award, Check, Type, MessageSquareWarning } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAppFeedback } from "@/components/system/app-feedback";
+import { apiError, readApiEnvelope } from "@/lib/api-envelope";
 
 type ProofType = "stat" | "testimonial" | "case-study" | "award" | "logo";
-interface BrandProduct { id: string; name: string; description: string; category?: string; url?: string }
-interface BuyerPersona { id: string; name: string; role?: string; painPoints: string[]; goals: string[] }
+interface BrandProduct { id: string; name: string; description: string; category?: string; pricing?: string; url?: string }
+interface BuyerPersona { id: string; name: string; role?: string; painPoints: string[]; goals: string[]; buyingTriggers: string[] }
 interface ProofPoint { id: string; type: ProofType; label: string; detail?: string; source?: string }
-interface Library { products: BrandProduct[]; personas: BuyerPersona[]; proofPoints: ProofPoint[] }
+interface Terminology { preferred: string[]; avoid: string[] }
+interface Correction { id: string; instruction: string; createdAt: string }
+interface Library { products: BrandProduct[]; personas: BuyerPersona[]; proofPoints: ProofPoint[]; terminology: Terminology }
 
 const PROOF_TYPES: ProofType[] = ["stat", "testimonial", "case-study", "award", "logo"];
 const uid = () => (typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `id-${Math.random().toString(36).slice(2)}`);
@@ -18,26 +21,36 @@ const fromList = (s: string) => s.split(",").map((x) => x.trim()).filter(Boolean
 const inputCls =
   "h-9 w-full rounded-lg border border-border bg-background px-3 text-[13px] outline-none transition-colors focus:border-brand";
 
+const EMPTY_LIB: Library = { products: [], personas: [], proofPoints: [], terminology: { preferred: [], avoid: [] } };
+
+function normalizeLib(l?: Partial<Library>): Library {
+  return {
+    products: l?.products ?? [],
+    personas: (l?.personas ?? []).map((p) => ({ ...p, buyingTriggers: p.buyingTriggers ?? [] })),
+    proofPoints: l?.proofPoints ?? [],
+    terminology: { preferred: l?.terminology?.preferred ?? [], avoid: l?.terminology?.avoid ?? [] },
+  };
+}
+
 export function BrandLibrary() {
   const { notify } = useAppFeedback();
   const [lib, setLib] = useState<Library | null>(null);
+  const [corrections, setCorrections] = useState<Correction[]>([]);
+  const [newCorrection, setNewCorrection] = useState("");
   const [dirty, setDirty] = useState(false);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
     fetch("/api/v1/brand-library", { headers: { accept: "application/json" }, cache: "no-store" })
-      .then((r) => r.json())
+      .then((r) => readApiEnvelope<{ library: Library & { corrections?: Correction[] } }>(r, "/brand-library"))
       .then((jr) => {
         if (cancelled) return;
         const l = jr?.data?.library;
-        setLib({
-          products: l?.products ?? [],
-          personas: l?.personas ?? [],
-          proofPoints: l?.proofPoints ?? [],
-        });
+        setLib(normalizeLib(l));
+        setCorrections(l?.corrections ?? []);
       })
-      .catch(() => setLib({ products: [], personas: [], proofPoints: [] }));
+      .catch(() => setLib(EMPTY_LIB));
     return () => {
       cancelled = true;
     };
@@ -52,21 +65,52 @@ export function BrandLibrary() {
     if (!lib) return;
     setSaving(true);
     try {
+      // Corrections are managed via their own endpoints; never include them in the
+      // full-replace body (the API preserves them when omitted).
       const r = await fetch("/api/v1/brand-library", {
         method: "PUT",
         headers: { accept: "application/json", "content-type": "application/json" },
         body: JSON.stringify(lib),
       });
-      const jr = await r.json();
-      if (!r.ok || !jr.success) throw new Error(jr.errors?.[0]?.message ?? "Save failed");
-      const l = jr.data.library;
-      setLib({ products: l.products, personas: l.personas, proofPoints: l.proofPoints });
+      const jr = await readApiEnvelope<{ library: Library }>(r, "/brand-library");
+      if (!r.ok || !jr.success) throw apiError(jr, r, "/brand-library");
+      setLib(normalizeLib(jr.data.library));
       setDirty(false);
       notify({ kind: "success", title: "Library saved", message: "Generated pages and outreach will use these facts." });
     } catch (err) {
       notify({ kind: "error", title: "Save failed", message: err instanceof Error ? err.message : "Try again." });
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function addCorrection() {
+    const instruction = newCorrection.trim();
+    if (!instruction) return;
+    try {
+      const r = await fetch("/api/v1/brand-library/corrections", {
+        method: "POST",
+        headers: { accept: "application/json", "content-type": "application/json" },
+        body: JSON.stringify({ instruction }),
+      });
+      const jr = await readApiEnvelope<{ library: { corrections: Correction[] } }>(r, "/brand-library/corrections");
+      if (!r.ok || !jr.success) throw apiError(jr, r, "/brand-library/corrections");
+      setCorrections(jr.data.library.corrections);
+      setNewCorrection("");
+      notify({ kind: "success", title: "Saved to memory", message: "The AI will honor this everywhere — permanently." });
+    } catch (err) {
+      notify({ kind: "error", title: "Couldn't save", message: err instanceof Error ? err.message : "Try again." });
+    }
+  }
+
+  async function removeCorrection(id: string) {
+    try {
+      const r = await fetch(`/api/v1/brand-library/corrections/${id}`, { method: "DELETE", headers: { accept: "application/json" } });
+      const jr = await readApiEnvelope<{ library: { corrections: Correction[] } }>(r, "/brand-library/corrections");
+      if (!r.ok || !jr.success) throw apiError(jr, r, "/brand-library/corrections");
+      setCorrections(jr.data.library.corrections);
+    } catch (err) {
+      notify({ kind: "error", title: "Couldn't remove", message: err instanceof Error ? err.message : "Try again." });
     }
   }
 
@@ -113,12 +157,18 @@ export function BrandLibrary() {
               value={p.description}
               onChange={(e) => mutate({ ...lib, products: lib.products.map((x) => (x.id === p.id ? { ...x, description: e.target.value } : x)) })}
             />
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-3 gap-2">
               <input
                 className={inputCls}
                 placeholder="Category (optional)"
                 value={p.category ?? ""}
                 onChange={(e) => mutate({ ...lib, products: lib.products.map((x) => (x.id === p.id ? { ...x, category: e.target.value } : x)) })}
+              />
+              <input
+                className={inputCls}
+                placeholder="Pricing (e.g. $99/mo)"
+                value={p.pricing ?? ""}
+                onChange={(e) => mutate({ ...lib, products: lib.products.map((x) => (x.id === p.id ? { ...x, pricing: e.target.value } : x)) })}
               />
               <input
                 className={inputCls}
@@ -136,8 +186,8 @@ export function BrandLibrary() {
         icon={Users}
         title="Buyer personas"
         count={lib.personas.length}
-        onAdd={() => mutate({ ...lib, personas: [...lib.personas, { id: uid(), name: "", painPoints: [], goals: [] }] })}
-        empty="Add who you sell to so copy speaks to their pains and goals."
+        onAdd={() => mutate({ ...lib, personas: [...lib.personas, { id: uid(), name: "", painPoints: [], goals: [], buyingTriggers: [] }] })}
+        empty="Add who you sell to so copy speaks to their pains, goals, and buying triggers."
       >
         {lib.personas.map((p) => (
           <Row key={p.id} onRemove={() => mutate({ ...lib, personas: lib.personas.filter((x) => x.id !== p.id) })}>
@@ -164,6 +214,11 @@ export function BrandLibrary() {
               label="Goals"
               value={p.goals}
               onChange={(arr) => mutate({ ...lib, personas: lib.personas.map((x) => (x.id === p.id ? { ...x, goals: arr } : x)) })}
+            />
+            <LabeledList
+              label="Buying triggers"
+              value={p.buyingTriggers}
+              onChange={(arr) => mutate({ ...lib, personas: lib.personas.map((x) => (x.id === p.id ? { ...x, buyingTriggers: arr } : x)) })}
             />
           </Row>
         ))}
@@ -213,6 +268,68 @@ export function BrandLibrary() {
           </Row>
         ))}
       </Section>
+
+      {/* Terminology — brand voice rules (preferred / avoid) */}
+      <section className="rounded-2xl border border-border bg-card p-5 shadow-card">
+        <h3 className="mb-1 flex items-center gap-2 text-[13px] font-semibold text-foreground">
+          <Type className="size-4 text-brand" /> Terminology
+        </h3>
+        <p className="mb-3 text-[12px] text-muted-foreground">Brand-voice rules every draft must follow — terms to prefer, and words to never use.</p>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <LabeledList
+            label="Preferred terms"
+            value={lib.terminology.preferred}
+            onChange={(arr) => mutate({ ...lib, terminology: { ...lib.terminology, preferred: arr } })}
+          />
+          <LabeledList
+            label="Never use"
+            value={lib.terminology.avoid}
+            onChange={(arr) => mutate({ ...lib, terminology: { ...lib.terminology, avoid: arr } })}
+          />
+        </div>
+      </section>
+
+      {/* Feedback Memory — corrections that stick everywhere (managed via dedicated endpoints) */}
+      <section className="rounded-2xl border border-border bg-card p-5 shadow-card">
+        <h3 className="mb-1 flex items-center gap-2 text-[13px] font-semibold text-foreground">
+          <MessageSquareWarning className="size-4 text-brand" /> Feedback Memory
+          <span className="tnum rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">{corrections.length}</span>
+        </h3>
+        <p className="mb-3 text-[12px] text-muted-foreground">
+          Fix something once — it stays fixed everywhere. Each correction is injected with top priority into every generated page,
+          lead, and outreach draft.
+        </p>
+        <div className="flex items-start gap-2">
+          <textarea
+            className={`${inputCls} h-auto min-h-[40px] resize-y py-2`}
+            placeholder='e.g. "Never call it a tool — always say platform."'
+            value={newCorrection}
+            onChange={(e) => setNewCorrection(e.target.value)}
+            onKeyDown={(e) => {
+              if ((e.metaKey || e.ctrlKey) && e.key === "Enter") addCorrection();
+            }}
+          />
+          <Button size="sm" className="h-9 shrink-0" onClick={addCorrection} disabled={!newCorrection.trim()}>
+            <Check className="size-3.5" /> Save to memory
+          </Button>
+        </div>
+        {corrections.length > 0 && (
+          <ul className="mt-3 space-y-2">
+            {corrections.map((c) => (
+              <li key={c.id} className="flex items-start justify-between gap-3 rounded-xl border border-border bg-surface-sunken p-3">
+                <span className="text-[13px] text-foreground">{c.instruction}</span>
+                <button
+                  onClick={() => removeCorrection(c.id)}
+                  className="shrink-0 rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+                  aria-label="Remove correction"
+                >
+                  <Trash2 className="size-3.5" />
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
     </div>
   );
 }

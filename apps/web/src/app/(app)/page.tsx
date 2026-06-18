@@ -17,6 +17,7 @@ import { BrandScorecard } from "@/components/dashboard/brand-scorecard";
 import { OutcomeStrip } from "@/components/dashboard/outcome-strip";
 import { SetupHealth } from "@/components/dashboard/setup-health";
 import { GrowthPlan } from "@/components/dashboard/growth-plan";
+import { BrandMemoryCard } from "@/components/dashboard/brand-memory-card";
 import { OverviewExport, type SummaryRow } from "@/components/dashboard/overview-export";
 import { deriveAuthorityActions } from "@/lib/authority-actions";
 import { thousands } from "@/lib/format";
@@ -122,6 +123,9 @@ export default async function AuthorityHQ() {
           <OutcomeStrip />
           <SetupHealth />
         </div>
+
+        {/* Brand Memory entry point — the AI's single source of truth (self-fetching) */}
+        <BrandMemoryCard />
 
         {/* Brand Scorecard — auto-analysis of the workspace's own domain (self-fetching) */}
         <BrandScorecard />
