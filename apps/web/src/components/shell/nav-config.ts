@@ -49,6 +49,7 @@ export const navSections: NavSection[] = [
     items: [
       { label: "Home", href: "/", icon: Home },
       { label: "Pipeline", href: "/pipeline", icon: Workflow },
+      { label: "Pages", href: "/pages", icon: Files, keywords: "generated pages create review publish editor blueprint" },
       { label: "Authority", href: "/authority", icon: ShieldCheck },
       { label: "Leads", href: "/leads", icon: Inbox },
       { label: "Analytics", href: "/analytics", icon: LineChart },
