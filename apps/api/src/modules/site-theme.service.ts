@@ -83,14 +83,48 @@ function extractTokens(html: string): {
   return { colors, fonts: [...new Set(fonts)], themeColor, favicon, ogImage };
 }
 
+/** HSL of a #rrggbb hex (null if unparseable) — used to pick sensible brand roles. */
+function hslOf(hex: string): { h: number; s: number; l: number } | null {
+  const m = /^#?([0-9a-f]{6})$/i.exec(hex.trim());
+  if (!m) return null;
+  const n = parseInt(m[1], 16);
+  const r = ((n >> 16) & 255) / 255, g = ((n >> 8) & 255) / 255, b = (n & 255) / 255;
+  const max = Math.max(r, g, b), min = Math.min(r, g, b), d = max - min;
+  const l = (max + min) / 2;
+  let s = 0, h = 0;
+  if (d !== 0) {
+    s = d / (1 - Math.abs(2 * l - 1));
+    h = max === r ? ((g - b) / d) % 6 : max === g ? (b - r) / d + 2 : (r - g) / d + 4;
+    h = (h * 60 + 360) % 360;
+  }
+  return { h, s, l };
+}
+/** A real brand color: not near-white / near-black, and saturated enough to not be a grey. */
+function isVivid(hex: string): boolean {
+  const c = hslOf(hex);
+  return !!c && c.l > 0.12 && c.l < 0.9 && c.s > 0.22;
+}
+function hueGap(a: string, b: string): number {
+  const x = hslOf(a), y = hslOf(b);
+  if (!x || !y) return 360;
+  const diff = Math.abs(x.h - y.h);
+  return Math.min(diff, 360 - diff);
+}
+
 function pickColors(t: ReturnType<typeof extractTokens>): SiteThemeProfile["colors"] {
-  const nonNeutral = t.colors.filter((c) => c !== "#ffffff" && c !== "#000000" && c !== "#fff" && c !== "#000");
+  // Only consider real brand colors — drop off-whites, near-blacks, and greys that pollute CSS,
+  // so "accent"/"muted" never end up as a near-white or a random scanned color.
+  const vivid = t.colors.filter(isVivid);
+  const primary =
+    (t.themeColor && isVivid(t.themeColor) ? t.themeColor : undefined) ?? vivid[0] ?? t.themeColor ?? "#6c4cf1";
+  // Accent = the next vivid color whose hue is clearly different from primary (never a near-white).
+  const accent = vivid.find((c) => c !== primary && hueGap(c, primary) > 40);
   return {
     background: "#ffffff",
     foreground: "#0a0a0a",
-    primary: t.themeColor ?? nonNeutral[0] ?? "#6c4cf1",
-    accent: nonNeutral[1],
-    muted: nonNeutral[2],
+    primary,
+    accent, // optional — the Brand Kit only renders an accent ramp when one is found
+    muted: "#f1f5f9", // a neutral muted surface — never an arbitrary scanned brand color
     border: "#e5e7eb",
   };
 }

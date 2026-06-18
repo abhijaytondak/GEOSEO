@@ -7,6 +7,7 @@ import { AuditStore } from "./audit.service";
 import { BrandAnalysisStore } from "./brand-analysis.service";
 import { BrandLibraryStore } from "./brand-library.service";
 import { crawlBrandDraft } from "./brand-library.extract";
+import { SiteThemeStore } from "./site-theme.service";
 import { validateBody, v } from "../common/validation";
 import { resolveTenantId, type TenantRequest } from "../common/tenant";
 
@@ -36,6 +37,7 @@ export class OnboardingController {
     @Inject(AuditStore) private readonly audit: AuditStore,
     @Inject(BrandAnalysisStore) private readonly brandAnalysis: BrandAnalysisStore,
     @Inject(BrandLibraryStore) private readonly library: BrandLibraryStore,
+    @Inject(SiteThemeStore) private readonly theme: SiteThemeStore,
   ) {}
 
   @Get("status")
@@ -110,6 +112,12 @@ export class OnboardingController {
     const siteUrl = (body.websiteUrl?.trim() || body.domain).trim();
     void crawlBrandDraft(siteUrl)
       .then((r) => (r.crawled ? this.library.replace(brandTenant, r.draft, new Date().toISOString()) : undefined))
+      .catch(() => undefined);
+    // Scan + confirm the site theme so the Brand Kit (real color ramps + typography) reflects the
+    // onboarded company's own site — not a seed palette. Fire-and-forget, same as above.
+    void this.theme
+      .scan(brandTenant, siteUrl)
+      .then((p) => this.theme.confirm(brandTenant, p.id))
       .catch(() => undefined);
     return { onboarding, settings: this.settings.get() };
   }
