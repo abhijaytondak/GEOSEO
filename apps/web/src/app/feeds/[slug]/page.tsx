@@ -7,6 +7,8 @@ import { pageEngineApi } from "@/lib/page-engine-client";
 import { api } from "@/lib/api-client";
 import { LeadForm } from "@/components/feeds/lead-form";
 import { FeedTracker } from "@/components/feeds/feed-tracker";
+import { BrandHero } from "@/components/feeds/brand-hero";
+import { Infographic } from "@/components/feeds/infographic";
 
 export const dynamic = "force-dynamic";
 
@@ -164,13 +166,25 @@ export default async function FeedPage({ params }: Params) {
             ))}
           </div>
           <h1 className="text-[34px] font-bold leading-tight tracking-[-0.02em] text-foreground">{page.title}</h1>
-          <p className="mt-3 text-[17px] leading-relaxed text-foreground/80">{page.heroCopy}</p>
+          <p className="mt-3 mb-6 text-[17px] leading-relaxed text-foreground/80">{page.heroCopy}</p>
 
-          {page.sections.map((s) => (
-            <section key={s.heading} className="mt-8">
-              <h2 className="text-[20px] font-semibold tracking-[-0.01em] text-foreground">{s.heading}</h2>
-              <p className="mt-2 text-[15px] leading-relaxed text-foreground/80">{s.body}</p>
-            </section>
+          {/* branded hero — generated image if present, else a theme-matched SVG (no stock) */}
+          <BrandHero
+            title={page.title}
+            primary={theme?.colors?.primary}
+            imageUrl={page.heroImageUrl}
+            imageAlt={page.heroImageAlt}
+          />
+
+          {page.sections.map((s, i) => (
+            <div key={s.heading}>
+              <section className="mt-8">
+                <h2 className="text-[20px] font-semibold tracking-[-0.01em] text-foreground">{s.heading}</h2>
+                <p className="mt-2 text-[15px] leading-relaxed text-foreground/80">{s.body}</p>
+              </section>
+              {/* infographic sits after the first section, like a visual summary */}
+              {i === 0 && page.infographic && <Infographic spec={page.infographic} />}
+            </div>
           ))}
 
           {page.faqs.length > 0 && (
@@ -187,13 +201,24 @@ export default async function FeedPage({ params }: Params) {
             </section>
           )}
 
+          {/* type-specific call to action (label varies by page type) */}
+          <section className="mt-10 rounded-2xl border border-border bg-brand/5 p-6 text-center">
+            <p className="text-[16px] font-semibold text-foreground">Ready to take the next step?</p>
+            <a
+              href="#lead"
+              className="mt-3 inline-flex items-center justify-center rounded-full bg-brand px-5 py-2.5 text-[14px] font-semibold text-brand-foreground transition-transform hover:scale-[1.02]"
+            >
+              {page.cta.label}
+            </a>
+          </section>
+
           <p className="mt-10 text-[11.5px] text-muted-foreground">
             Canonical: <span className="font-mono">{canonical}</span>
           </p>
         </article>
 
         {/* sticky lead capture */}
-        <aside className="lg:sticky lg:top-12 lg:self-start">
+        <aside id="lead" className="lg:sticky lg:top-12 lg:self-start">
           <LeadForm slug={page.slug} sourceUrl={canonical} brandName={brandName} />
         </aside>
       </main>

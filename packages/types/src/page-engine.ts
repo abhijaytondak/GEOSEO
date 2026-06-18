@@ -107,6 +107,28 @@ export interface SeoCheck {
   pass: boolean;
 }
 
+/**
+ * In-page infographic spec (PRD Phase 6 — Infographics). Rendered as branded,
+ * THEME-AWARE HTML/SVG on the published page — not a raster image — so AI
+ * crawlers can read the data (a deliberate edge over image-only infographics).
+ */
+export type InfographicKind = "process-flow" | "comparison-table" | "stat-grid" | "pros-cons";
+
+export interface InfographicSpec {
+  kind: InfographicKind;
+  title: string;
+  /** process-flow */
+  steps?: { label: string; detail?: string }[];
+  /** comparison-table */
+  columns?: string[];
+  rows?: { label: string; cells: string[] }[];
+  /** stat-grid */
+  stats?: { value: string; label: string }[];
+  /** pros-cons */
+  pros?: string[];
+  cons?: string[];
+}
+
 export interface GeneratedPage {
   id: string;
   blueprintId: string;
@@ -123,6 +145,16 @@ export interface GeneratedPage {
   cta: { label: string; href: string };
   /** JSON-LD structured data (stringified). */
   schemaJson: string;
+  /**
+   * Hero image for the page. When an image-gen provider is configured this is a
+   * hosted brand image URL; otherwise the published page renders a theme-matched
+   * branded hero (no generic stock) — see docs/PRD-page-engine-gushwork-parity.md
+   * Phase 2.
+   */
+  heroImageUrl?: string;
+  heroImageAlt?: string;
+  /** Optional in-page infographic (crawlable HTML/SVG) — PRD Phase 6. */
+  infographic?: InfographicSpec;
   targetKeywords: string[];
   wordCount: number;
   brandMemoryVersion: number;

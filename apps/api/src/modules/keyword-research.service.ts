@@ -1,5 +1,6 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { fetchWithTimeout } from "../common/http";
+import { aiSearchKeywords } from "../llm/keywords";
 
 /** A single keyword idea from the research provider (normalized across sources). */
 export interface KeywordIdea {
@@ -13,7 +14,7 @@ export interface KeywordIdea {
 }
 
 /** Which provider actually produced the last result set. */
-export type ResearchSource = "dataforseo" | "autocomplete" | "mock";
+export type ResearchSource = "dataforseo" | "ai-search" | "autocomplete" | "mock";
 
 interface DfsItem {
   keyword?: string;
@@ -58,8 +59,16 @@ export class KeywordResearchService {
     return process.env.KEYWORD_AUTOCOMPLETE !== "false";
   }
 
+  /** AI-search tier is available when the shared LLM seam has a key. */
+  get aiSearchEnabled(): boolean {
+    return Boolean(process.env.DEEPSEEK_API_KEY);
+  }
+
   get source(): ResearchSource {
-    return this.last ?? (this.configured ? "dataforseo" : this.autocompleteEnabled ? "autocomplete" : "mock");
+    return (
+      this.last ??
+      (this.configured ? "dataforseo" : this.aiSearchEnabled ? "ai-search" : this.autocompleteEnabled ? "autocomplete" : "mock")
+    );
   }
 
   /** Expand seed terms into keyword ideas. Returns [] when no provider yields results. */
@@ -79,6 +88,16 @@ export class KeywordResearchService {
       if (dfs.length) {
         this.last = "dataforseo";
         return dfs;
+      }
+    }
+
+    // AI-search tier — real buyer queries from an LLM acting as an answer engine
+    // (Gushwork parity: "keywords from Google AND AI search engines"). Metrics estimated.
+    if (this.aiSearchEnabled) {
+      const phrases = await aiSearchKeywords(terms, limit);
+      if (phrases && phrases.length) {
+        this.last = "ai-search";
+        return phrases.map((kw) => ({ keyword: kw, ...this.estimateMetrics(kw) }));
       }
     }
 

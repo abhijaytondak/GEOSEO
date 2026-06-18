@@ -3,6 +3,8 @@ import { dbEnabled, ensureTable, loadAllWithIds, removeRow, upsert } from "../db
 import { resolveMode } from "../common/mode";
 import { DEFAULT_TENANT_ID } from "../common/tenant";
 import { draftPageContent, type DraftContent } from "../llm/deepseek";
+import { specFor, buildSchemaJson } from "../llm/page-type-spec";
+import { buildInfographic } from "../llm/infographic";
 import { BrandMemoryStore } from "./brand.service";
 import { BrandLibraryStore, composeBrandContext } from "./brand-library.service";
 import { KeywordResearchService, type KeywordIdea, type ResearchSource } from "./keyword-research.service";
@@ -395,6 +397,23 @@ export class PageEngineStore implements OnModuleInit {
     const title = opp.query.replace(/\b\w/g, (c) => c.toUpperCase());
     const company = this.brand.current()?.company?.trim();
     const metaTitle = ai?.metaTitle ?? (company ? `${title} | ${company}` : title);
+    // Page-type spec drives structure for BOTH the AI and template paths, so a
+    // Blog/Service/Comparison page is distinct either way (PRD Phase 1).
+    const spec = specFor(opp.recommendedPageType);
+    const metaDescription =
+      ai?.metaDescription ?? `A ${spec.label.toLowerCase()} targeting "${opp.query}", drafted from Brand Memory.`;
+    const sections = ai?.sections?.length
+      ? ai.sections
+      : spec.sectionPlan.map((heading) => ({
+          heading,
+          body: `Draft ${spec.label.toLowerCase()} section on "${heading.toLowerCase()}" for ${title} — pending review.`,
+        }));
+    const faqs = ai?.faqs?.length
+      ? ai.faqs
+      : Array.from({ length: spec.faqCount }, (_, i) => ({
+          q: `What should I know about ${opp.query}? (${i + 1})`,
+          a: "Draft answer pending review.",
+        }));
     const page: GeneratedPage = {
       id: `pg-gen-${this.seq}`,
       blueprintId: s.blueprints[0]?.id ?? "bp-1",
@@ -404,23 +423,20 @@ export class PageEngineStore implements OnModuleInit {
       pageType: opp.recommendedPageType,
       status: "draft",
       metaTitle,
-      metaDescription: ai?.metaDescription ?? `A page targeting "${opp.query}", drafted from Brand Memory.`,
+      metaDescription,
       heroCopy: ai?.heroCopy ?? `Draft hero for ${opp.query}.`,
-      sections: ai?.sections?.length
-        ? ai.sections
-        : [{ heading: "Overview", body: "AI-drafted section pending review." }],
-      faqs: ai?.faqs ?? [],
-      cta: { label: "Book a demo", href: "/demo" },
-      schemaJson: ai
-        ? JSON.stringify({ "@context": "https://schema.org", "@type": "Article", name: title }, null, 2)
-        : "{}",
+      sections,
+      faqs,
+      cta: spec.cta,
+      schemaJson: buildSchemaJson(opp.recommendedPageType, { title, description: metaDescription, faqs }),
+      infographic: buildInfographic(opp.recommendedPageType, opp.query, sections),
       targetKeywords: [opp.query],
       wordCount: 0,
       brandMemoryVersion: 1,
       seoChecks: [
         { label: "Single H1", pass: true },
         { label: "Meta title 50–60 chars", pass: metaTitle.length >= 50 && metaTitle.length <= 60 },
-        { label: "Valid JSON-LD", pass: Boolean(ai) },
+        { label: "Valid JSON-LD", pass: true },
         { label: "Crawlable without auth", pass: true },
       ],
       qualityChecks: [
@@ -708,17 +724,25 @@ export class PageEngineStore implements OnModuleInit {
     return created;
   }
 
-  /** Real DataForSEO keyword idea → scored opportunity. */
+  /** Real keyword idea (DataForSEO or AI-search) → scored opportunity. */
   private oppFromIdea(tenantId: string, idea: KeywordIdea, intentOverride?: SearchIntent): KeywordOpportunity {
     this.seq += 1;
     const intent = intentOverride ?? classifyKwIntent(idea.keyword);
     const commercialValue = clampN((idea.cpc > 0 ? Math.min(idea.cpc * 8, 55) : idea.competition * 55) + 25, 1, 99);
     const confidence = clampN(60 + (idea.searchVolume > 100 ? 15 : 0) + (idea.difficulty < 40 ? 15 : 0), 1, 99);
+    const src = this.research.source;
+    const label = src === "dataforseo" ? "Discovered (DataForSEO)" : src === "ai-search" ? "AI search demand" : "Discovered";
+    const evidence =
+      src === "dataforseo"
+        ? `DataForSEO: ${idea.searchVolume.toLocaleString()} searches/mo · difficulty ${idea.difficulty} · CPC $${idea.cpc.toFixed(2)}.`
+        : src === "ai-search"
+          ? `AI-search buyer query · est. ${idea.searchVolume.toLocaleString()} searches/mo · difficulty ${idea.difficulty}.`
+          : `Keyword idea · est. ${idea.searchVolume.toLocaleString()} searches/mo · difficulty ${idea.difficulty}.`;
     return {
       id: `kw-disc-${this.seq}`,
       query: idea.keyword.toLowerCase(),
       clusterId: "c-discovered",
-      clusterLabel: "Discovered (DataForSEO)",
+      clusterLabel: label,
       intent,
       volume: idea.searchVolume,
       difficulty: idea.difficulty,
@@ -726,7 +750,7 @@ export class PageEngineStore implements OnModuleInit {
       confidence,
       recommendedPageType: PAGE_TYPE_BY_INTENT[intent] ?? "landing",
       competitorUrls: [],
-      evidence: `DataForSEO: ${idea.searchVolume.toLocaleString()} searches/mo · difficulty ${idea.difficulty} · CPC $${idea.cpc.toFixed(2)}.`,
+      evidence,
       status: "new",
       duplicate: this.st(tenantId).pages.some((p) => p.targetKeywords.some((k) => k.toLowerCase() === idea.keyword.toLowerCase())),
       createdAt: this.now,
@@ -756,6 +780,38 @@ export class PageEngineStore implements OnModuleInit {
       duplicate: this.st(tenantId).pages.some((p) => p.targetKeywords.some((k) => k.toLowerCase() === seed.toLowerCase())),
       createdAt: this.now,
     };
+  }
+
+  /**
+   * Re-draft an existing page's CONTENT via the LLM (PRD Phase 4 — Auto-Updates
+   * core). Preserves identity (id/slug/publishedUrl/pageType/targetKeywords) so the
+   * live URL is unchanged; refreshes copy/meta/schema/infographic, snapshots a
+   * version for diff/rollback, and clears a `needs-refresh` flag. The automatic
+   * trigger (rank-drop / scheduled sweep) is separate and queue/Redis-gated; this
+   * is the actual refresh ACTION (the old `/refresh` only flagged the page).
+   */
+  async regeneratePage(tenantId: string, pageId: string): Promise<GeneratedPage | undefined> {
+    const p = this.st(tenantId).pages.find((x) => x.id === pageId);
+    if (!p) return undefined;
+    const query = p.targetKeywords[0] ?? p.title.toLowerCase();
+    const ai = await draftPageContent(query, p.pageType, await this.brandHint(tenantId));
+    if (ai) {
+      if (ai.metaTitle) p.metaTitle = ai.metaTitle;
+      if (ai.metaDescription) p.metaDescription = ai.metaDescription;
+      if (ai.heroCopy) p.heroCopy = ai.heroCopy;
+      if (ai.sections?.length) p.sections = ai.sections;
+      if (ai.faqs?.length) p.faqs = ai.faqs;
+      p.schemaJson = buildSchemaJson(p.pageType, { title: p.title, description: p.metaDescription, faqs: p.faqs });
+      p.infographic = buildInfographic(p.pageType, query, p.sections);
+      p.wordCount = countWords(p);
+    }
+    if (p.status === "needs-refresh") p.status = "published";
+    p.lastRefreshedAt = this.now;
+    p.updatedAt = this.now;
+    this.snapshot(tenantId, p, ai ? "AI content refresh" : "Refresh (LLM unavailable — content unchanged)", "ai");
+    this.save(tenantId, T.pages, p.id, p);
+    this.logAudit(tenantId, "update", "page", p.id);
+    return p;
   }
 
   /* leads */

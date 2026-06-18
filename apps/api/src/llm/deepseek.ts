@@ -1,4 +1,5 @@
 import { fetchWithTimeout } from "../common/http";
+import { specFor } from "./page-type-spec";
 
 /**
  * DeepSeek content drafter (OpenAI-compatible). Generates real page drafts.
@@ -29,12 +30,23 @@ export async function draftPageContent(
   const model = process.env.DEEPSEEK_MODEL ?? "deepseek-chat";
 
   const brand = brandHint?.trim() || NEUTRAL_BRAND_HINT;
+  const spec = specFor(pageType);
+  const bodyLen =
+    spec.depth === "long"
+      ? "3-5 sentences of substantive, specific body copy"
+      : spec.depth === "short"
+        ? "1-2 tight sentences"
+        : "2-3 sentences";
   const system =
-    "You are an expert B2B SaaS SEO content writer. Write clear, specific, non-generic copy with no unsupported claims. Respond ONLY with JSON.";
+    "You are an expert B2B SaaS SEO content writer. Write clear, specific, non-generic copy with no unsupported claims. Match the page type's structure exactly. Respond ONLY with JSON.";
   const user = `Brand: ${brand}
-Write a ${pageType} page targeting the search query "${query}".
+Write a ${spec.label} (page type: ${pageType}) targeting the search query "${query}".
+This page is ${spec.role}.
+Follow this section arc — adapt the exact wording to the brand and query, but keep the arc and order:
+${spec.sectionPlan.map((s, i) => `${i + 1}. ${s}`).join("\n")}
+Write ${bodyLen} for each section.
 Return JSON exactly matching:
-{"metaTitle": string (<=60 chars), "metaDescription": string (<=155 chars), "heroCopy": string (1-2 sentences), "sections": [{"heading": string, "body": string}] (3 items), "faqs": [{"q": string, "a": string}] (2 items)}`;
+{"metaTitle": string (<=60 chars), "metaDescription": string (<=155 chars), "heroCopy": string (1-2 sentences), "sections": [{"heading": string, "body": string}] (${spec.sectionPlan.length} items, following the arc above), "faqs": [{"q": string, "a": string}] (${spec.faqCount} items)}`;
 
   try {
     const res = await fetchWithTimeout(
@@ -50,7 +62,7 @@ Return JSON exactly matching:
           ],
           response_format: { type: "json_object" },
           temperature: 0.7,
-          max_tokens: 1200,
+          max_tokens: spec.depth === "long" ? 2600 : spec.depth === "short" ? 900 : 1600,
         }),
       },
       30_000,

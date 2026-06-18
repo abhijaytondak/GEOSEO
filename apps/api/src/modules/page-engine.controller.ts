@@ -246,6 +246,12 @@ export class PagesController {
     return this.must(this.store.transitionPage(resolveTenantId(req), id, "needs-refresh"), id);
   }
 
+  /** Auto-Updates core: actually RE-DRAFT the page via the LLM, preserving its URL. */
+  @Post(":id/regenerate")
+  async regenerate(@Req() req: TenantRequest, @Param("id") id: string) {
+    return this.must(await this.store.regeneratePage(resolveTenantId(req), id), id);
+  }
+
   @Put(":id")
   update(@Req() req: TenantRequest, @Param("id") id: string, @Body(validateBody(PageEditSchema)) body: PageEdit) {
     return this.must(this.store.updatePage(resolveTenantId(req), id, body ?? {}), id);
