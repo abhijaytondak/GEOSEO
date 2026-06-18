@@ -174,7 +174,8 @@ same shape: env-gated, **return null/[] on any failure → safe fallback**, neve
 Vercel demo runs the real backend (with these seams active) instead of the mock fallback.
 
 ## Done recently (don't redo)
-- **Brand Memory — real site extraction + tone of voice + sidebar entry (2026-06-18; api+web `tsc` clean, endpoint curl-verified, Playwright screenshot-verified; committed on branch `p0-6-tenant-page-engine`, NOT pushed):**
+- **Brand Memory — real site extraction + tone of voice + sidebar entry (2026-06-18; PUSHED to `main` (`d88145e` + image-URL decode fix `1570c86`) + DEPLOYED + live-verified on geoseo-tau.vercel.app):**
+  ⚠️ **DEPLOY GOTCHA (cost me a round-trip):** the API (Render) auto-deploys on **git push to `main`**; the web (Vercel) deploys from the **working tree** via `vercel deploy --prod --yes` (a git push does NOT update Vercel). So a backend change needs a push to main; a web change needs a vercel deploy. Both were done + live-verified here.
   the Library tab was showing the dummy **Northwind** seed — now it extracts the customer's *real* brand from their own site.
   **Backend (my-lane, additive):** `apps/api/src/llm/brand-extract.ts` (DeepSeek `extractBrandLibrary` → structured
   products/personas/proof/terminology/voice from on-page copy; returns `null` without `DEEPSEEK_API_KEY` → graceful) +
@@ -191,8 +192,10 @@ Vercel demo runs the real backend (with these seams active) instead of the mock 
   products/personas); LLM auto-enriches once keyed. ⚠️ `safeFetchText` `redirect:"manual"` → sites that 301/308 (apex→www,
   http→https) return `crawled:false` (pre-existing, shared with `brand.controller` extract). ⚠️ This commit's `brand-library.tsx`
   imports `@/lib/api-envelope` — an **UNTRACKED** file owned by the in-flight envelope-refactor lane (already imported at HEAD):
-  builds on disk, but the commit won't `tsc` standalone until that lane commits `api-envelope.ts`. Did **not** touch other-lane WIP
-  (image-gen tenant migration, api-client/page-engine/platform-client envelope refactor, brand-assets).
+  builds on disk, but the commit won't `tsc` standalone until that lane commits `api-envelope.ts`. **Assets tab (`brand-assets.tsx`):**
+  additively surfaced the scraped `library.images` as a "From your site" gallery (the dummy placeholder tiles are the AI-gen fallback,
+  shown only until `IMAGE_GEN_API_KEY` is set) — left **UNCOMMITTED** (that file is the envelope lane's WIP) but deployed live via the Vercel
+  working-tree deploy. Otherwise did **not** touch other-lane WIP (image-gen tenant migration, api-client/page-engine/platform-client envelope refactor).
 - **API hardening pass (QA-audit follow-up; typecheck clean + smoke 109/109 + GET sweep 73/73 + live curl + /simplify pass):** closed every
   robustness gap from the deep API audit. **(1) Outbound timeouts** — new `common/http.ts` `fetchWithTimeout(url, init?, ms=12s)`
   is the single source of truth; migrated every seam fetch to it (gsc — incl. the previously-unguarded OAuth token mint —
