@@ -11,6 +11,8 @@ export interface BrandProduct {
   name: string;
   description: string;
   category?: string;
+  /** So the AI never invents prices (Gushwork-parity: products carry pricing). */
+  pricing?: string;
   url?: string;
 }
 
@@ -20,6 +22,8 @@ export interface BuyerPersona {
   role?: string;
   painPoints: string[];
   goals: string[];
+  /** What makes this persona buy now (Gushwork-parity: buying triggers). */
+  buyingTriggers: string[];
 }
 
 export type ProofType = "stat" | "testimonial" | "case-study" | "award" | "logo";
@@ -31,11 +35,35 @@ export interface ProofPoint {
   source?: string;
 }
 
+/** Brand-voice terminology rules — preferred terms to use, and words/phrases to avoid. */
+export interface BrandTerminology {
+  preferred: string[];
+  avoid: string[];
+}
+
+/**
+ * Feedback Memory (Gushwork-parity differentiator): a correction the user made that must
+ * stick everywhere — "fix it once, it stays fixed." Injected with top priority into every
+ * generation grounding so the AI never repeats the mistake.
+ */
+export interface Correction {
+  id: string;
+  instruction: string;
+  createdAt: string;
+}
+
 export interface BrandLibrary {
   products: BrandProduct[];
   personas: BuyerPersona[];
   proofPoints: ProofPoint[];
+  terminology: BrandTerminology;
+  corrections: Correction[];
   updatedAt: string;
+}
+
+/** Empty library (used for new tenants / hydration defaults). */
+export function emptyLibrary(): BrandLibrary {
+  return { products: [], personas: [], proofPoints: [], terminology: { preferred: [], avoid: [] }, corrections: [], updatedAt: "" };
 }
 
 const PROOF_TYPES: ProofType[] = ["stat", "testimonial", "case-study", "award", "logo"];
@@ -57,11 +85,23 @@ export function composeBrandContext(brand: BrandProfile | null | undefined, lib:
   if (!brand?.company) return undefined;
   const parts = [`${brand.company}${brand.valueProp ? ` — ${brand.valueProp}` : ""}`];
   if (brand.audience) parts.push(`Audience: ${brand.audience}.`);
+
+  // Feedback Memory first + highest priority: corrections the user made must always hold.
+  if (lib.corrections?.length) {
+    parts.push(
+      "ALWAYS honor these brand corrections (highest priority, never violate): " +
+        lib.corrections.slice(0, 12).map((c) => c.instruction).join("; ") +
+        ".",
+    );
+  }
   if (lib.products.length) {
     parts.push(
       "Products: " +
-        lib.products.slice(0, 5).map((p) => `${p.name}${p.description ? ` (${p.description})` : ""}`).join("; ") +
-        ".",
+        lib.products
+          .slice(0, 6)
+          .map((p) => `${p.name}${p.description ? ` (${p.description})` : ""}${p.pricing ? ` — pricing: ${p.pricing}` : ""}`)
+          .join("; ") +
+        ". Never invent product names, features, or prices.",
     );
   }
   if (lib.personas.length) {
@@ -73,6 +113,7 @@ export function composeBrandContext(brand: BrandProfile | null | undefined, lib:
             const bits = [p.name + (p.role ? ` (${p.role})` : "")];
             if (p.painPoints.length) bits.push(`pains: ${p.painPoints.slice(0, 3).join(", ")}`);
             if (p.goals.length) bits.push(`goals: ${p.goals.slice(0, 3).join(", ")}`);
+            if (p.buyingTriggers?.length) bits.push(`buys when: ${p.buyingTriggers.slice(0, 3).join(", ")}`);
             return bits.join(" — ");
           })
           .join("; ") +
@@ -85,6 +126,13 @@ export function composeBrandContext(brand: BrandProfile | null | undefined, lib:
         lib.proofPoints.slice(0, 5).map((p) => p.label + (p.detail ? ` (${p.detail})` : "")).join("; ") +
         ".",
     );
+  }
+  const term = lib.terminology;
+  if (term && (term.preferred?.length || term.avoid?.length)) {
+    const bits: string[] = [];
+    if (term.preferred?.length) bits.push(`prefer these terms: ${term.preferred.slice(0, 12).join(", ")}`);
+    if (term.avoid?.length) bits.push(`never use: ${term.avoid.slice(0, 12).join(", ")}`);
+    parts.push("Brand voice — " + bits.join("; ") + ".");
   }
   return parts.join(" ").trim();
 }
@@ -102,8 +150,13 @@ export class BrandLibraryStore {
     const loaded = await this.db.loadForTenant(tenantId);
     const s: BrandLibrary = {
       products: loaded?.products ?? [],
-      personas: loaded?.personas ?? [],
+      personas: (loaded?.personas ?? []).map((p) => ({ ...p, buyingTriggers: p.buyingTriggers ?? [] })),
       proofPoints: loaded?.proofPoints ?? [],
+      terminology: {
+        preferred: loaded?.terminology?.preferred ?? [],
+        avoid: loaded?.terminology?.avoid ?? [],
+      },
+      corrections: loaded?.corrections ?? [],
       updatedAt: loaded?.updatedAt ?? "",
     };
     this.cache.set(tenantId, s);
@@ -127,6 +180,7 @@ export class BrandLibraryStore {
         name: str((p as BrandProduct)?.name, 160),
         description: str((p as BrandProduct)?.description, 1200),
         category: str((p as BrandProduct)?.category, 80) || undefined,
+        pricing: str((p as BrandProduct)?.pricing, 200) || undefined,
         url: str((p as BrandProduct)?.url, 2048) || undefined,
       }))
       .filter((p) => p.name);
@@ -139,6 +193,7 @@ export class BrandLibraryStore {
         role: str((p as BuyerPersona)?.role, 160) || undefined,
         painPoints: strList((p as BuyerPersona)?.painPoints),
         goals: strList((p as BuyerPersona)?.goals),
+        buyingTriggers: strList((p as BuyerPersona)?.buyingTriggers),
       }))
       .filter((p) => p.name);
 
@@ -156,17 +211,62 @@ export class BrandLibraryStore {
       })
       .filter((p) => p.label);
 
-    const lib: BrandLibrary = { products, personas, proofPoints, updatedAt: now };
+    const terminology: BrandTerminology = {
+      preferred: strList((next.terminology as BrandTerminology)?.preferred, 40),
+      avoid: strList((next.terminology as BrandTerminology)?.avoid, 40),
+    };
+    // Corrections (Feedback Memory) are preserved across full-replace edits — they're managed
+    // via addCorrection/removeCorrection, not overwritten by a library save.
+    const existing = await this.state(tenantId);
+    const corrections = Array.isArray(next.corrections)
+      ? sanitizeCorrections(next.corrections, now)
+      : existing.corrections;
+
+    const lib: BrandLibrary = { products, personas, proofPoints, terminology, corrections, updatedAt: now };
     this.persist(tenantId, lib);
     return lib;
+  }
+
+  /** Append a correction (Feedback Memory — "fix once, stays fixed everywhere"). */
+  async addCorrection(tenantId: string, instruction: string, now: string): Promise<BrandLibrary> {
+    const s = await this.state(tenantId);
+    const text = str(instruction, 600);
+    if (text) {
+      s.corrections = [{ id: `corr-${s.corrections.length + 1}-${now.slice(0, 10)}`, instruction: text, createdAt: now }, ...s.corrections].slice(0, 200);
+      s.updatedAt = now;
+      this.persist(tenantId, s);
+    }
+    return s;
+  }
+
+  async removeCorrection(tenantId: string, correctionId: string, now: string): Promise<BrandLibrary> {
+    const s = await this.state(tenantId);
+    s.corrections = s.corrections.filter((c) => c.id !== correctionId);
+    s.updatedAt = now;
+    this.persist(tenantId, s);
+    return s;
   }
 
   /** Completeness signal for the Brand workspace (0–100). */
   async strength(tenantId: string): Promise<number> {
     const lib = await this.state(tenantId);
-    const p = lib.products.length ? 40 : 0;
-    const a = lib.personas.length ? 35 : 0;
-    const f = lib.proofPoints.length ? 25 : 0;
-    return p + a + f;
+    const p = lib.products.length ? 30 : 0;
+    const a = lib.personas.length ? 25 : 0;
+    const f = lib.proofPoints.length ? 20 : 0;
+    const t = lib.terminology.preferred.length || lib.terminology.avoid.length ? 15 : 0;
+    const c = lib.corrections.length ? 10 : 0;
+    return p + a + f + t + c;
   }
+}
+
+/** Sanitize a corrections array (used when a full-replace includes corrections). */
+function sanitizeCorrections(raw: unknown[], now: string): Correction[] {
+  return raw
+    .slice(0, 200)
+    .map((c, i) => ({
+      id: id((c as Correction)?.id, `corr-${i + 1}`),
+      instruction: str((c as Correction)?.instruction, 600),
+      createdAt: str((c as Correction)?.createdAt, 40) || now,
+    }))
+    .filter((c) => c.instruction);
 }

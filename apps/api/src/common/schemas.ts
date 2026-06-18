@@ -191,6 +191,7 @@ export const BrandLibrarySchema: Schema = {
         name: v.string({ max: 160 }),
         description: v.optional(v.string({ max: 1200 })),
         category: v.optional(v.string({ max: 80 })),
+        pricing: v.optional(v.string({ max: 200 })),
         url: v.optional(v.string({ max: 2048 })),
       }),
     ),
@@ -203,8 +204,15 @@ export const BrandLibrarySchema: Schema = {
         role: v.optional(v.string({ max: 160 })),
         painPoints: v.optional(v.arrayOf(v.string({ max: 200 }))),
         goals: v.optional(v.arrayOf(v.string({ max: 200 }))),
+        buyingTriggers: v.optional(v.arrayOf(v.string({ max: 200 }))),
       }),
     ),
+  ),
+  terminology: v.optional(
+    v.shape({
+      preferred: v.optional(v.arrayOf(v.string({ max: 200 }))),
+      avoid: v.optional(v.arrayOf(v.string({ max: 200 }))),
+    }),
   ),
   proofPoints: v.optional(
     v.arrayOf(
