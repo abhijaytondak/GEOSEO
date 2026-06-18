@@ -47,6 +47,58 @@ Use 3 sections and 2 faqs.`;
   }
 }
 
+export interface PuterBrandLibrary {
+  valueProp?: string;
+  products: { name: string; description?: string; category?: string; pricing?: string }[];
+  personas: { name: string; role?: string; painPoints?: string[]; goals?: string[]; buyingTriggers?: string[] }[];
+  proofPoints: { type?: string; label: string; detail?: string }[];
+  terminology: { preferred?: string[]; avoid?: string[] };
+  voice: { tone?: string; traits?: string[]; guidance?: string };
+}
+
+/**
+ * Browser-AI Brand Memory extraction via Puter (no server key — the signed-in Puter user
+ * pays). Reads the crawled site text and returns real products / personas / proof / terminology /
+ * tone of voice. Returns null if Puter is unavailable or the call fails, so callers keep the
+ * server's heuristic draft. Mirrors `draftWithPuter` (same parse + fallback contract).
+ */
+export async function extractBrandLibraryWithPuter(
+  siteText: string,
+  ctx: { url: string; company?: string },
+): Promise<PuterBrandLibrary | null> {
+  const chat = typeof window !== "undefined" ? window.puter?.ai?.chat : undefined;
+  if (!chat || !siteText.trim()) return null;
+
+  const prompt = `You are a brand strategist extracting a company's real Brand Memory from its own website copy. Use ONLY facts present in the text — never invent products, prices, statistics, customers, or claims. If the text gives no basis for a field, use an empty array or empty string.
+Website: ${ctx.url}
+Company: ${ctx.company || "infer from the text"}
+
+Website text (truncated):
+"""${siteText.slice(0, 14000)}"""
+
+Respond ONLY with minified JSON (no markdown, no code fences) matching exactly:
+{"valueProp":"","products":[{"name":"","description":"","category":"","pricing":""}],"personas":[{"name":"","role":"","painPoints":[""],"goals":[""],"buyingTriggers":[""]}],"proofPoints":[{"type":"stat|testimonial|case-study|award|logo","label":"","detail":""}],"terminology":{"preferred":[""],"avoid":[""]},"voice":{"tone":"","traits":[""],"guidance":""}}`;
+
+  try {
+    const resp = await chat(prompt, { model: "gpt-4o-mini" });
+    const r = resp as { message?: { content?: string }; text?: string };
+    let text = typeof resp === "string" ? resp : (r.message?.content ?? r.text ?? "");
+    text = text.trim().replace(/^```(?:json)?\s*/i, "").replace(/```$/, "").trim();
+    const p = JSON.parse(text) as Partial<PuterBrandLibrary>;
+    if (typeof p !== "object" || p === null) return null;
+    return {
+      valueProp: typeof p.valueProp === "string" ? p.valueProp : undefined,
+      products: Array.isArray(p.products) ? p.products : [],
+      personas: Array.isArray(p.personas) ? p.personas : [],
+      proofPoints: Array.isArray(p.proofPoints) ? p.proofPoints : [],
+      terminology: p.terminology ?? {},
+      voice: p.voice ?? {},
+    };
+  } catch {
+    return null;
+  }
+}
+
 export interface PuterCompetitor {
   name: string;
   domain: string;

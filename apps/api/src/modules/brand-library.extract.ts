@@ -122,7 +122,7 @@ function withIds<T>(items: T[], prefix: string): (T & { id: string })[] {
 
 export async function crawlBrandDraft(
   rawUrl: string,
-): Promise<{ draft: BrandLibraryDraft; crawled: boolean; llm: boolean; source: string }> {
+): Promise<{ draft: BrandLibraryDraft; crawled: boolean; llm: boolean; source: string; text: string }> {
   const normalized = /^https?:\/\//i.test(rawUrl.trim()) ? rawUrl.trim() : `https://${rawUrl.trim()}`;
   const domain = normalized.replace(/^https?:\/\//i, "").replace(/\/.*$/, "");
 
@@ -205,7 +205,7 @@ export async function crawlBrandDraft(
       },
       images,
     };
-    return { draft, crawled, llm: true, source: domain };
+    return { draft, crawled, llm: true, source: domain, text: text.slice(0, 14000) };
   }
 
   // Heuristic fallback (no LLM key / call failed): never fabricate — seed only what
@@ -220,5 +220,5 @@ export async function crawlBrandDraft(
     voice: { tone: "professional", traits: [], guidance: "" },
     images,
   };
-  return { draft, crawled, llm: false, source: domain };
+  return { draft, crawled, llm: false, source: domain, text: text.slice(0, 14000) };
 }

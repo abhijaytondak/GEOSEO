@@ -5,6 +5,7 @@ import { Loader2, Plus, Trash2, Package, Users, Award, Check, Type, MessageSquar
 import { Button } from "@/components/ui/button";
 import { useAppFeedback } from "@/components/system/app-feedback";
 import { apiError, readApiEnvelope } from "@/lib/api-envelope";
+import { puterReady, extractBrandLibraryWithPuter } from "@/lib/puter-ai";
 
 type ProofType = "stat" | "testimonial" | "case-study" | "award" | "logo";
 interface BrandProduct { id: string; name: string; description: string; category?: string; pricing?: string; url?: string }
@@ -95,22 +96,54 @@ export function BrandLibrary() {
         headers: { accept: "application/json", "content-type": "application/json" },
         body: JSON.stringify({ url }),
       });
-      const jr = await readApiEnvelope<{ draft: Partial<Library>; crawled: boolean; llm: boolean; source: string }>(
+      const jr = await readApiEnvelope<{ draft: Partial<Library>; crawled: boolean; llm: boolean; source: string; text?: string }>(
         r,
         "/brand-library/extract-from-site",
       );
       if (!r.ok || !jr.success) throw apiError(jr, r, "/brand-library/extract-from-site");
       const d = jr.data;
       mutate(normalizeLib(d.draft)); // populates the form for review; nothing persists until Save
+      // When the server has no LLM key, run a key-free deep extraction in the browser via Puter AI.
+      const willPuter = d.crawled && !d.llm && !!d.text && puterReady();
       notify({
         kind: d.crawled ? "success" : "info",
         title: d.crawled ? `Pulled from ${d.source}` : "Couldn't reach the site",
-        message: d.crawled
-          ? d.llm
+        message: !d.crawled
+          ? "Add your details manually below."
+          : d.llm
             ? "Review the real facts extracted from your site, then Save."
-            : "Pulled your value prop, tone, and images. Fill in the rest (or add an LLM key for deep extraction), then Save."
-          : "Add your details manually below.",
+            : willPuter
+              ? "Pulled images + tone. Enriching products, personas & proof with AI — approve the one-time Puter popup if asked…"
+              : "Pulled your value prop, tone, and images. Fill in the rest (or add an LLM key), then Save.",
       });
+      if (willPuter) {
+        try {
+          const ai = await extractBrandLibraryWithPuter(d.text!, { url, company: d.draft.products?.[0]?.name || url });
+          if (ai && (ai.products.length || ai.personas.length || ai.proofPoints.length || (ai.terminology.preferred?.length ?? 0) || ai.voice.tone)) {
+            setLib((cur) => {
+              const base = cur ?? normalizeLib(d.draft);
+              return {
+                ...base,
+                products: ai.products.length
+                  ? ai.products.map((p) => ({ id: uid(), name: p.name, description: p.description ?? "", category: p.category, pricing: p.pricing })).filter((p) => p.name)
+                  : base.products,
+                personas: ai.personas.length
+                  ? ai.personas.map((p) => ({ id: uid(), name: p.name, role: p.role, painPoints: p.painPoints ?? [], goals: p.goals ?? [], buyingTriggers: p.buyingTriggers ?? [] })).filter((p) => p.name)
+                  : base.personas,
+                proofPoints: ai.proofPoints.length
+                  ? ai.proofPoints.map((p) => ({ id: uid(), type: (PROOF_TYPES as string[]).includes(p.type ?? "") ? (p.type as ProofType) : "stat", label: p.label, detail: p.detail })).filter((p) => p.label)
+                  : base.proofPoints,
+                terminology: { preferred: ai.terminology.preferred ?? base.terminology.preferred, avoid: ai.terminology.avoid ?? base.terminology.avoid },
+                voice: { tone: ai.voice.tone || base.voice.tone, traits: ai.voice.traits ?? base.voice.traits, guidance: ai.voice.guidance ?? base.voice.guidance },
+              };
+            });
+            setDirty(true);
+            notify({ kind: "success", title: "Extracted with AI", message: "Products, personas, proof, and voice pulled from your site — review and Save." });
+          }
+        } catch {
+          /* Puter unavailable / declined — keep the heuristic draft */
+        }
+      }
     } catch (err) {
       notify({ kind: "error", title: "Extraction failed", message: err instanceof Error ? err.message : "Try again." });
     } finally {

@@ -31,8 +31,9 @@ export class BrandLibraryController {
   @Post("extract-from-site")
   async extractFromSite(@Body(validateBody(ExtractSchema)) body: { url: string }) {
     if (!body?.url?.trim()) throw new BadRequestException("url is required");
-    const { draft, crawled, llm, source } = await crawlBrandDraft(body.url);
-    return { draft, crawled, llm, source };
+    const { draft, crawled, llm, source, text } = await crawlBrandDraft(body.url);
+    // `text` lets the browser run a key-free Puter AI extraction when the server has no LLM key.
+    return { draft, crawled, llm, source, text };
   }
 
   /** Full-replace upsert of the structured brand library (products / personas / proof). */
