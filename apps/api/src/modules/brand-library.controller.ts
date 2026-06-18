@@ -3,10 +3,12 @@ import { ApiTags } from "@nestjs/swagger";
 import { validateBody, v } from "../common/validation";
 import { BrandLibrarySchema } from "../common/schemas";
 import { BrandLibraryStore, type BrandLibrary } from "./brand-library.service";
+import { crawlBrandDraft } from "./brand-library.extract";
 import { AuditStore } from "./audit.service";
 import { resolveTenantId, type TenantRequest } from "../common/tenant";
 
 const CorrectionSchema = { instruction: v.string({ min: 1, max: 600 }) };
+const ExtractSchema = { url: v.string({ min: 1, max: 2048 }) };
 
 @ApiTags("brand")
 @Controller("brand-library")
@@ -20,6 +22,17 @@ export class BrandLibraryController {
   async get(@Req() req: TenantRequest) {
     const t = resolveTenantId(req);
     return { library: await this.library.get(t), strength: await this.library.strength(t) };
+  }
+
+  /** Extract a real Brand Memory draft from the company's own website (PRD §7.1 / §8.1).
+   *  SSRF-guarded crawl → LLM structured extraction (DeepSeek) with a heuristic fallback,
+   *  plus real brand images scraped from the page. Returns a draft for the user to review;
+   *  it does NOT persist until they save via PUT. */
+  @Post("extract-from-site")
+  async extractFromSite(@Body(validateBody(ExtractSchema)) body: { url: string }) {
+    if (!body?.url?.trim()) throw new BadRequestException("url is required");
+    const { draft, crawled, llm, source } = await crawlBrandDraft(body.url);
+    return { draft, crawled, llm, source };
   }
 
   /** Full-replace upsert of the structured brand library (products / personas / proof). */

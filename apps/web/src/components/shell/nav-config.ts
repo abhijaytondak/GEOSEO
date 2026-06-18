@@ -56,7 +56,10 @@ export const navSections: NavSection[] = [
   },
   {
     label: "Workspace",
-    items: [{ label: "Settings", href: "/settings", icon: Settings }],
+    items: [
+      { label: "Brand Memory", href: "/brand", icon: BrainCircuit },
+      { label: "Settings", href: "/settings", icon: Settings },
+    ],
   },
 ];
 

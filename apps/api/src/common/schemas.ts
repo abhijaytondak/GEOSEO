@@ -214,6 +214,14 @@ export const BrandLibrarySchema: Schema = {
       avoid: v.optional(v.arrayOf(v.string({ max: 200 }))),
     }),
   ),
+  voice: v.optional(
+    v.shape({
+      tone: v.optional(v.string({ max: 120 })),
+      traits: v.optional(v.arrayOf(v.string({ max: 80 }))),
+      guidance: v.optional(v.string({ max: 1200 })),
+    }),
+  ),
+  images: v.optional(v.arrayOf(v.string({ max: 2048 }))),
   proofPoints: v.optional(
     v.arrayOf(
       v.shape({

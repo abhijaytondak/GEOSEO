@@ -41,6 +41,14 @@ export interface BrandTerminology {
   avoid: string[];
 }
 
+/** Tone of voice — how every generated draft should *sound*. Preset/freeform tone label,
+ *  adjective traits, and freeform do/don't guidance. Folded into the generation grounding. */
+export interface BrandVoice {
+  tone: string;
+  traits: string[];
+  guidance: string;
+}
+
 /**
  * Feedback Memory (Gushwork-parity differentiator): a correction the user made that must
  * stick everywhere — "fix it once, it stays fixed." Injected with top priority into every
@@ -57,13 +65,22 @@ export interface BrandLibrary {
   personas: BuyerPersona[];
   proofPoints: ProofPoint[];
   terminology: BrandTerminology;
+  /** Tone of voice (optional — added after launch; readers must tolerate absence). */
+  voice?: BrandVoice;
+  /** Real brand images pulled from the site (absolute http(s) URLs). */
+  images?: string[];
   corrections: Correction[];
   updatedAt: string;
 }
 
+/** Empty voice (stable shape for the UI). */
+export function emptyVoice(): BrandVoice {
+  return { tone: "", traits: [], guidance: "" };
+}
+
 /** Empty library (used for new tenants / hydration defaults). */
 export function emptyLibrary(): BrandLibrary {
-  return { products: [], personas: [], proofPoints: [], terminology: { preferred: [], avoid: [] }, corrections: [], updatedAt: "" };
+  return { products: [], personas: [], proofPoints: [], terminology: { preferred: [], avoid: [] }, voice: emptyVoice(), images: [], corrections: [], updatedAt: "" };
 }
 
 const PROOF_TYPES: ProofType[] = ["stat", "testimonial", "case-study", "award", "logo"];
@@ -127,6 +144,14 @@ export function composeBrandContext(brand: BrandProfile | null | undefined, lib:
         ".",
     );
   }
+  const voice = lib.voice;
+  if (voice && (voice.tone || voice.traits?.length || voice.guidance)) {
+    const bits: string[] = [];
+    if (voice.tone) bits.push(`tone: ${voice.tone}`);
+    if (voice.traits?.length) bits.push(`traits: ${voice.traits.slice(0, 8).join(", ")}`);
+    if (voice.guidance) bits.push(voice.guidance);
+    parts.push("Write in this brand's tone of voice — " + bits.join("; ") + ".");
+  }
   const term = lib.terminology;
   if (term && (term.preferred?.length || term.avoid?.length)) {
     const bits: string[] = [];
@@ -156,6 +181,12 @@ export class BrandLibraryStore {
         preferred: loaded?.terminology?.preferred ?? [],
         avoid: loaded?.terminology?.avoid ?? [],
       },
+      voice: {
+        tone: loaded?.voice?.tone ?? "",
+        traits: loaded?.voice?.traits ?? [],
+        guidance: loaded?.voice?.guidance ?? "",
+      },
+      images: loaded?.images ?? [],
       corrections: loaded?.corrections ?? [],
       updatedAt: loaded?.updatedAt ?? "",
     };
@@ -215,6 +246,19 @@ export class BrandLibraryStore {
       preferred: strList((next.terminology as BrandTerminology)?.preferred, 40),
       avoid: strList((next.terminology as BrandTerminology)?.avoid, 40),
     };
+
+    const voice: BrandVoice = {
+      tone: str((next.voice as BrandVoice)?.tone, 120),
+      traits: strList((next.voice as BrandVoice)?.traits, 16),
+      guidance: str((next.voice as BrandVoice)?.guidance, 1200),
+    };
+
+    // Only http(s) image URLs — never data: URIs or relative paths (defense-in-depth).
+    const images: string[] = (Array.isArray(next.images) ? next.images : [])
+      .map((u) => str(u, 2048))
+      .filter((u) => /^https?:\/\//i.test(u))
+      .slice(0, 24);
+
     // Corrections (Feedback Memory) are preserved across full-replace edits — they're managed
     // via addCorrection/removeCorrection, not overwritten by a library save.
     const existing = await this.state(tenantId);
@@ -222,7 +266,7 @@ export class BrandLibraryStore {
       ? sanitizeCorrections(next.corrections, now)
       : existing.corrections;
 
-    const lib: BrandLibrary = { products, personas, proofPoints, terminology, corrections, updatedAt: now };
+    const lib: BrandLibrary = { products, personas, proofPoints, terminology, voice, images, corrections, updatedAt: now };
     this.persist(tenantId, lib);
     return lib;
   }

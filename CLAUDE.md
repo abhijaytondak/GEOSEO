@@ -174,6 +174,25 @@ same shape: env-gated, **return null/[] on any failure → safe fallback**, neve
 Vercel demo runs the real backend (with these seams active) instead of the mock fallback.
 
 ## Done recently (don't redo)
+- **Brand Memory — real site extraction + tone of voice + sidebar entry (2026-06-18; api+web `tsc` clean, endpoint curl-verified, Playwright screenshot-verified; committed on branch `p0-6-tenant-page-engine`, NOT pushed):**
+  the Library tab was showing the dummy **Northwind** seed — now it extracts the customer's *real* brand from their own site.
+  **Backend (my-lane, additive):** `apps/api/src/llm/brand-extract.ts` (DeepSeek `extractBrandLibrary` → structured
+  products/personas/proof/terminology/voice from on-page copy; returns `null` without `DEEPSEEK_API_KEY` → graceful) +
+  `apps/api/src/modules/brand-library.extract.ts` (`crawlBrandDraft`: SSRF-guarded `safeFetchText` → html→text + HTML-entity
+  decode → LLM extract **or** conservative heuristic → real images scraped via og:image/twitter:image/apple-touch-icon/`<img>`,
+  resolved to absolute http(s)). New endpoint **`POST /brand-library/extract-from-site {url}`** returns a **non-persisted draft**
+  for review (user saves via existing `PUT /brand-library`). Extended `BrandLibrary` (`BrandLibraryStore`) with
+  **`voice?:{tone,traits,guidance}`** (folded into `composeBrandContext` grounding) + **`images?:string[]`**; updated the store
+  sanitizer + `BrandLibrarySchema`. **Frontend** `components/brand/brand-library.tsx`: brand-tinted "Extract from your site" card
+  (URL prefilled from brand profile), **Tone of voice** section (preset pills + freeform tone + traits + writing guidance),
+  real-image gallery. **Sidebar entry**: Brand Memory under Workspace in `shell/nav-config.ts`. Verified: github.com → real
+  product + 12 images (entity-decoded); SSRF localhost → 400; empty url → 400; screenshots of Library tab + extract flow + tone
+  section + sidebar. ⚠️ **`DEEPSEEK_API_KEY` empty locally → heuristic path** (real value-prop+tone+images, never fabricated
+  products/personas); LLM auto-enriches once keyed. ⚠️ `safeFetchText` `redirect:"manual"` → sites that 301/308 (apex→www,
+  http→https) return `crawled:false` (pre-existing, shared with `brand.controller` extract). ⚠️ This commit's `brand-library.tsx`
+  imports `@/lib/api-envelope` — an **UNTRACKED** file owned by the in-flight envelope-refactor lane (already imported at HEAD):
+  builds on disk, but the commit won't `tsc` standalone until that lane commits `api-envelope.ts`. Did **not** touch other-lane WIP
+  (image-gen tenant migration, api-client/page-engine/platform-client envelope refactor, brand-assets).
 - **API hardening pass (QA-audit follow-up; typecheck clean + smoke 109/109 + GET sweep 73/73 + live curl + /simplify pass):** closed every
   robustness gap from the deep API audit. **(1) Outbound timeouts** — new `common/http.ts` `fetchWithTimeout(url, init?, ms=12s)`
   is the single source of truth; migrated every seam fetch to it (gsc — incl. the previously-unguarded OAuth token mint —
