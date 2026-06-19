@@ -682,6 +682,54 @@ export function PagesView({
               </SheetHeader>
 
               <div className="space-y-5 px-6 py-5">
+                {/* lifecycle pipeline + next-step hint — orients the user right after generating */}
+                {(() => {
+                  const STAGES = [
+                    { key: "draft", label: "Draft" },
+                    { key: "in-review", label: "Review" },
+                    { key: "approved", label: "Approved" },
+                    { key: "published", label: "Published" },
+                  ] as const;
+                  const idx = current.status === "needs-refresh" ? 3 : STAGES.findIndex((s) => s.key === current.status);
+                  const HINT: Record<PageStatus, string> = {
+                    draft: "Draft ready — review it below, then submit for approval.",
+                    "in-review": "In review — approve it to make it publish-ready.",
+                    approved: "Approved — publish it to your feed when you're ready.",
+                    published: "Live on your feed. Regenerate any time to refresh it.",
+                    "needs-refresh": "Published but flagged stale — Regenerate to refresh the content.",
+                  };
+                  const stale = current.status === "needs-refresh";
+                  return (
+                    <section className="rounded-xl border border-border bg-surface-sunken p-3.5">
+                      <div className="flex items-center gap-1">
+                        {STAGES.map((s, i) => {
+                          const state = i < idx ? "done" : i === idx ? "active" : "pending";
+                          return (
+                            <div key={s.key} className="flex flex-1 items-center gap-1">
+                              <span
+                                className={cn(
+                                  "inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[11px] font-semibold",
+                                  state === "done" && "bg-positive/12 text-positive",
+                                  state === "active" && (stale ? "bg-negative/12 text-negative" : "bg-brand/12 text-brand"),
+                                  state === "pending" && "text-muted-foreground",
+                                )}
+                              >
+                                {state === "done" && <Check className="size-3" />}
+                                {state === "active" && <span className={cn("size-1.5 rounded-full", stale ? "bg-negative" : "bg-brand")} />}
+                                {s.label}
+                              </span>
+                              {i < STAGES.length - 1 && (
+                                <span className={cn("h-px flex-1", i < idx ? "bg-positive/40" : "bg-border")} />
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                      <p className="mt-2.5 text-[12.5px] text-muted-foreground">{HINT[current.status] ?? HINT.draft}</p>
+                    </section>
+                  );
+                })()}
+
                 {/* SEO checks */}
                 <section>
                   <h3 className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">SEO validation</h3>
