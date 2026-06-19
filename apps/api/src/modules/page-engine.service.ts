@@ -5,6 +5,7 @@ import { DEFAULT_TENANT_ID } from "../common/tenant";
 import { draftPageContent, type DraftContent } from "../llm/deepseek";
 import { specFor, buildSchemaJson } from "../llm/page-type-spec";
 import { buildInfographic } from "../llm/infographic";
+import { classifyIntents, type ClassifiedIntent } from "../llm/intent";
 import { BrandMemoryStore } from "./brand.service";
 import { BrandLibraryStore, composeBrandContext } from "./brand-library.service";
 import { KeywordResearchService, type KeywordIdea, type ResearchSource } from "./keyword-research.service";
@@ -19,6 +20,7 @@ const T = {
 } as const;
 import type {
   AuditEntry,
+  FunnelStage,
   GeneratedPage,
   KeywordOpportunity,
   Lead,
@@ -71,6 +73,13 @@ function classifyKwIntent(keyword: string): SearchIntent {
   if (/\b(vs|versus|alternative|alternatives|compare|comparison)\b/.test(k)) return "comparison";
   if (/\b(how|what|why|guide|tutorial|examples?|ideas?|tips|best way)\b/.test(k)) return "informational";
   return "commercial";
+}
+
+/** Fallback funnel stage from intent when the LLM classifier is unavailable. */
+function stageFromIntent(intent: SearchIntent): FunnelStage {
+  if (intent === "transactional") return "ready-to-buy";
+  if (intent === "informational") return "research";
+  return "consideration"; // commercial / comparison / navigational / local
 }
 
 /** Progress record for a background "Initiate" batch page-generation run. */
@@ -715,8 +724,10 @@ export class PageEngineStore implements OnModuleInit {
   async discover(tenantId: string, input: DiscoverInput): Promise<KeywordOpportunity[]> {
     const seeds = (input.seeds ?? []).map((s) => s.trim()).filter(Boolean).slice(0, 6);
     const ideas = await this.research.researchKeywords(seeds, { limit: 24 });
+    // LLM intent refinement (intent + research-vs-ready-to-buy stage); regex fallback.
+    const classified = ideas.length ? await classifyIntents(ideas.map((i) => i.keyword)) : null;
     const created: KeywordOpportunity[] = ideas.length
-      ? ideas.map((idea) => this.oppFromIdea(tenantId, idea, input.intent))
+      ? ideas.map((idea) => this.oppFromIdea(tenantId, idea, input.intent, classified?.[idea.keyword.trim().toLowerCase()]))
       : seeds.map((seed) => this.oppFromSeed(tenantId, seed, input.intent));
     const s = this.st(tenantId);
     for (const opp of created) s.opportunities.unshift(opp);
@@ -725,9 +736,15 @@ export class PageEngineStore implements OnModuleInit {
   }
 
   /** Real keyword idea (DataForSEO or AI-search) → scored opportunity. */
-  private oppFromIdea(tenantId: string, idea: KeywordIdea, intentOverride?: SearchIntent): KeywordOpportunity {
+  private oppFromIdea(
+    tenantId: string,
+    idea: KeywordIdea,
+    intentOverride?: SearchIntent,
+    classified?: ClassifiedIntent,
+  ): KeywordOpportunity {
     this.seq += 1;
-    const intent = intentOverride ?? classifyKwIntent(idea.keyword);
+    const intent = intentOverride ?? classified?.intent ?? classifyKwIntent(idea.keyword);
+    const funnelStage = classified?.stage ?? stageFromIntent(intent);
     const commercialValue = clampN((idea.cpc > 0 ? Math.min(idea.cpc * 8, 55) : idea.competition * 55) + 25, 1, 99);
     const confidence = clampN(60 + (idea.searchVolume > 100 ? 15 : 0) + (idea.difficulty < 40 ? 15 : 0), 1, 99);
     const src = this.research.source;
@@ -744,6 +761,7 @@ export class PageEngineStore implements OnModuleInit {
       clusterId: "c-discovered",
       clusterLabel: label,
       intent,
+      funnelStage,
       volume: idea.searchVolume,
       difficulty: idea.difficulty,
       commercialValue,
@@ -763,12 +781,14 @@ export class PageEngineStore implements OnModuleInit {
     const intents: SearchIntent[] = ["commercial", "informational", "comparison"];
     const types: PageType[] = ["landing", "guide", "comparison"];
     const h = [...seed].reduce((a, c) => a + c.charCodeAt(0), 0);
+    const intent = intentOverride ?? intents[h % intents.length];
     return {
       id: `kw-disc-${this.seq}`,
       query: seed.toLowerCase(),
       clusterId: "c-discovered",
       clusterLabel: "Discovered",
-      intent: intentOverride ?? intents[h % intents.length],
+      intent,
+      funnelStage: stageFromIntent(intent),
       volume: 300 + (h % 9) * 600,
       difficulty: 25 + (h % 50),
       commercialValue: 55 + (h % 40),

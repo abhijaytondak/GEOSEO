@@ -25,6 +25,9 @@ export type SearchIntent =
   | "local"
   | "comparison";
 
+/** Buyer funnel stage — research-mode vs ready-to-buy (Gushwork "Intent Mapping" #2). */
+export type FunnelStage = "research" | "consideration" | "ready-to-buy";
+
 /* ----------------------------------------------- Research → Opportunity */
 
 export type OpportunityStatus = "new" | "approved" | "rejected" | "deferred";
@@ -35,6 +38,8 @@ export interface KeywordOpportunity {
   clusterId: string;
   clusterLabel: string;
   intent: SearchIntent;
+  /** Research-mode vs ready-to-buy signal (Intent Mapping). */
+  funnelStage?: FunnelStage;
   /** Estimated monthly search volume. */
   volume: number;
   /** 0–100 keyword difficulty. */

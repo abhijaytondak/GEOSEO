@@ -14,7 +14,7 @@ import {
   AlertTriangle,
   FileText,
 } from "lucide-react";
-import type { KeywordOpportunity, OpportunityStatus, SearchIntent } from "@geoseo/types";
+import type { FunnelStage, KeywordOpportunity, OpportunityStatus, SearchIntent } from "@geoseo/types";
 import { pageEngineApi } from "@/lib/page-engine-client";
 import { draftWithPuter } from "@/lib/puter-ai";
 import { Button } from "@/components/ui/button";
@@ -29,6 +29,11 @@ const INTENT_CLS: Record<SearchIntent, string> = {
   informational: "bg-muted text-muted-foreground",
   local: "bg-warning/15 text-warning",
   navigational: "bg-muted text-muted-foreground",
+};
+const STAGE_META: Record<FunnelStage, { label: string; cls: string }> = {
+  research: { label: "Research", cls: "bg-muted text-muted-foreground" },
+  consideration: { label: "Consideration", cls: "bg-info/12 text-info" },
+  "ready-to-buy": { label: "Ready to buy", cls: "bg-positive/12 text-positive" },
 };
 const STATUS_CLS: Record<OpportunityStatus, string> = {
   new: "bg-info/12 text-info",
@@ -277,7 +282,14 @@ export function OpportunitiesExplorer({ initial }: { initial: KeywordOpportunity
                         </span>
                       </button>
                     </td>
-                    <td className="px-3 py-3"><span className={cn("rounded-full px-1.5 py-0.5 text-[11px] font-semibold capitalize", INTENT_CLS[o.intent])}>{o.intent}</span></td>
+                    <td className="px-3 py-3">
+                      <div className="flex flex-col items-start gap-1">
+                        <span className={cn("rounded-full px-1.5 py-0.5 text-[11px] font-semibold capitalize", INTENT_CLS[o.intent])}>{o.intent}</span>
+                        {o.funnelStage && (
+                          <span className={cn("rounded-full px-1.5 py-0.5 text-[10px] font-semibold", STAGE_META[o.funnelStage].cls)}>{STAGE_META[o.funnelStage].label}</span>
+                        )}
+                      </div>
+                    </td>
                     <td className="px-3 py-3 tabular-nums text-[13px] text-muted-foreground">{compact(o.volume)}</td>
                     <td className="px-3 py-3 tabular-nums text-[13px] text-muted-foreground">{o.difficulty}</td>
                     <td className="px-3 py-3 tabular-nums text-[13px] text-muted-foreground">{o.commercialValue}</td>
