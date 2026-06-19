@@ -96,6 +96,22 @@ export interface PageBatchJob {
 }
 
 /**
+ * Progress record for a background keyword discovery run. Discovery is now
+ * LLM-backed (AI-search keyword tier + intent classification) and can take
+ * 20-40s — longer than the web BFF's mutation budget — so the UI starts a job
+ * and polls, mirroring the Initiate batch pattern.
+ */
+export interface DiscoverJob {
+  id: string;
+  status: "running" | "completed" | "failed";
+  created: number;
+  opportunityIds: string[];
+  startedAt: string;
+  finishedAt?: string;
+  error?: string;
+}
+
+/**
  * In-memory page-engine state (Research → Blueprint → Page → Leads).
  * Mirrors the existing store pattern; swaps for a DB-backed repo later.
  * Seeded from `@geoseo/mock` and deep-cloned so mutations never touch the
@@ -129,6 +145,9 @@ export class PageEngineStore implements OnModuleInit {
   /** In-flight one-click "Initiate" batch generations (Growth Plan → background drafting). */
   private batchJobs = new Map<string, PageBatchJob>();
   private bseq = 0;
+  /** In-flight background keyword-discovery runs (LLM-backed → polled by the UI). */
+  private discoverJobs = new Map<string, DiscoverJob>();
+  private dseq = 0;
 
   /** Get (lazily create) a tenant's state. */
   private st(tenantId: string): PEState {
@@ -519,6 +538,46 @@ export class PageEngineStore implements OnModuleInit {
   /** Progress snapshot for an Initiate batch (undefined if unknown/expired). */
   getBatchJob(id: string): PageBatchJob | undefined {
     const j = this.batchJobs.get(id);
+    return j ? { ...j } : undefined;
+  }
+
+  /** Start background keyword discovery and return a job handle immediately (the
+   *  LLM tiers run server-side; the browser polls instead of holding the request). */
+  startDiscover(tenantId: string, input: DiscoverInput): DiscoverJob {
+    while (this.discoverJobs.size >= 50) {
+      const oldest = this.discoverJobs.keys().next().value;
+      if (oldest === undefined) break;
+      this.discoverJobs.delete(oldest);
+    }
+    this.dseq += 1;
+    const job: DiscoverJob = {
+      id: `dsc-${this.dseq}`,
+      status: "running",
+      created: 0,
+      opportunityIds: [],
+      startedAt: new Date().toISOString(),
+    };
+    this.discoverJobs.set(job.id, job);
+    void this.runDiscover(tenantId, job, input);
+    return { ...job };
+  }
+
+  private async runDiscover(tenantId: string, job: DiscoverJob, input: DiscoverInput): Promise<void> {
+    try {
+      const created = await this.discover(tenantId, input);
+      job.created = created.length;
+      job.opportunityIds = created.map((o) => o.id);
+      job.status = "completed";
+    } catch (e) {
+      job.status = "failed";
+      job.error = e instanceof Error ? e.message : "discovery failed";
+    }
+    job.finishedAt = new Date().toISOString();
+  }
+
+  /** Progress snapshot for a background discovery run (undefined if unknown/expired). */
+  getDiscoverJob(id: string): DiscoverJob | undefined {
+    const j = this.discoverJobs.get(id);
     return j ? { ...j } : undefined;
   }
 

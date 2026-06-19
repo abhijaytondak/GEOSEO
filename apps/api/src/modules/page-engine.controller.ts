@@ -85,6 +85,22 @@ export class OpportunitiesController {
     const created = await this.store.discover(t, { seeds, intent: body.intent as never });
     return { created, opportunities: this.store.listOpportunities(t), source: this.store.researchSource() };
   }
+
+  /** Background discovery — returns a job handle immediately; poll the GET below.
+   *  Use this from the UI: LLM-backed discovery exceeds the web BFF request budget. */
+  @Post("discover-async")
+  startDiscover(@Req() req: TenantRequest, @Body() body: { seeds?: string[]; intent?: string }) {
+    const seeds = Array.isArray(body?.seeds) ? body.seeds.filter((s) => typeof s === "string") : [];
+    if (seeds.length === 0) throw new BadRequestException("seeds[] is required");
+    return this.store.startDiscover(resolveTenantId(req), { seeds, intent: body.intent as never });
+  }
+
+  @Get("discover-async/:jobId")
+  discoverStatus(@Param("jobId") jobId: string) {
+    const job = this.store.getDiscoverJob(jobId);
+    if (!job) throw new NotFoundException(`Discover job ${jobId} not found`);
+    return job;
+  }
 }
 
 /* ----------------------------------------------- blueprints */

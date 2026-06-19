@@ -57,6 +57,20 @@ function impact(o: KeywordOpportunity): number {
   return Math.round(o.commercialValue * 0.5 + reach * 0.3 + (100 - o.difficulty) * 0.2);
 }
 
+type DiscoverJob = { id: string; status: "running" | "completed" | "failed"; created: number; error?: string };
+
+/** Minimal self-contained call through the Next BFF (avoids the shared client). */
+async function apiJson<T>(method: string, path: string, body?: unknown): Promise<T> {
+  const res = await fetch(path, {
+    method,
+    headers: body ? { "content-type": "application/json" } : undefined,
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  const json = await res.json().catch(() => null);
+  if (!res.ok) throw new Error(json?.errors?.[0] ?? `Request failed (${res.status})`);
+  return (json?.data ?? json) as T;
+}
+
 export function OpportunitiesExplorer({ initial }: { initial: KeywordOpportunity[] }) {
   const { notify } = useAppFeedback();
   const [opps, setOpps] = useState(initial);
@@ -120,10 +134,19 @@ export function OpportunitiesExplorer({ initial }: { initial: KeywordOpportunity
     if (!list.length) return;
     setDiscovering(true);
     try {
-      const { created } = await pageEngineApi.discoverOpportunities(list);
-      setOpps((arr) => [...created, ...arr]);
+      // LLM-backed discovery (AI-search + intent classification) can take 20-40s —
+      // longer than the BFF request budget — so start a job and poll it.
+      let job = await apiJson<DiscoverJob>("POST", "/api/v1/opportunities/discover-async", { seeds: list });
+      for (let i = 0; i < 40 && job.status === "running"; i++) {
+        await new Promise((r) => setTimeout(r, 1500));
+        job = await apiJson<DiscoverJob>("GET", `/api/v1/opportunities/discover-async/${job.id}`);
+      }
+      if (job.status === "failed") throw new Error(job.error ?? "Discovery failed");
+      if (job.status === "running") throw new Error("Discovery is still running — refresh in a moment.");
+      const { opportunities } = await apiJson<{ opportunities: KeywordOpportunity[] }>("GET", "/api/v1/opportunities");
+      setOpps(opportunities);
       setSeeds("");
-      notify({ kind: "success", title: "Discovered", message: `${created.length} new opportunities.` });
+      notify({ kind: "success", title: "Discovered", message: `${job.created} new opportunities.` });
     } catch (err) {
       notify({ kind: "error", title: "Discovery failed", message: err instanceof Error ? err.message : "Try again." });
     } finally {
