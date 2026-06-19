@@ -50,7 +50,8 @@ function htmlToText(html: string): string {
     .trim();
 }
 
-const MAX_IMAGES = 60;
+const MAX_IMAGES = 200;
+const MAX_CRAWL_PAGES = 5;
 
 /** From a responsive `srcset`, pick the highest-resolution candidate (sharper than a tiny default src). */
 function largestFromSrcset(srcset: string): string | undefined {
@@ -68,11 +69,11 @@ function largestFromSrcset(srcset: string): string | undefined {
 
 /** Real brand images from the page: og/twitter share image + meaningful content imgs.
  *  Skips tiny icons/sprites/avatars/placeholders and prefers the largest responsive variant. */
-function extractImages(html: string, baseUrl: string): string[] {
+function extractImages(html: string, baseUrl: string, limit = MAX_IMAGES): string[] {
   const out: string[] = [];
   const seen = new Set<string>();
   const push = (raw?: string | null) => {
-    if (!raw || out.length >= MAX_IMAGES) return;
+    if (!raw || out.length >= limit) return;
     try {
       // Decode HTML entities in the URL (e.g. `&amp;` in query strings) so the image actually loads.
       const u = new URL(decodeEntities(raw).trim(), baseUrl);
@@ -88,36 +89,75 @@ function extractImages(html: string, baseUrl: string): string[] {
   };
   const grab = (re: RegExp) => html.match(re)?.[1];
 
+  // Anything that isn't a real brand image — tracking pixels, sprites, icon/avatar/placeholder assets.
+  const JUNK = /sprite|pixel|tracking|spacer|1x1|blank|favicon|avatar|placeholder|loader|spinner|emoji|\bflag|hamburger|burger|chevron|caret|arrow-/i;
+  const consider = (src?: string | null) => {
+    if (!src || /^data:/i.test(src) || JUNK.test(src)) return;
+    push(src);
+  };
+
   // Social-share images first — the site's own chosen, full-size brand visuals.
   push(grab(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i));
   push(grab(/<meta[^>]+name=["']twitter:image["'][^>]+content=["']([^"']+)["']/i));
 
+  // <img> tags — prefer the largest responsive variant; honor lazy-load attributes.
   for (const m of html.matchAll(/<img\b[^>]*>/gi)) {
     const tag = m[0];
-    // Skip images that declare tiny dimensions — icons/spacers, not brand imagery.
     const w = Number(tag.match(/\bwidth=["']?(\d+)/i)?.[1] ?? "");
     const h = Number(tag.match(/\bheight=["']?(\d+)/i)?.[1] ?? "");
-    if ((w && w < 64) || (h && h < 64)) continue;
-    // Prefer the largest responsive variant; fall back to src / lazy-loaded data-src.
-    const srcset = tag.match(/\bsrcset=["']([^"']+)["']/i)?.[1];
-    const src =
+    if ((w && w < 40) || (h && h < 40)) continue; // genuinely tiny → icon/spacer
+    const srcset = tag.match(/\bsrcset=["']([^"']+)["']/i)?.[1] || tag.match(/\bdata-srcset=["']([^"']+)["']/i)?.[1];
+    consider(
       (srcset && largestFromSrcset(srcset)) ||
-      tag.match(/\bsrc=["']([^"']+)["']/i)?.[1] ||
-      tag.match(/\bdata-src=["']([^"']+)["']/i)?.[1];
-    if (!src || /^data:/i.test(src)) continue;
-    // Drop non-brand assets (tracking pixels, sprites, icons, avatars, placeholders, spinners).
-    if (/sprite|pixel|tracking|spacer|1x1|blank|favicon|avatar|placeholder|loader|spinner|emoji|\bflag|hamburger|burger|chevron|caret|arrow-/i.test(src)) continue;
-    // Keep SVGs only when they look like a logo (icon sprites are noise).
-    if (/\.svg(\?|$)/i.test(src) && !/logo/i.test(tag + " " + src)) continue;
-    push(src);
+        tag.match(/\bsrc=["']([^"']+)["']/i)?.[1] ||
+        tag.match(/\bdata-src=["']([^"']+)["']/i)?.[1] ||
+        tag.match(/\bdata-lazy-src=["']([^"']+)["']/i)?.[1],
+    );
   }
-  // apple-touch-icon is an icon — only include if we found little else.
+  // <picture><source srcset> responsive variants.
+  for (const m of html.matchAll(/<source\b[^>]*\bsrcset=["']([^"']+)["']/gi)) consider(largestFromSrcset(m[1]));
+  // CSS background images (marketing sites lean on these) — inline styles + <style> blocks.
+  for (const m of html.matchAll(/url\((['"]?)([^)'"\s]+?\.(?:jpe?g|png|webp|gif|avif|svg)(?:\?[^)'"\s]*)?)\1\)/gi)) consider(m[2]);
+
   if (out.length < 4) push(grab(/<link[^>]+rel=["'][^"']*apple-touch-icon[^"']*["'][^>]+href=["']([^"']+)["']/i));
   return out;
 }
 
 function withIds<T>(items: T[], prefix: string): (T & { id: string })[] {
   return items.map((it, i) => ({ ...it, id: `${prefix}-${i + 1}` }));
+}
+
+const PAGE_PRIORITY = /product|solution|feature|service|about|case|customer|client|work|portfolio|gallery|pricing|industr|platform|use-case/i;
+
+/** Same-domain internal page links to ALSO crawl for brand images — so we capture every brand
+ *  image across the site, not just the homepage. Prioritizes content-rich pages; capped. */
+function internalLinks(html: string, baseUrl: string, domain: string): string[] {
+  const bare = (h: string) => h.replace(/^www\./i, "").toLowerCase();
+  const host = bare(domain);
+  const seen = new Set<string>();
+  const all: string[] = [];
+  for (const m of html.matchAll(/<a\b[^>]*href=["']([^"']+)["']/gi)) {
+    const href = m[1];
+    if (/^(#|mailto:|tel:|javascript:|data:)/i.test(href)) continue;
+    try {
+      const u = new URL(decodeEntities(href).trim(), baseUrl);
+      if (u.protocol !== "http:" && u.protocol !== "https:") continue;
+      if (bare(u.hostname) !== host) continue; // same domain only
+      if (/\.(pdf|zip|jpe?g|png|svg|gif|webp|mp4|mov|css|js)(\?|$)/i.test(u.pathname)) continue;
+      u.hash = "";
+      const s = u.toString().replace(/\/$/, "");
+      if (s === baseUrl.replace(/\/$/, "")) continue; // not the homepage itself
+      if (!seen.has(s)) {
+        seen.add(s);
+        all.push(s);
+      }
+    } catch {
+      /* skip malformed hrefs */
+    }
+  }
+  const priority = all.filter((u) => PAGE_PRIORITY.test(u));
+  const rest = all.filter((u) => !PAGE_PRIORITY.test(u));
+  return [...priority, ...rest].slice(0, MAX_CRAWL_PAGES);
 }
 
 export async function crawlBrandDraft(
@@ -148,7 +188,34 @@ export async function crawlBrandDraft(
   const h1 = decodeEntities((html.match(/<h1[^>]*>([\s\S]*?)<\/h1>/i)?.[1] ?? "").replace(/<[^>]+>/g, " ")).replace(/\s+/g, " ").trim();
   const tagline = description || h1 || title.replace(company, "").replace(/^[\s|\-–·:]+/, "").trim();
 
-  const images = crawled ? extractImages(html, normalized) : [];
+  // Collect brand images from the homepage AND key internal pages so we capture *every* brand image,
+  // not just the homepage. Same-domain only, SSRF-guarded per hop, fetched in parallel, fail-soft.
+  const images: string[] = [];
+  if (crawled) {
+    const seen = new Set<string>();
+    const add = (urls: string[]) => {
+      for (const u of urls) {
+        if (images.length >= MAX_IMAGES) break;
+        if (!seen.has(u)) {
+          seen.add(u);
+          images.push(u);
+        }
+      }
+    };
+    add(extractImages(html, normalized));
+    const links = internalLinks(html, normalized, domain);
+    const pages = await Promise.all(
+      links.map(async (link) => {
+        try {
+          const { html: pageHtml } = await safeFetchText(link, { maxBytes: 1_200_000, timeoutMs: 6000 });
+          return pageHtml ? extractImages(pageHtml, link) : [];
+        } catch {
+          return []; // a page that errors (SSRF/timeout) just contributes nothing
+        }
+      }),
+    );
+    for (const list of pages) add(list);
+  }
   const text = crawled ? htmlToText(html) : "";
 
   // Preferred path: real structured extraction via the LLM (uses only on-page facts).

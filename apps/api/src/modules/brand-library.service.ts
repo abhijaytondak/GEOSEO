@@ -257,7 +257,7 @@ export class BrandLibraryStore {
     const images: string[] = (Array.isArray(next.images) ? next.images : [])
       .map((u) => str(u, 2048))
       .filter((u) => /^https?:\/\//i.test(u))
-      .slice(0, 100);
+      .slice(0, 200);
 
     // Corrections (Feedback Memory) are preserved across full-replace edits — they're managed
     // via addCorrection/removeCorrection, not overwritten by a library save.
