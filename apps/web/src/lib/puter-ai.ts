@@ -23,16 +23,48 @@ export function puterReady(): boolean {
   return typeof window !== "undefined" && typeof window.puter?.ai?.chat === "function";
 }
 
+/**
+ * Per-page-type writing spec — MIRRORS apps/api/src/llm/page-type-spec.ts so the
+ * browser (Puter) draft is as rich and structurally distinct as the server one.
+ * Keep the two in sync (the arcs change rarely).
+ */
+const PAGE_SPEC: Record<string, { role: string; sections: string[]; faqs: number }> = {
+  landing: { role: "a conversion-focused landing page that turns commercial-intent visitors into demos or signups", sections: ["The problem you're solving", "How it works", "Key capabilities", "Proof & outcomes", "Who it's for"], faqs: 4 },
+  service: { role: "a benefit-focused service page for one specific service, conversion-ready and structured for AI comprehension", sections: ["What this service includes", "The benefits you get", "Our process", "Why choose us", "Plans & pricing"], faqs: 4 },
+  guide: { role: "a long-form, genuinely useful, authoritative article structured for readability and for AI engines to cite", sections: ["What it is and why it matters", "How it works, step by step", "Best practices", "Common mistakes to avoid", "Real-world examples", "Key takeaways"], faqs: 6 },
+  comparison: { role: "an honest buyer-evaluation comparison that helps a ready-to-decide reader pick the right option", sections: ["TL;DR — the verdict", "Feature-by-feature comparison", "Pricing comparison", "When to choose each", "Switching & migration"], faqs: 5 },
+  faq: { role: "an answer-dense FAQ page that resolves buyer questions and is structured for AI answer engines", sections: ["Quick overview"], faqs: 10 },
+  resource: { role: "a practical resource (template, checklist, or toolkit) the reader can act on immediately", sections: ["What's inside", "How to use it", "A worked example", "Tips to get the most from it"], faqs: 4 },
+  local: { role: "a location-focused page that wins local intent and converts nearby buyers", sections: ["Services we offer locally", "Why choose a local provider", "Areas we cover", "What to expect"], faqs: 4 },
+};
+
+/** Rich-content + AI-search optimization rules shared by the browser and server drafters. */
+export const RICH_CONTENT_RULES = `Write deeply researched, genuinely useful content — the kind that ranks #1 on Google AND gets cited by AI answer engines (ChatGPT, Perplexity, Google AI Overviews). Rules:
+- Depth: 2-4 substantive paragraphs per section (long-form sections more). Be specific and concrete — real mechanisms, concrete examples, numbers/benchmarks, step-by-step detail, and trade-offs. No vague filler, no repetition, no marketing fluff.
+- Answer-first: open each section with a direct, self-contained, quotable answer to its implied question (this is what AI engines extract and cite), then expand with evidence and detail.
+- Structure for extraction: define key terms plainly; where it aids comprehension, embed lists or numbered steps INSIDE the body (use "- " bullets or "1. " steps on their own lines).
+- Topical completeness: cover the closely-related sub-topics and entities a reader and a search engine expect for this query, so the page is comprehensive, not shallow.
+- FAQs: each answer is a complete, standalone 2-4 sentence response (these power FAQPage rich results + AI answers).
+- Accuracy: never invent statistics, customers, prices, or claims not grounded in the brand context. Truthful and useful over promotional.`;
+
 export async function draftWithPuter(query: string, pageType: string, brandHint?: string): Promise<PuterDraft | null> {
   const chat = typeof window !== "undefined" ? window.puter?.ai?.chat : undefined;
   if (!chat) return null;
 
   const brand = brandHint?.trim() || "the customer's brand (no Brand Memory provided — write accurate, brand-neutral copy)";
-  const prompt = `You are an expert B2B SaaS SEO writer for ${brand}.
-Write a ${pageType} page targeting the search query "${query}".
+  const spec = PAGE_SPEC[pageType] ?? PAGE_SPEC.landing;
+  const arc = spec.sections.map((s, i) => `${i + 1}. ${s}`).join("\n");
+  const prompt = `You are a world-class B2B SaaS SEO + GEO (generative engine optimization) content writer for ${brand}.
+Write ${spec.role}. The page targets the search query "${query}".
+
+${RICH_CONTENT_RULES}
+
+Follow this section arc — adapt the exact heading wording to the brand and query, but keep the arc and order:
+${arc}
+
 Respond ONLY with minified JSON (no markdown, no code fences) matching exactly:
-{"metaTitle":"<=60 chars","metaDescription":"<=155 chars","heroCopy":"1-2 sentences","sections":[{"heading":"","body":""}],"faqs":[{"q":"","a":""}]}
-Use 3 sections and 2 faqs.`;
+{"metaTitle":"compelling, <=60 chars","metaDescription":"benefit-led, <=155 chars","heroCopy":"2-3 sentences that hook the reader and state the core value","sections":[{"heading":"","body":""}],"faqs":[{"q":"","a":""}]}
+Produce exactly ${spec.sections.length} sections (following the arc) and ${spec.faqs} faqs. Each section body must be rich — multiple paragraphs.`;
 
   try {
     const resp = await chat(prompt, { model: "gpt-4o-mini" });

@@ -9,6 +9,7 @@ import { LeadForm } from "@/components/feeds/lead-form";
 import { FeedTracker } from "@/components/feeds/feed-tracker";
 import { BrandHero } from "@/components/feeds/brand-hero";
 import { Infographic } from "@/components/feeds/infographic";
+import { RichText } from "@/components/feeds/rich-text";
 
 export const dynamic = "force-dynamic";
 
@@ -180,7 +181,9 @@ export default async function FeedPage({ params }: Params) {
             <div key={s.heading}>
               <section className="mt-8">
                 <h2 className="text-[20px] font-semibold tracking-[-0.01em] text-foreground">{s.heading}</h2>
-                <p className="mt-2 text-[15px] leading-relaxed text-foreground/80">{s.body}</p>
+                <div className="mt-2">
+                  <RichText text={s.body} />
+                </div>
               </section>
               {/* infographic sits after the first section, like a visual summary */}
               {i === 0 && page.infographic && <Infographic spec={page.infographic} />}

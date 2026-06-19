@@ -48,6 +48,7 @@ import { useAppFeedback } from "@/components/system/app-feedback";
 import { pageEngineApi, type RefreshRec } from "@/lib/page-engine-client";
 import { draftWithPuter } from "@/lib/puter-ai";
 import { PageComposer, type ComposerType } from "@/components/pages/page-composer";
+import { RichText } from "@/components/feeds/rich-text";
 
 const STATUS: Record<PageStatus, { label: string; cls: string }> = {
   draft: { label: "Draft", cls: "bg-muted text-muted-foreground" },
@@ -913,9 +914,9 @@ export function PagesView({
                           <textarea
                             value={sec.body}
                             onChange={(e) => setSection(i, { body: e.target.value })}
-                            rows={2}
-                            placeholder="Section body"
-                            className="mt-2 w-full resize-none rounded-lg border border-border bg-card px-2.5 py-1.5 text-[12.5px] outline-none focus:border-ring"
+                            rows={6}
+                            placeholder="Section body — paragraphs, and '- ' bullets or '1.' steps render as lists"
+                            className="mt-2 w-full resize-y rounded-lg border border-border bg-card px-2.5 py-1.5 text-[12.5px] leading-relaxed outline-none focus:border-ring"
                           />
                         </div>
                       ))}
@@ -964,7 +965,9 @@ export function PagesView({
                       {(current.sections ?? []).map((sec) => (
                         <div key={sec.heading} className="mt-3">
                           <div className="text-[13px] font-semibold text-foreground">{sec.heading}</div>
-                          <p className="mt-0.5 text-[13px] leading-relaxed text-muted-foreground">{sec.body}</p>
+                          <div className="mt-0.5">
+                            <RichText text={sec.body} dense />
+                          </div>
                         </div>
                       ))}
                       {(current.faqs ?? []).length > 0 && (
