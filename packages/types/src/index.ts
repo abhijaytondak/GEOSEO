@@ -621,6 +621,43 @@ export interface CompetitorAnalysis {
   generatedAt: ISODate;
 }
 
+/**
+ * Page-level competitor analysis — crawl a competitor's URL and surface what it
+ * targets, how it's structured, and exploitable weaknesses (Gushwork "Competitor
+ * Tracking" #3: which pages win + where they're vulnerable).
+ */
+export interface CompetitorPageStructure {
+  wordCount: number;
+  headings: number;
+  /** Top section headings (H2s), for at-a-glance structure. */
+  sections: string[];
+  images: number;
+  /** Page emits JSON-LD structured data. */
+  hasSchema: boolean;
+  /** Page has an FAQ section / FAQPage schema. */
+  hasFaq: boolean;
+  metaDescription: string;
+}
+
+export interface CompetitorPageAnalysis {
+  url: string;
+  /** False when the page couldn't be fetched (redirect/blocked/empty). */
+  crawled: boolean;
+  title: string;
+  structure: CompetitorPageStructure;
+  /** What the page targets / its angle. */
+  summary: string;
+  /** Why it ranks — its strengths. */
+  strengths: string[];
+  /** Exploitable gaps — how you can outrank it. */
+  vulnerabilities: string[];
+  /** Concrete "how to beat it" recommendation. */
+  recommendation: string;
+  /** LLM-enriched vs heuristic-only. */
+  source: "llm" | "heuristic";
+  generatedAt: ISODate;
+}
+
 /** A single auto-generated insight line on the brand scorecard. */
 export interface BrandScorecardItem {
   kind: "strength" | "weakness" | "action";
