@@ -328,6 +328,28 @@ export function PagesView({
     }
   }
 
+  // Auto-Updates (#8): manually re-draft a page via the LLM. Slug/URL/canonical are
+  // preserved and the prior content is snapshotted as a version (reversible via rollback).
+  async function regenerate(id: string) {
+    const ok = await confirm({
+      title: "Regenerate this page?",
+      message: "AI will re-draft the content from current Brand Memory. The URL is preserved and the existing version is saved, so you can roll back.",
+      confirmLabel: "Regenerate",
+    });
+    if (!ok) return;
+    setBusy(id);
+    try {
+      const updated = await pageEngineApi.regeneratePage(id);
+      setPages((arr) => arr.map((p) => (p.id === id ? updated : p)));
+      setVersions(await pageEngineApi.getPageVersions(id));
+      notify({ kind: "success", title: "Page regenerated", message: "Re-drafted from Brand Memory; URL unchanged." });
+    } catch (err) {
+      notify({ kind: "error", title: "Regenerate failed", message: err instanceof Error ? err.message : "Try again." });
+    } finally {
+      setBusy(null);
+    }
+  }
+
   async function generateFromOpportunity(opp: KeywordOpportunity) {
     setBusy(opp.id);
     try {
@@ -933,6 +955,9 @@ export function PagesView({
                 <span className="mr-auto text-[12px] text-muted-foreground tabular-nums">
                   {current.wordCount.toLocaleString()} words · BM v{current.brandMemoryVersion}
                 </span>
+                <Button variant="ghost" className="h-9" disabled={busy === current.id} onClick={() => regenerate(current.id)}>
+                  {busy === current.id ? <Loader2 className="size-4 animate-spin" /> : <RefreshCw className="size-4" />} Regenerate
+                </Button>
                 <Button variant="ghost" className="h-9" disabled={busy === current.id} onClick={() => duplicate(current.id)}>
                   <Copy className="size-4" /> Duplicate
                 </Button>

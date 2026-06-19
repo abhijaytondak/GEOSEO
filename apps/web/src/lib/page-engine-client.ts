@@ -182,6 +182,8 @@ export const pageEngineApi = {
   publishPage: (id: string) => send<GeneratedPage>("POST", `/pages/${id}/publish`),
   unpublishPage: (id: string) => send<GeneratedPage>("POST", `/pages/${id}/unpublish`),
   duplicatePage: (id: string) => send<GeneratedPage>("POST", `/pages/${id}/duplicate`),
+  // Auto-Updates (#8): re-draft via LLM preserving slug/URL + snapshot a version.
+  regeneratePage: (id: string) => send<GeneratedPage>("POST", `/pages/${id}/regenerate`),
   validatePage: (id: string) =>
     send<{ blockers: string[]; canPublish: boolean }>("POST", `/pages/${id}/validate`),
   crmSyncLead: (id: string) =>
