@@ -24,7 +24,12 @@ let providersP: Promise<{
 function resolveProviders() {
   if (!providersP) {
     providersP = (async () => {
-      if (resolveMode() === "demo") {
+      // Mock/sample SEO data (backlinks, rank, DA, impressions) is OPT-IN, gated by the
+      // same GEOSEO_DEMO_SEED flag as the page-engine fixtures. A live/hosted workspace
+      // (flag unset) gets HONEST empty/"connect a provider" data even in demo mode — no
+      // fabricated authority/backlinks/rankings shown to real users. Set the flag locally
+      // for a fully-populated demo UI.
+      if (resolveMode() === "demo" && process.env.GEOSEO_DEMO_SEED === "true") {
         const m = await import("./providers/demo.providers");
         return { seo: m.seoProvider, brand: m.brandSource, outreach: m.outreachDrafter };
       }

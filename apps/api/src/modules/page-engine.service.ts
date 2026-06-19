@@ -244,10 +244,14 @@ export class PageEngineStore implements OnModuleInit {
   /* ---- persistence: hydrate on boot (partitioned by tenant), write-through on mutate ---- */
   async onModuleInit() {
     const demo = resolveMode() === "demo";
+    // Demo fixtures (Northwind sample) are OPT-IN: only seed when GEOSEO_DEMO_SEED=true.
+    // Default off so a live/hosted workspace opened to real users starts EMPTY and never
+    // re-seeds dummy data on a restart (set the flag locally for a demo-able dev UI).
+    const seedDemo = demo && process.env.GEOSEO_DEMO_SEED === "true";
     if (!dbEnabled) {
       // No DB ⇒ pure in-memory (local/demo only; production fails closed in main.ts before
       // this runs). Demo gets fixtures for a usable UI; production never reaches here.
-      if (demo) await this.seedDemoData(DEFAULT_TENANT_ID);
+      if (seedDemo) await this.seedDemoData(DEFAULT_TENANT_ID);
       return;
     }
     try {
@@ -278,8 +282,8 @@ export class PageEngineStore implements OnModuleInit {
         this.seq = 100_000;
         this.vseq = verRows.length + 10_000;
         this.aseq = audRows.length + 10_000;
-      } else if (demo) {
-        // first boot, demo: seed fixtures into ws-default, then persist them to Supabase
+      } else if (seedDemo) {
+        // first boot, demo + opt-in: seed fixtures into ws-default, then persist them to Supabase
         await this.seedDemoData(DEFAULT_TENANT_ID);
         const s = this.st(DEFAULT_TENANT_ID);
         await Promise.all([
