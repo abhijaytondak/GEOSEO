@@ -10,14 +10,27 @@ import { cn } from "@/lib/utils";
 
 /** Self-contained BFF call (mirrors the pattern in opportunities-explorer / competitor view —
  *  keeps the static server route untouched and avoids threading the shared client). */
+class ApiError extends Error {
+  status: number;
+  constructor(message: string, status: number) {
+    super(message);
+    this.status = status;
+  }
+}
+
 async function apiJson<T>(method: string, path: string, body?: unknown): Promise<T> {
-  const res = await fetch(path, {
-    method,
-    headers: body ? { "content-type": "application/json" } : undefined,
-    body: body ? JSON.stringify(body) : undefined,
-  });
+  let res: Response;
+  try {
+    res = await fetch(path, {
+      method,
+      headers: body ? { "content-type": "application/json" } : undefined,
+      body: body ? JSON.stringify(body) : undefined,
+    });
+  } catch {
+    throw new ApiError("network", 0); // backend unreachable (offline / no host)
+  }
   const json = await res.json().catch(() => null);
-  if (!res.ok) throw new Error(json?.errors?.[0]?.message ?? json?.errors?.[0] ?? `Request failed (${res.status})`);
+  if (!res.ok) throw new ApiError(json?.errors?.[0]?.message ?? json?.errors?.[0] ?? `Request failed (${res.status})`, res.status);
   return (json?.data ?? json) as T;
 }
 
@@ -113,7 +126,19 @@ export function PageComposer({ topic, onTopicChange, pageType, onTypeChange, exi
       setTimeout(() => setStep("idle"), 1200);
     } catch (err) {
       setStep("idle");
-      notify({ kind: "error", title: "Generation failed", message: err instanceof Error ? err.message : "Try again." });
+      const status = err instanceof ApiError ? err.status : undefined;
+      // 0 = unreachable, 502/503 = the BFF couldn't reach the API (e.g. the hosted demo
+      // has no backend). Explain instead of showing a raw error.
+      const backendDown = status === 0 || status === 502 || status === 503;
+      if (backendDown) {
+        notify({
+          kind: "info",
+          title: "Backend not connected",
+          message: "Live AI generation needs the connected API, which isn't reachable here. It works in the full app (local or a hosted backend).",
+        });
+      } else {
+        notify({ kind: "error", title: "Generation failed", message: err instanceof Error ? err.message : "Try again." });
+      }
     }
   }
 
