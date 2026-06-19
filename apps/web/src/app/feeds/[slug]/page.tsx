@@ -10,84 +10,9 @@ import { FeedTracker } from "@/components/feeds/feed-tracker";
 import { BrandHero } from "@/components/feeds/brand-hero";
 import { Infographic } from "@/components/feeds/infographic";
 import { RichText } from "@/components/feeds/rich-text";
+import { themeStyle } from "@/lib/feed-theme";
 
 export const dynamic = "force-dynamic";
-
-type Rgb = { r: number; g: number; b: number };
-
-function hexToRgb(hex?: string): Rgb | null {
-  if (!hex) return null;
-  let h = hex.trim().replace(/^#/, "");
-  if (h.length === 3) h = h.split("").map((c) => c + c).join("");
-  if (h.length !== 6 || /[^0-9a-fA-F]/.test(h)) return null;
-  return { r: parseInt(h.slice(0, 2), 16), g: parseInt(h.slice(2, 4), 16), b: parseInt(h.slice(4, 6), 16) };
-}
-
-/** WCAG relative luminance (0 = black, 1 = white) — used to pick readable foregrounds. */
-function relLuminance({ r, g, b }: Rgb): number {
-  const f = (v: number) => {
-    const c = v / 255;
-    return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
-  };
-  return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b);
-}
-
-const toHex = (n: number) => Math.max(0, Math.min(255, Math.round(n))).toString(16).padStart(2, "0");
-/** Blend a→b by t (0..1), returning a hex string. */
-const mix = (a: Rgb, b: Rgb, t: number) =>
-  `#${toHex(a.r + (b.r - a.r) * t)}${toHex(a.g + (b.g - a.g) * t)}${toHex(a.b + (b.b - a.b) * t)}`;
-
-/**
- * Map a confirmed Site Theme Profile onto the design-system CSS variables so the
- * published page renders in the customer's own palette, radius, and font — native
- * to their brand, not the generic GEOSEO theme (PRD §7.3). The existing Tailwind
- * classes inherit these vars, so no per-element restyling is needed.
- *
- * Surface tokens (card/muted/border) are DERIVED from the background↔foreground
- * axis so contrast holds on BOTH light and dark customer themes — a dark site
- * previously got white cards/chips/borders (unreadable). We blend toward the text
- * color by small ratios to lift surfaces just off the background.
- */
-function themeStyle(t: SiteThemeProfile | null): React.CSSProperties | undefined {
-  if (!t) return undefined;
-  const c = t.colors ?? ({} as SiteThemeProfile["colors"]);
-  const v: Record<string, string> = {};
-  const bg = hexToRgb(c.background);
-  const fg = hexToRgb(c.foreground);
-
-  if (bg && fg) {
-    v["--background"] = c.background!;
-    v["--foreground"] = c.foreground!;
-    v["--card-foreground"] = c.foreground!;
-    // Lift surfaces off the background toward the text color — works dark or light.
-    v["--card"] = mix(bg, fg, 0.05);
-    v["--muted"] = mix(bg, fg, 0.1);
-    v["--muted-foreground"] = mix(bg, fg, 0.55);
-    v["--border"] = mix(bg, fg, 0.14);
-    v["--border-strong"] = mix(bg, fg, 0.22);
-  } else {
-    // Partial palette — set whatever single tokens we have.
-    if (c.background) v["--background"] = c.background;
-    if (c.foreground) {
-      v["--foreground"] = c.foreground;
-      v["--card-foreground"] = c.foreground;
-    }
-    if (c.border) {
-      v["--border"] = c.border;
-      v["--border-strong"] = c.border;
-    }
-  }
-
-  if (c.primary) {
-    v["--brand"] = c.primary;
-    const p = hexToRgb(c.primary);
-    // Readable text/icon color on brand-filled chips & buttons.
-    if (p) v["--brand-foreground"] = relLuminance(p) > 0.5 ? "#0a0a0a" : "#ffffff";
-  }
-  if (t.layout?.radius) v["--radius"] = `${t.layout.radius}px`;
-  if (t.typography?.bodyFont) v["fontFamily"] = `'${t.typography.bodyFont}', system-ui, -apple-system, sans-serif`;
-  return v as React.CSSProperties;
-}
 
 type Params = { params: Promise<{ slug: string }> };
 

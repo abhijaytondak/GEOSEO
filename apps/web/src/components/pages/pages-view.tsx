@@ -701,10 +701,10 @@ export function PagesView({
 
       {/* detail / editor drawer */}
       <Sheet open={openId !== null} onOpenChange={(o) => !o && closePage()}>
-        <SheetContent side="right" className="w-full gap-0 overflow-y-auto p-0 sm:max-w-2xl">
+        <SheetContent side="right" className="!w-full gap-0 overflow-y-auto p-0 !max-w-none">
           {current && (
             <>
-              <SheetHeader className="border-b border-border px-6 pb-4 pt-6">
+              <SheetHeader className="mx-auto w-full max-w-5xl border-b border-border px-6 pb-4 pt-6">
                 <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.06em] text-brand">
                   <FileText className="size-3.5" />
                   {current.pageType} page
@@ -726,7 +726,7 @@ export function PagesView({
                 </SheetDescription>
               </SheetHeader>
 
-              <div className="space-y-5 px-6 py-5">
+              <div className="mx-auto w-full max-w-5xl space-y-5 px-6 py-5 lg:py-8">
                 {/* lifecycle pipeline + next-step hint — orients the user right after generating */}
                 {(() => {
                   const STAGES = [
@@ -1158,7 +1158,7 @@ export function PagesView({
               </div>
 
               {/* action footer */}
-              <div className="sticky bottom-0 flex items-center gap-2 border-t border-border bg-card/95 px-6 py-4 backdrop-blur">
+              <div className="sticky bottom-0 mx-auto flex w-full max-w-5xl items-center gap-2 border-t border-border bg-card/95 px-6 py-4 backdrop-blur">
                 <span className="mr-auto text-[12px] text-muted-foreground tabular-nums">
                   {current.wordCount.toLocaleString()} words · BM v{current.brandMemoryVersion}
                 </span>
