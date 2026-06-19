@@ -17,7 +17,28 @@ export class JobQueue implements OnModuleDestroy {
   private connection: Redis | null = null;
   private queue: Queue | null = null;
   private worker: Worker | null = null;
+  private workerErrors = 0;
+  private tripped = false;
   active = false;
+
+  /** Circuit-breaker: a persistently-broken Redis (e.g. Upstash over its request quota)
+   *  makes the worker re-emit "error" on every poll. Trip after a few errors → tear the
+   *  worker/queue down and fall back to in-memory, instead of flooding the log and burning
+   *  more requests against a dead Redis. */
+  private tripBreaker(): void {
+    if (this.tripped) return;
+    this.tripped = true;
+    this.active = false;
+    this.logger.error(
+      "Redis queue disabled after repeated errors — falling back to in-memory jobs. " +
+        "Set ALLOW_INMEMORY_QUEUE=true (or fix REDIS_URL) to silence this.",
+    );
+    void this.worker?.close().catch(() => {});
+    void this.queue?.close().catch(() => {});
+    void this.connection?.quit().catch(() => {});
+    this.worker = null;
+    this.queue = null;
+  }
 
   async start(handler: (jobRunId: string) => Promise<void>): Promise<void> {
     const url = process.env.REDIS_URL;
@@ -58,6 +79,17 @@ export class JobQueue implements OnModuleDestroy {
       this.worker.on("failed", (job, err) =>
         this.logger.error(`job ${job?.id} failed: ${err.message}`),
       );
+      // CRITICAL: BullMQ's Worker/Queue are EventEmitters that emit "error" for internal
+      // failures (e.g. the blocking-poll connection, or Upstash replying "max requests limit
+      // exceeded"). An "error" event with NO listener throws and crashes the whole process —
+      // which is exactly how a metered/over-quota Redis took the API down. Listen so a broken
+      // Redis only logs + degrades to the in-memory path, never crashes (per this file's contract).
+      this.worker.on("error", (e) => {
+        this.workerErrors += 1;
+        if (this.workerErrors <= 3) this.logger.error(`worker: ${e.message}`);
+        if (this.workerErrors >= 5) this.tripBreaker();
+      });
+      this.queue.on("error", (e) => this.logger.error(`queue: ${e.message}`));
       // Surface connection errors without crashing the API.
       this.connection.on("error", (e) => this.logger.error(`redis: ${e.message}`));
       this.active = true;
