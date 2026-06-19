@@ -1,8 +1,9 @@
-import { Controller, Get, Inject, Post, Req } from "@nestjs/common";
+import { BadRequestException, Body, Controller, Get, Inject, Post, Req } from "@nestjs/common";
 import { ApiTags } from "@nestjs/swagger";
 import { BrandAnalysisStore } from "./brand-analysis.service";
 import { AuditStore } from "./audit.service";
 import { resolveTenantId, type TenantRequest } from "../common/tenant";
+import { analyzeCompetitorPage } from "../llm/competitor-page";
 
 /**
  * Brand auto-analysis surface — powers the dashboard Scorecard and the Competitors view.
@@ -33,5 +34,21 @@ export class BrandAnalysisController {
   @Get("competitors")
   async competitors(@Req() req: TenantRequest) {
     return { competitor: await this.analysis.competitors(resolveTenantId(req), new Date().toISOString()) };
+  }
+
+  /**
+   * Page-level competitor analysis (Competitor Tracking #3): crawl a competitor
+   * URL and surface its structure + exploitable vulnerabilities. Stateless
+   * (non-persisted) on-demand analysis. SSRF/invalid URLs → 400.
+   */
+  @Post("competitor-page")
+  async competitorPage(@Body() body: { url?: string }) {
+    const url = body?.url?.trim();
+    if (!url) throw new BadRequestException("url is required");
+    try {
+      return { page: await analyzeCompetitorPage(url) };
+    } catch (e) {
+      throw new BadRequestException(e instanceof Error ? e.message : "Could not analyse this URL");
+    }
   }
 }
