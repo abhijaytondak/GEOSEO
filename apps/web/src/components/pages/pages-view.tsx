@@ -47,6 +47,7 @@ import { cn } from "@/lib/utils";
 import { useAppFeedback } from "@/components/system/app-feedback";
 import { pageEngineApi, type RefreshRec } from "@/lib/page-engine-client";
 import { draftWithPuter } from "@/lib/puter-ai";
+import { PageComposer, type ComposerType } from "@/components/pages/page-composer";
 
 const STATUS: Record<PageStatus, { label: string; cls: string }> = {
   draft: { label: "Draft", cls: "bg-muted text-muted-foreground" },
@@ -103,6 +104,36 @@ export function PagesView({
   const [previewDevice, setPreviewDevice] = useState<"desktop" | "mobile">("desktop");
   const [diffId, setDiffId] = useState<string | null>(null);
   const [fidelity, setFidelity] = useState<ThemeFidelity | null>(null);
+  // Pages regenerated this session clear from "Needs Attention" (the staleness is resolved).
+  const [refreshedIds, setRefreshedIds] = useState<Set<string>>(() => new Set());
+  // "Create a page" composer (lifted so the backlog's "Use" can prefill it).
+  const [topic, setTopic] = useState("");
+  const [composerType, setComposerType] = useState<ComposerType>("auto");
+  const [ideasOpen, setIdeasOpen] = useState(false);
+
+  function handleGenerated(page: GeneratedPage) {
+    setPages((arr) => [page, ...arr.filter((p) => p.id !== page.id)]);
+    openPage(page.id);
+  }
+  function handleNewOpps(fresh: KeywordOpportunity[]) {
+    setOpps((arr) => {
+      const have = new Set(arr.map((o) => o.id));
+      return [...fresh.filter((o) => !have.has(o.id)), ...arr];
+    });
+  }
+  // Prefill the composer from a discovered opportunity (intent → page type).
+  function applyOpportunityToComposer(o: KeywordOpportunity) {
+    const map: Record<string, ComposerType> = {
+      comparison: "comparison",
+      informational: "guide",
+      commercial: "landing",
+      transactional: "landing",
+    };
+    setTopic(o.query);
+    setComposerType(map[o.intent] ?? "auto");
+    setIdeasOpen(false);
+    if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
+  }
 
   // Workspace theme-fidelity score — how natively published pages render to the customer site (PRD §13).
   useEffect(() => {
@@ -342,6 +373,7 @@ export function PagesView({
       const updated = await pageEngineApi.regeneratePage(id);
       setPages((arr) => arr.map((p) => (p.id === id ? updated : p)));
       setVersions(await pageEngineApi.getPageVersions(id));
+      setRefreshedIds((s) => new Set(s).add(id));
       notify({ kind: "success", title: "Page regenerated", message: "Re-drafted from Brand Memory; URL unchanged." });
     } catch (err) {
       notify({ kind: "error", title: "Regenerate failed", message: err instanceof Error ? err.message : "Try again." });
@@ -395,6 +427,17 @@ export function PagesView({
         </a>
       )}
 
+      {/* ✦ Create a page — the generator's focal point */}
+      <PageComposer
+        topic={topic}
+        onTopicChange={setTopic}
+        pageType={composerType}
+        onTypeChange={setComposerType}
+        existingOppIds={opps.map((o) => o.id)}
+        onGenerated={handleGenerated}
+        onNewOpps={handleNewOpps}
+      />
+
       {/* KPI strip */}
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         {[
@@ -421,14 +464,14 @@ export function PagesView({
       </div>
 
       {/* refresh recommendations (monitoring · PRD §7.8 / §9.1) */}
-      {recommendations.length > 0 && (
+      {recommendations.filter((r) => !refreshedIds.has(r.pageId)).length > 0 && (
         <Panel
           title="Needs Attention"
-          description="Monitoring flagged these published pages"
+          description="Monitoring flagged these published pages — regenerate to refresh them"
           bodyClassName="p-0"
         >
           <div className="divide-y divide-border">
-            {recommendations.map((r) => (
+            {recommendations.filter((r) => !refreshedIds.has(r.pageId)).map((r) => (
               <div key={r.pageId} className="flex items-center gap-3 px-5 py-3">
                 <span
                   className={cn(
@@ -442,9 +485,12 @@ export function PagesView({
                   <div className="truncate text-[13px] font-semibold text-foreground">{r.title}</div>
                   <div className="truncate text-[12px] text-muted-foreground">{r.reason}</div>
                 </div>
-                <Button size="sm" variant="outline" className="h-8 rounded-full px-3" onClick={() => openPage(r.pageId)}>
-                  <RefreshCw className="size-3.5" />
+                <Button size="sm" variant="ghost" className="h-8 rounded-full px-3" onClick={() => openPage(r.pageId)}>
                   Review
+                </Button>
+                <Button size="sm" variant="outline" className="h-8 shrink-0 rounded-full px-3" disabled={busy === r.pageId} onClick={() => regenerate(r.pageId)}>
+                  {busy === r.pageId ? <Loader2 className="size-3.5 animate-spin" /> : <RefreshCw className="size-3.5" />}
+                  Regenerate
                 </Button>
               </div>
             ))}
@@ -452,94 +498,160 @@ export function PagesView({
         </Panel>
       )}
 
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
-        {/* generated pages */}
-        <Panel
-          title="Generated Pages"
-          description="Research → blueprint → draft → publish"
-          className="lg:col-span-2"
-          bodyClassName="p-0"
-        >
-          <div className="divide-y divide-border">
+      {/* your pages — visual cards */}
+      <Panel title="Your pages" description="Every page you generate, ready to review and publish" bodyClassName="p-0">
+        {pages.length === 0 ? (
+          <div className="flex flex-col items-center gap-2 px-6 py-14 text-center">
+            <span className="inline-flex size-10 items-center justify-center rounded-full bg-brand/10 text-brand">
+              <Sparkles className="size-5" />
+            </span>
+            <p className="text-[14px] font-semibold text-foreground">No pages yet</p>
+            <p className="max-w-xs text-[12.5px] text-muted-foreground">
+              Describe a topic in <span className="font-medium text-foreground">Create a page</span> above to generate your first one.
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 gap-4 p-5 sm:grid-cols-2 xl:grid-cols-3">
             {pages.map((p) => {
               const s = seoScore(p);
+              const st = STATUS[p.status] ?? STATUS.draft;
               return (
-                <div key={p.id} className="flex items-center gap-3 px-5 py-3.5">
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="truncate text-[13.5px] font-semibold text-foreground">{p.title}</span>
-                      <span className={cn("shrink-0 rounded-full px-1.5 py-0.5 text-[10.5px] font-semibold", (STATUS[p.status] ?? STATUS.draft).cls)}>
-                        {(STATUS[p.status] ?? STATUS.draft).label}
-                      </span>
-                    </div>
-                    <div className="mt-0.5 flex items-center gap-2 truncate text-[12px] text-muted-foreground">
-                      <span className="capitalize">{p.pageType}</span>
-                      <span>·</span>
+                <div
+                  key={p.id}
+                  className="group flex flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-card transition-shadow hover:shadow-md"
+                >
+                  {/* themed hero strip */}
+                  <button onClick={() => openPage(p.id)} className="relative block h-20 w-full overflow-hidden text-left">
+                    {p.heroImageUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element -- generated/CDN image, not a static asset
+                      <img src={p.heroImageUrl} alt="" className="size-full object-cover" />
+                    ) : (
+                      <div className="size-full bg-gradient-to-br from-brand/25 via-brand/8 to-card" />
+                    )}
+                    <span className="absolute left-2.5 top-2.5 rounded-full bg-card/85 px-2 py-0.5 text-[10.5px] font-semibold capitalize text-foreground backdrop-blur">
+                      {p.pageType}
+                    </span>
+                    <span className={cn("absolute right-2.5 top-2.5 rounded-full px-2 py-0.5 text-[10.5px] font-semibold", st.cls)}>
+                      {st.label}
+                    </span>
+                  </button>
+                  {/* body */}
+                  <button onClick={() => openPage(p.id)} className="flex-1 px-4 pt-3 text-left">
+                    <div className="line-clamp-2 text-[13.5px] font-semibold leading-snug text-foreground">{p.title}</div>
+                    <div className="mt-1 flex items-center gap-1.5 truncate text-[11.5px] text-muted-foreground">
                       <span className="truncate">{p.slug}</span>
                       <span>·</span>
-                      <span className={cn(s.pass === s.total ? "text-positive" : "text-warning")}>
+                      <span className={cn("shrink-0 tabular-nums", s.total > 0 && s.pass === s.total ? "text-positive" : "text-warning")}>
                         SEO {s.pass}/{s.total}
                       </span>
                     </div>
+                  </button>
+                  {/* actions */}
+                  <div className="flex items-center gap-1.5 px-4 pb-3 pt-2.5">
+                    {p.status === "published" && p.publishedUrl ? (
+                      <a
+                        href={p.publishedUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className={cn(buttonVariants({ variant: "outline", size: "sm" }), "h-8 flex-1 rounded-full")}
+                      >
+                        View live <ExternalLink className="size-3.5" />
+                      </a>
+                    ) : (
+                      <Button size="sm" variant="outline" className="h-8 flex-1 rounded-full" onClick={() => openPage(p.id)}>
+                        <Eye className="size-3.5" /> Review
+                      </Button>
+                    )}
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="size-8 shrink-0 rounded-full p-0"
+                      title="Regenerate from Brand Memory"
+                      aria-label="Regenerate"
+                      disabled={busy === p.id}
+                      onClick={() => regenerate(p.id)}
+                    >
+                      {busy === p.id ? <Loader2 className="size-3.5 animate-spin" /> : <RefreshCw className="size-3.5" />}
+                    </Button>
                   </div>
-                  <Button size="sm" variant="outline" className="h-8 rounded-full px-3" onClick={() => openPage(p.id)}>
-                    <Eye className="size-3.5" />
-                    Review
-                  </Button>
                 </div>
               );
             })}
           </div>
-        </Panel>
+        )}
+      </Panel>
 
-        {/* opportunity backlog → generate */}
-        <Panel title="Opportunity Backlog" description="Discover buyer-intent keywords, then draft">
-          {/* seed-driven discovery */}
-          <div className="mb-3 flex gap-2">
-            <input
-              value={seeds}
-              onChange={(e) => setSeeds(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && runDiscover()}
-              placeholder="Seed topics, comma-separated…"
-              className="h-9 flex-1 rounded-lg border border-border bg-surface-sunken px-3 text-[13px] outline-none focus:border-ring focus:bg-card"
-            />
-            <Button size="sm" className="h-9 shrink-0 rounded-full px-3" disabled={discovering || !seeds.trim()} onClick={runDiscover}>
-              {discovering ? <Loader2 className="size-3.5 animate-spin" /> : <Sparkles className="size-3.5" />}
-              Discover
-            </Button>
-          </div>
-          <div className="space-y-2.5">
-            {newOpps.length === 0 && (
-              <p className="py-6 text-center text-[13px] text-muted-foreground">All caught up — no new opportunities.</p>
-            )}
-            {newOpps.map((o) => (
-              <div key={o.id} className="rounded-xl border border-border bg-surface-sunken p-3">
-                <div className="flex items-center gap-2">
-                  <span className="truncate text-[13px] font-semibold text-foreground">{o.query}</span>
-                  <span className={cn("shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-semibold capitalize", INTENT_CLS[o.intent] ?? "bg-muted text-muted-foreground")}>
-                    {o.intent}
-                  </span>
-                </div>
-                <div className="mt-1 flex items-center gap-2 text-[11.5px] text-muted-foreground tabular-nums">
-                  <span>Vol {o.volume.toLocaleString()}</span>
-                  <span>·</span>
-                  <span>KD {o.difficulty}</span>
-                  <span>·</span>
-                  <span>Value {o.commercialValue}</span>
-                </div>
-                <Button
-                  size="sm"
-                  className="mt-2.5 h-8 w-full rounded-full"
-                  disabled={busy === o.id}
-                  onClick={() => generateFromOpportunity(o)}
-                >
-                  {busy === o.id ? <Loader2 className="size-3.5 animate-spin" /> : <Sparkles className="size-3.5" />}
-                  Generate draft
-                </Button>
+      {/* need ideas? — discovery demoted to an optional assist */}
+      <div className="rounded-2xl border border-border bg-card shadow-card">
+        <button
+          onClick={() => setIdeasOpen((v) => !v)}
+          aria-expanded={ideasOpen}
+          className="flex w-full items-center gap-2 px-5 py-3.5 text-left"
+        >
+          <Sparkles className="size-4 text-muted-foreground" />
+          <span className="text-[13.5px] font-semibold text-foreground">Need ideas?</span>
+          <span className="text-[12.5px] text-muted-foreground">Discover buyer-intent keywords to generate from</span>
+          <ArrowRight className={cn("ml-auto size-4 text-muted-foreground transition-transform", ideasOpen && "rotate-90")} />
+        </button>
+        {ideasOpen && (
+          <div className="border-t border-border p-5">
+            <div className="mb-3 flex gap-2">
+              <input
+                value={seeds}
+                onChange={(e) => setSeeds(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && runDiscover()}
+                placeholder="Seed topics, comma-separated…"
+                className="h-9 flex-1 rounded-lg border border-border bg-surface-sunken px-3 text-[13px] outline-none focus:border-ring focus:bg-card"
+              />
+              <Button size="sm" className="h-9 shrink-0 rounded-full px-3" disabled={discovering || !seeds.trim()} onClick={runDiscover}>
+                {discovering ? <Loader2 className="size-3.5 animate-spin" /> : <Sparkles className="size-3.5" />}
+                Discover
+              </Button>
+            </div>
+            {newOpps.length === 0 ? (
+              <p className="py-6 text-center text-[13px] text-muted-foreground">No open opportunities — discover some above.</p>
+            ) : (
+              <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+                {newOpps.map((o) => (
+                  <div key={o.id} className="rounded-xl border border-border bg-surface-sunken p-3">
+                    <div className="flex items-center gap-2">
+                      <span className="truncate text-[13px] font-semibold text-foreground">{o.query}</span>
+                      <span className={cn("shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-semibold capitalize", INTENT_CLS[o.intent] ?? "bg-muted text-muted-foreground")}>
+                        {o.intent}
+                      </span>
+                    </div>
+                    <div className="mt-1 flex items-center gap-2 text-[11.5px] text-muted-foreground tabular-nums">
+                      <span>Vol {o.volume.toLocaleString()}</span>
+                      <span>·</span>
+                      <span>KD {o.difficulty}</span>
+                      <span>·</span>
+                      <span>Value {o.commercialValue}</span>
+                    </div>
+                    <div className="mt-2.5 flex gap-1.5">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-8 flex-1 rounded-full"
+                        onClick={() => applyOpportunityToComposer(o)}
+                      >
+                        Use as topic
+                      </Button>
+                      <Button
+                        size="sm"
+                        className="h-8 flex-1 rounded-full"
+                        disabled={busy === o.id}
+                        onClick={() => generateFromOpportunity(o)}
+                      >
+                        {busy === o.id ? <Loader2 className="size-3.5 animate-spin" /> : <Sparkles className="size-3.5" />}
+                        Generate
+                      </Button>
+                    </div>
+                  </div>
+                ))}
               </div>
-            ))}
+            )}
           </div>
-        </Panel>
+        )}
       </div>
 
       {/* detail / editor drawer */}
