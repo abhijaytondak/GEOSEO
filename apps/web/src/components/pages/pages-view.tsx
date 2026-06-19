@@ -110,6 +110,7 @@ export function PagesView({
   const [topic, setTopic] = useState("");
   const [composerType, setComposerType] = useState<ComposerType>("auto");
   const [ideasOpen, setIdeasOpen] = useState(false);
+  const [pageFilter, setPageFilter] = useState<PageStatus | "all">("all");
 
   function handleGenerated(page: GeneratedPage) {
     setPages((arr) => [page, ...arr.filter((p) => p.id !== page.id)]);
@@ -511,8 +512,48 @@ export function PagesView({
             </p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 gap-4 p-5 sm:grid-cols-2 xl:grid-cols-3">
-            {pages.map((p) => {
+          <>
+            {/* status filters */}
+            <div className="flex flex-wrap items-center gap-1.5 border-b border-border px-5 py-3">
+              {([
+                { key: "all", label: "All" },
+                { key: "published", label: "Published" },
+                { key: "draft", label: "Draft" },
+                { key: "in-review", label: "In review" },
+                { key: "approved", label: "Approved" },
+                { key: "needs-refresh", label: "Needs refresh" },
+              ] as const).map((f) => {
+                const n = f.key === "all" ? pages.length : pages.filter((p) => p.status === f.key).length;
+                if (n === 0 && f.key !== "all") return null;
+                const active = pageFilter === f.key;
+                return (
+                  <button
+                    key={f.key}
+                    onClick={() => setPageFilter(f.key)}
+                    aria-pressed={active}
+                    className={cn(
+                      "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[12px] font-medium transition-colors",
+                      active ? "border-brand/40 bg-brand/10 text-brand" : "border-border bg-card text-muted-foreground hover:text-foreground",
+                    )}
+                  >
+                    {f.label}
+                    <span className={cn("rounded-full px-1.5 text-[10.5px] tabular-nums", active ? "bg-brand/15 text-brand" : "bg-muted text-muted-foreground")}>{n}</span>
+                  </button>
+                );
+              })}
+            </div>
+            {(() => {
+              const filtered = pageFilter === "all" ? pages : pages.filter((p) => p.status === pageFilter);
+              if (filtered.length === 0) {
+                return (
+                  <p className="px-6 py-12 text-center text-[13px] text-muted-foreground">
+                    No {(STATUS[pageFilter as PageStatus]?.label ?? "matching").toLowerCase()} pages.
+                  </p>
+                );
+              }
+              return (
+                <div className="grid grid-cols-1 gap-4 p-5 sm:grid-cols-2 xl:grid-cols-3">
+                  {filtered.map((p) => {
               const s = seoScore(p);
               const st = STATUS[p.status] ?? STATUS.draft;
               return (
@@ -576,8 +617,11 @@ export function PagesView({
                   </div>
                 </div>
               );
-            })}
-          </div>
+                  })}
+                </div>
+              );
+            })()}
+          </>
         )}
       </Panel>
 
