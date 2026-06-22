@@ -310,6 +310,22 @@ export class PagesController {
     return { job, page };
   }
 
+  /** Keyword-aware rewrite — add target keywords, the LLM re-drafts weaving them in.
+   *  Async (poll the GET below); shares the regen-job store. The review loop's core. */
+  @Post(":id/rewrite-async")
+  startRewrite(@Req() req: TenantRequest, @Param("id") id: string, @Body() body: { keywords?: string[] }) {
+    const keywords = Array.isArray(body?.keywords) ? body.keywords.filter((k) => typeof k === "string") : [];
+    return { job: this.store.startRewrite(resolveTenantId(req), id, keywords) };
+  }
+
+  @Get("rewrite-async/:jobId")
+  rewriteStatus(@Req() req: TenantRequest, @Param("jobId") jobId: string) {
+    const job = this.store.getRegenJob(jobId);
+    if (!job) throw new NotFoundException(`Rewrite job ${jobId} not found`);
+    const page = job.status === "completed" ? this.store.getPage(resolveTenantId(req), job.pageId) : undefined;
+    return { job, page };
+  }
+
   @Put(":id")
   update(@Req() req: TenantRequest, @Param("id") id: string, @Body(validateBody(PageEditSchema)) body: PageEdit) {
     return this.must(this.store.updatePage(resolveTenantId(req), id, body ?? {}), id);

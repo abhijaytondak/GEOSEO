@@ -49,6 +49,7 @@ import { pageEngineApi, type RefreshRec } from "@/lib/page-engine-client";
 import { draftWithPuter } from "@/lib/puter-ai";
 import { PageComposer, type ComposerType } from "@/components/pages/page-composer";
 import { RichText } from "@/components/feeds/rich-text";
+import { KeywordReview } from "@/components/pages/keyword-review";
 
 const STATUS: Record<PageStatus, { label: string; cls: string }> = {
   draft: { label: "Draft", cls: "bg-muted text-muted-foreground" },
@@ -105,6 +106,7 @@ export function PagesView({
   const [previewDevice, setPreviewDevice] = useState<"desktop" | "mobile">("desktop");
   const [diffId, setDiffId] = useState<string | null>(null);
   const [fidelity, setFidelity] = useState<ThemeFidelity | null>(null);
+  const [highlightKw, setHighlightKw] = useState(false);
   // Pages regenerated this session clear from "Needs Attention" (the staleness is resolved).
   const [refreshedIds, setRefreshedIds] = useState<Set<string>>(() => new Set());
   // "Create a page" composer (lifted so the backlog's "Use" can prefill it).
@@ -784,6 +786,18 @@ export function PagesView({
                   );
                 })()}
 
+                {/* keyword analysis + add-keywords → LLM rewrite (the review core) */}
+                <KeywordReview
+                  page={current}
+                  onRewritten={(p) => {
+                    setPages((arr) => arr.map((x) => (x.id === p.id ? p : x)));
+                    pageEngineApi.getPageVersions(p.id).then(setVersions).catch(() => {});
+                  }}
+                  highlightOn={highlightKw}
+                  onToggleHighlight={() => setHighlightKw((v) => !v)}
+                  notify={notify}
+                />
+
                 {/* SEO checks */}
                 <section>
                   <h3 className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">SEO validation</h3>
@@ -975,7 +989,7 @@ export function PagesView({
                         <div key={sec.heading} className="mt-3">
                           <div className="text-[13px] font-semibold text-foreground">{sec.heading}</div>
                           <div className="mt-0.5">
-                            <RichText text={sec.body} dense />
+                            <RichText text={sec.body} dense highlight={highlightKw ? current.targetKeywords : undefined} />
                           </div>
                         </div>
                       ))}

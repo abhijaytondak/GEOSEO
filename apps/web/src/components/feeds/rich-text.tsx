@@ -47,16 +47,32 @@ function parseBlocks(text: string): Block[] {
   return blocks;
 }
 
-/** Inline emphasis: **bold** → <strong>. Splits a string into React nodes. */
-function inline(text: string, keyPrefix: string): React.ReactNode[] {
+const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+/** Wrap any of `highlight` keyword phrases found in `text` in <mark> (case-insensitive). */
+function markKeywords(text: string, highlight: string[] | undefined, keyPrefix: string): React.ReactNode[] {
+  const terms = (highlight ?? []).map((t) => t.trim()).filter((t) => t.length >= 2);
+  if (!terms.length) return [text];
+  const re = new RegExp(`(${terms.map(escapeRe).join("|")})`, "gi");
+  return text.split(re).map((part, i) =>
+    re.test(part) && terms.some((t) => t.toLowerCase() === part.toLowerCase())
+      ? <mark key={`${keyPrefix}-h${i}`} className="rounded bg-brand/20 px-0.5 font-medium text-brand">{part}</mark>
+      : part,
+  );
+}
+
+/** Inline emphasis: **bold** → <strong>, plus optional keyword highlighting. */
+function inline(text: string, keyPrefix: string, highlight?: string[]): React.ReactNode[] {
   return text.split(/(\*\*[^*]+\*\*)/g).map((part, i) => {
     const m = part.match(/^\*\*([^*]+)\*\*$/);
-    return m ? <strong key={`${keyPrefix}-${i}`}>{m[1]}</strong> : <span key={`${keyPrefix}-${i}`}>{part}</span>;
+    if (m) return <strong key={`${keyPrefix}-${i}`}>{m[1]}</strong>;
+    return <span key={`${keyPrefix}-${i}`}>{markKeywords(part, highlight, `${keyPrefix}-${i}`)}</span>;
   });
 }
 
-/** `dense` = the in-app editor preview (smaller, muted); default = the public /feeds page. */
-export function RichText({ text, dense = false }: { text: string; dense?: boolean }) {
+/** `dense` = the in-app editor preview (smaller, muted); default = the public /feeds page.
+ *  `highlight` = keyword phrases to <mark> in the body (review "highlight keywords" mode). */
+export function RichText({ text, dense = false, highlight }: { text: string; dense?: boolean; highlight?: string[] }) {
   const blocks = parseBlocks(text);
   if (blocks.length === 0) return null;
   const txt = dense ? "text-[13px] leading-relaxed text-muted-foreground" : "text-[15px] leading-relaxed text-foreground/80";
@@ -67,7 +83,7 @@ export function RichText({ text, dense = false }: { text: string; dense?: boolea
           return (
             <ul key={i} className={`list-disc space-y-1 pl-5 ${txt}`}>
               {b.items.map((it, j) => (
-                <li key={j}>{inline(it, `${i}-${j}`)}</li>
+                <li key={j}>{inline(it, `${i}-${j}`, highlight)}</li>
               ))}
             </ul>
           );
@@ -75,13 +91,13 @@ export function RichText({ text, dense = false }: { text: string; dense?: boolea
           return (
             <ol key={i} className={`list-decimal space-y-1 pl-5 ${txt}`}>
               {b.items.map((it, j) => (
-                <li key={j}>{inline(it, `${i}-${j}`)}</li>
+                <li key={j}>{inline(it, `${i}-${j}`, highlight)}</li>
               ))}
             </ol>
           );
         return (
           <p key={i} className={txt}>
-            {inline(b.items.join(" "), `${i}`)}
+            {inline(b.items.join(" "), `${i}`, highlight)}
           </p>
         );
       })}

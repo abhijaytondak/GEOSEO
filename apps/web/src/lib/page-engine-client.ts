@@ -202,6 +202,14 @@ export const pageEngineApi = {
       `/pages/regenerate-async/${jobId}`,
       () => ({ job: { id: jobId, status: "failed", error: "offline" } }),
     ),
+  // Keyword-aware rewrite — add target keywords, LLM re-drafts weaving them in. Async + poll.
+  startRewrite: (id: string, keywords: string[]) =>
+    send<{ job: { id: string; status: string } }>("POST", `/pages/${id}/rewrite-async`, { keywords }).then((r) => r.job),
+  getRewriteJob: (jobId: string) =>
+    get<{ job: { id: string; status: string; error?: string }; page?: GeneratedPage }>(
+      `/pages/rewrite-async/${jobId}`,
+      () => ({ job: { id: jobId, status: "failed", error: "offline" } }),
+    ),
   validatePage: (id: string) =>
     send<{ blockers: string[]; canPublish: boolean }>("POST", `/pages/${id}/validate`),
   crmSyncLead: (id: string) =>

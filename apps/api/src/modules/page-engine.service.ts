@@ -951,6 +951,71 @@ export class PageEngineStore implements OnModuleInit {
     return p;
   }
 
+  /** Keyword-aware rewrite: merge new target keywords, then re-draft the page via the LLM
+   *  instructed to weave them in naturally (no stuffing). Preserves slug/URL + snapshots a
+   *  version. The heart of the review loop: add keywords → rewrite in place. */
+  async rewritePage(tenantId: string, pageId: string, addKeywords: string[]): Promise<GeneratedPage | undefined> {
+    const p = this.st(tenantId).pages.find((x) => x.id === pageId);
+    if (!p) return undefined;
+    const clean = [...new Set([...(p.targetKeywords ?? []), ...addKeywords.map((k) => k.trim()).filter(Boolean)])];
+    p.targetKeywords = clean;
+    const query = p.targetKeywords[0] ?? p.title.toLowerCase();
+    const base = (await this.brandHint(tenantId)) ?? "";
+    const kwHint =
+      `${base}\nTarget keywords to weave in naturally across headings and body (do NOT keyword-stuff; keep it readable and useful): ` +
+      clean.join(", ") + ".";
+    const ai = await draftPageContent(query, p.pageType, kwHint.trim());
+    if (ai) {
+      if (ai.metaTitle) p.metaTitle = ai.metaTitle;
+      if (ai.metaDescription) p.metaDescription = ai.metaDescription;
+      if (ai.heroCopy) p.heroCopy = ai.heroCopy;
+      if (ai.sections?.length) p.sections = ai.sections;
+      if (ai.faqs?.length) p.faqs = ai.faqs;
+      p.schemaJson = buildSchemaJson(p.pageType, { title: p.title, description: p.metaDescription, faqs: p.faqs });
+      p.infographic = buildInfographic(p.pageType, query, p.sections);
+      p.wordCount = countWords(p);
+    }
+    p.updatedAt = this.now;
+    this.snapshot(tenantId, p, ai ? `Rewrite for keywords: ${clean.slice(0, 5).join(", ")}` : "Rewrite (LLM unavailable)", "ai");
+    this.save(tenantId, T.pages, p.id, p);
+    this.logAudit(tenantId, "update", "page", p.id);
+    return p;
+  }
+
+  /** Start a background keyword-aware rewrite (LLM ~30-80s exceeds the sync budget → poll).
+   *  Reuses the regen-job machinery (same {status, pageId} shape). */
+  startRewrite(tenantId: string, pageId: string, addKeywords: string[]): RegenJob {
+    while (this.regenJobs.size >= 50) {
+      const oldest = this.regenJobs.keys().next().value;
+      if (oldest === undefined) break;
+      this.regenJobs.delete(oldest);
+    }
+    this.rseq += 1;
+    const exists = this.st(tenantId).pages.some((x) => x.id === pageId);
+    const job: RegenJob = {
+      id: `rwr-${this.rseq}`,
+      status: exists ? "running" : "failed",
+      pageId,
+      startedAt: new Date().toISOString(),
+      ...(exists ? {} : { error: `Page ${pageId} not found`, finishedAt: new Date().toISOString() }),
+    };
+    this.regenJobs.set(job.id, job);
+    if (exists) {
+      void (async () => {
+        try {
+          const updated = await this.rewritePage(tenantId, pageId, addKeywords);
+          job.status = updated ? "completed" : "failed";
+          if (!updated) job.error = "rewrite produced no change";
+        } catch (e) {
+          job.status = "failed";
+          job.error = e instanceof Error ? e.message : "rewrite failed";
+        }
+        job.finishedAt = new Date().toISOString();
+      })();
+    }
+    return { ...job };
+  }
+
   /* leads */
   listLeads(tenantId: string) {
     return this.st(tenantId).leads;
