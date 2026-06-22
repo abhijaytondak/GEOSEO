@@ -56,7 +56,7 @@ where "domain" is the competitor's primary website host only (e.g. "voltas.com")
           max_tokens: 700,
         }),
       },
-      30_000,
+      Number(process.env.LLM_TIMEOUT_MS) || 30_000,
     );
     if (!res.ok) return []; // 402 insufficient balance, etc. → fallback
     const data = (await res.json()) as { choices?: { message?: { content?: string } }[] };

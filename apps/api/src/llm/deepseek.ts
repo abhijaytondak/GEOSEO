@@ -73,7 +73,8 @@ Return JSON exactly matching:
           max_tokens: spec.depth === "long" ? 4096 : spec.depth === "short" ? 1400 : 2800,
         }),
       },
-      30_000,
+      // Local models (Ollama) are far slower than hosted APIs — make the budget configurable.
+      Number(process.env.LLM_TIMEOUT_MS) || 30_000,
     );
     if (!res.ok) return null; // 402 insufficient balance, etc. → fallback
     const data = (await res.json()) as {

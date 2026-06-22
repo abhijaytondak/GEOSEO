@@ -44,7 +44,7 @@ Return JSON exactly: {"results":[{"keyword":string,"intent":string,"stage":strin
           max_tokens: 1400,
         }),
       },
-      25_000,
+      Number(process.env.LLM_TIMEOUT_MS) || 25_000,
     );
     if (!res.ok) return null;
     const data = (await res.json()) as { choices?: { message?: { content?: string } }[] };

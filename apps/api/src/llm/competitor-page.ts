@@ -157,7 +157,7 @@ Return JSON exactly: {"summary": string (1-2 sentences on what it targets), "str
           max_tokens: 900,
         }),
       },
-      25_000,
+      Number(process.env.LLM_TIMEOUT_MS) || 25_000,
     );
     if (!res.ok) return null;
     const data = (await res.json()) as { choices?: { message?: { content?: string } }[] };
