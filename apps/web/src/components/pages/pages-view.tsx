@@ -372,7 +372,16 @@ export function PagesView({
     if (!ok) return;
     setBusy(id);
     try {
-      const updated = await pageEngineApi.regeneratePage(id);
+      // Async job + poll — the LLM re-draft exceeds the hosted sync request budget (~30s).
+      const job = await pageEngineApi.startRegenerate(id);
+      let res = await pageEngineApi.getRegenerateJob(job.id);
+      for (let i = 0; i < 80 && res.job.status === "running"; i++) {
+        await new Promise((r) => setTimeout(r, 1500));
+        res = await pageEngineApi.getRegenerateJob(job.id);
+      }
+      if (res.job.status === "failed") throw new Error(res.job.error ?? "Regeneration failed");
+      if (res.job.status === "running" || !res.page) throw new Error("Still regenerating — refresh in a moment.");
+      const updated = res.page;
       setPages((arr) => arr.map((p) => (p.id === id ? updated : p)));
       setVersions(await pageEngineApi.getPageVersions(id));
       setRefreshedIds((s) => new Set(s).add(id));

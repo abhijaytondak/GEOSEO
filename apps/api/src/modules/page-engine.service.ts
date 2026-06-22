@@ -111,6 +111,16 @@ export interface DiscoverJob {
   error?: string;
 }
 
+/** Progress record for a background page regeneration (LLM re-draft → polled by the UI). */
+export interface RegenJob {
+  id: string;
+  status: "running" | "completed" | "failed";
+  pageId: string;
+  startedAt: string;
+  finishedAt?: string;
+  error?: string;
+}
+
 /**
  * In-memory page-engine state (Research → Blueprint → Page → Leads).
  * Mirrors the existing store pattern; swaps for a DB-backed repo later.
@@ -148,6 +158,10 @@ export class PageEngineStore implements OnModuleInit {
   /** In-flight background keyword-discovery runs (LLM-backed → polled by the UI). */
   private discoverJobs = new Map<string, DiscoverJob>();
   private dseq = 0;
+  /** In-flight background page regenerations (LLM re-draft → polled; same reason as discover:
+   *  the LLM call exceeds the BFF/host sync request budget). */
+  private regenJobs = new Map<string, RegenJob>();
+  private rseq = 0;
 
   /** Get (lazily create) a tenant's state. */
   private st(tenantId: string): PEState {
@@ -582,6 +596,46 @@ export class PageEngineStore implements OnModuleInit {
   /** Progress snapshot for a background discovery run (undefined if unknown/expired). */
   getDiscoverJob(id: string): DiscoverJob | undefined {
     const j = this.discoverJobs.get(id);
+    return j ? { ...j } : undefined;
+  }
+
+  /** Start a background page regeneration and return a job handle immediately. The LLM
+   *  re-draft exceeds the BFF/host sync request budget (~30s), so the UI polls. */
+  startRegenerate(tenantId: string, pageId: string): RegenJob {
+    while (this.regenJobs.size >= 50) {
+      const oldest = this.regenJobs.keys().next().value;
+      if (oldest === undefined) break;
+      this.regenJobs.delete(oldest);
+    }
+    this.rseq += 1;
+    const exists = this.st(tenantId).pages.some((x) => x.id === pageId);
+    const job: RegenJob = {
+      id: `rgn-${this.rseq}`,
+      status: exists ? "running" : "failed",
+      pageId,
+      startedAt: new Date().toISOString(),
+      ...(exists ? {} : { error: `Page ${pageId} not found`, finishedAt: new Date().toISOString() }),
+    };
+    this.regenJobs.set(job.id, job);
+    if (exists) {
+      void (async () => {
+        try {
+          const updated = await this.regeneratePage(tenantId, pageId);
+          job.status = updated ? "completed" : "failed";
+          if (!updated) job.error = "regeneration produced no change";
+        } catch (e) {
+          job.status = "failed";
+          job.error = e instanceof Error ? e.message : "regeneration failed";
+        }
+        job.finishedAt = new Date().toISOString();
+      })();
+    }
+    return { ...job };
+  }
+
+  /** Progress snapshot for a background regeneration (undefined if unknown/expired). */
+  getRegenJob(id: string): RegenJob | undefined {
+    const j = this.regenJobs.get(id);
     return j ? { ...j } : undefined;
   }
 

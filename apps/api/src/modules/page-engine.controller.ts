@@ -9,6 +9,7 @@ import {
   Param,
   Post,
   Put,
+  Query,
   Req,
   UnprocessableEntityException,
 } from "@nestjs/common";
@@ -16,7 +17,7 @@ import type { LeadStatus, PageBlueprint, PageEdit } from "@geoseo/types";
 import { ApiTags } from "@nestjs/swagger";
 import { PageEngineStore } from "./page-engine.service";
 import { SettingsStore } from "./settings.service";
-import { CmsPublishStore } from "./cms-publish.service";
+import { CmsPublishStore, renderHtml, renderMarkdown, renderStandaloneHtml } from "./cms-publish.service";
 import { Public } from "../common/public.decorator";
 import { resolveTenantId, type TenantRequest } from "../common/tenant";
 import { validateBody, v } from "../common/validation";
@@ -257,6 +258,31 @@ export class PagesController {
     return { blockers, canPublish: blockers.length === 0 };
   }
 
+  /**
+   * Export a generated page for any platform that has no publish adapter —
+   * hand-coded / static / Jamstack sites and Framer (Markdown → CMS import).
+   * `format`: `html` (standalone doc, default) · `md` · `json` (raw page model).
+   * Returns the rendered content + a suggested filename/content-type so the
+   * caller can save or paste it; never mutates the page.
+   */
+  @Get(":id/export")
+  exportPage(@Req() req: TenantRequest, @Param("id") id: string, @Query("format") format?: string) {
+    const page = this.store.getPage(resolveTenantId(req), id);
+    if (!page) throw new NotFoundException(`Page ${id} not found`);
+    const slug = page.slug.replace(/^\//, "") || page.id;
+    const fmt = (format ?? "html").toLowerCase();
+    if (fmt === "md" || fmt === "markdown") {
+      return { format: "md", filename: `${slug}.md`, contentType: "text/markdown; charset=utf-8", content: renderMarkdown(page) };
+    }
+    if (fmt === "json") {
+      return { format: "json", filename: `${slug}.json`, contentType: "application/json", content: JSON.stringify(page, null, 2) };
+    }
+    if (fmt === "fragment") {
+      return { format: "fragment", filename: `${slug}.html`, contentType: "text/html; charset=utf-8", content: renderHtml(page) };
+    }
+    return { format: "html", filename: `${slug}.html`, contentType: "text/html; charset=utf-8", content: renderStandaloneHtml(page) };
+  }
+
   @Post(":id/refresh")
   refresh(@Req() req: TenantRequest, @Param("id") id: string) {
     return this.must(this.store.transitionPage(resolveTenantId(req), id, "needs-refresh"), id);
@@ -266,6 +292,22 @@ export class PagesController {
   @Post(":id/regenerate")
   async regenerate(@Req() req: TenantRequest, @Param("id") id: string) {
     return this.must(await this.store.regeneratePage(resolveTenantId(req), id), id);
+  }
+
+  /** Async regenerate — the LLM re-draft (~30-80s) exceeds the BFF/host sync request
+   *  budget, so start a job and poll. Use this from the UI. */
+  @Post(":id/regenerate-async")
+  startRegenerate(@Req() req: TenantRequest, @Param("id") id: string) {
+    return { job: this.store.startRegenerate(resolveTenantId(req), id) };
+  }
+
+  @Get("regenerate-async/:jobId")
+  regenerateStatus(@Req() req: TenantRequest, @Param("jobId") jobId: string) {
+    const job = this.store.getRegenJob(jobId);
+    if (!job) throw new NotFoundException(`Regenerate job ${jobId} not found`);
+    // On completion, return the freshly re-drafted page too (saves a round-trip).
+    const page = job.status === "completed" ? this.store.getPage(resolveTenantId(req), job.pageId) : undefined;
+    return { job, page };
   }
 
   @Put(":id")

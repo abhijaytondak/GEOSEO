@@ -113,7 +113,26 @@ export function PageComposer({ topic, onTopicChange, pageType, onTypeChange, exi
 
       // 3) Optimize + persist — assemble the page (per-type structure, schema, brand hero).
       setStep("optimize");
-      const page = await pageEngineApi.generatePage(pick.id, content ?? undefined);
+      let page;
+      if (content) {
+        // Puter drafted in-browser → server skips the LLM, so the sync call is fast.
+        page = await pageEngineApi.generatePage(pick.id, content);
+      } else {
+        // No browser draft → server drafts via the LLM (~30-80s on a slow/host-limited
+        // backend). Run it as a background job + poll so it isn't cut by the sync request
+        // budget (e.g. Render's ~30s inbound limit).
+        const job = await pageEngineApi.generatePagesBatch([pick.id]);
+        let prog = job;
+        for (let i = 0; i < 80 && prog.status === "running"; i++) {
+          await new Promise((r) => setTimeout(r, 1500));
+          prog = await pageEngineApi.getBatchProgress(job.id);
+        }
+        const newId = prog.pageIds?.[prog.pageIds.length - 1];
+        if (!newId) throw new Error("Generation didn't finish — try again in a moment.");
+        const pages = await pageEngineApi.getPages();
+        page = pages.find((p) => p.id === newId);
+        if (!page) throw new Error("Generated page not found — check Pipeline.");
+      }
 
       setStep("done");
       onGenerated(page);
