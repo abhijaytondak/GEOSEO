@@ -2,6 +2,7 @@ import { Inject, Injectable, Logger } from "@nestjs/common";
 import { DocStore } from "../db/db";
 import { fetchWithTimeout } from "../common/http";
 import { BrandMemoryStore } from "./brand.service";
+import { BrandLibraryStore } from "./brand-library.service";
 import { SiteThemeStore } from "./site-theme.service";
 
 export type ImageKind = "hero" | "infographic" | "illustration" | "og";
@@ -51,6 +52,7 @@ export class ImageGenStore {
 
   constructor(
     @Inject(BrandMemoryStore) private readonly brand: BrandMemoryStore,
+    @Inject(BrandLibraryStore) private readonly library: BrandLibraryStore,
     @Inject(SiteThemeStore) private readonly themes: SiteThemeStore,
   ) {}
 
@@ -79,20 +81,55 @@ export class ImageGenStore {
     return (await this.state(tenantId)).items;
   }
 
-  /** Confirmed site-theme primary color, or the design default. */
-  private async primaryColor(tenantId: string): Promise<string> {
-    return (await this.themes.list(tenantId)).find((t) => t.status === "confirmed")?.colors?.primary ?? "#6c4cf1";
+  /** Confirmed site-theme palette (scanned from the brand's own site), or design defaults. */
+  private async palette(tenantId: string): Promise<{ primary: string; accent?: string; dark: boolean }> {
+    const theme = (await this.themes.list(tenantId)).find((t) => t.status === "confirmed");
+    const c = theme?.colors;
+    const primary = c?.primary ?? "#6c4cf1";
+    const accent = c?.accent && c.accent !== primary ? c.accent : undefined;
+    // Light vs dark canvas, inferred from the scanned background so generated art matches.
+    const bg = c?.background;
+    const dark = !!bg && /^#?[0-3]/i.test(bg.replace(/^#/, ""));
+    return { primary, accent, dark };
   }
 
-  /** Brand + theme-aware generation prompt — branded, customer colors, no stock imagery. */
-  private buildPrompt(subject: string, kind: ImageKind, primary: string): string {
+  /** Confirmed site-theme primary color, or the design default. */
+  private async primaryColor(tenantId: string): Promise<string> {
+    return (await this.palette(tenantId)).primary;
+  }
+
+  /**
+   * A consistent **brand style signature** appended to every image so the whole set reads as
+   * one visual family (brand harmony). Derived from the brand's *own* assets: the site-scanned
+   * palette (primary/accent + light/dark canvas), brand voice traits → visual mood, and — when
+   * Brand Memory holds real brand imagery — an instruction to match that existing aesthetic.
+   */
+  private async styleSignature(tenantId: string, primary: string, accent?: string, dark = false): Promise<string> {
+    const lib = await this.library.get(tenantId).catch(() => undefined);
+    const traits = lib?.voice?.traits?.slice(0, 4).filter(Boolean) ?? [];
+    const mood = traits.length ? `Visual mood: ${traits.join(", ")}.` : "";
+    const hasAssets = (lib?.images?.length ?? 0) > 0;
+    const bits = [
+      `Brand palette: lead with ${primary}${accent ? `, accent ${accent}` : ""};`,
+      `${dark ? "dark" : "light"} background that matches the brand's site.`,
+      mood,
+      // Fixed art direction → every render shares composition/lighting → harmony across the set.
+      "Cohesive brand art direction: clean, modern, professional; soft even lighting; generous negative space; flat, minimal, consistent style.",
+      hasAssets ? "Stay visually consistent with the brand's existing imagery and identity." : "",
+      "No stock photography, no logos, no watermark, minimal or no text.",
+    ];
+    return bits.filter(Boolean).join(" ");
+  }
+
+  /** Brand + theme-aware generation prompt — branded, customer colors, harmonized style. */
+  private async buildPrompt(tenantId: string, subject: string, kind: ImageKind, primary: string, accent?: string, dark = false): Promise<string> {
     const b = this.brand.current();
     const company = b?.company?.trim() || "the brand";
     const bits = [
       `${KIND_HINT[kind]} for ${company}${b?.valueProp ? ` (${b.valueProp})` : ""}.`,
       `Subject: ${subject}.`,
       b?.tone ? `Brand tone: ${b.tone}.` : "",
-      `Build the palette around ${primary}. Professional, on-brand, no stock photography, no logos, minimal text.`,
+      await this.styleSignature(tenantId, primary, accent, dark),
     ];
     return bits.filter(Boolean).join(" ");
   }
@@ -114,9 +151,10 @@ export class ImageGenStore {
   }
 
   async generate(tenantId: string, subject: string, kind: ImageKind, now: string): Promise<GeneratedImage> {
-    const primary = await this.primaryColor(tenantId);
-    const prompt = this.buildPrompt(subject, kind, primary);
-    const url = (this.configured ? await this.viaApi(prompt) : null) ?? this.placeholder(subject, kind, primary);
+    const { primary, accent, dark } = await this.palette(tenantId);
+    const prompt = await this.buildPrompt(tenantId, subject, kind, primary, accent, dark);
+    const generated = this.configured ? await this.viaApi(prompt) : null;
+    const url = generated ?? this.placeholder(subject, kind, primary);
     const s = await this.state(tenantId);
     s.seq += 1;
     const image: GeneratedImage = {
@@ -125,7 +163,9 @@ export class ImageGenStore {
       kind,
       url,
       prompt,
-      source: url.startsWith("data:") ? "placeholder" : "openai",
+      // `generated` is a real render from the image API; null ⇒ we fell back to the SVG
+      // placeholder. (Both can be data: URIs, so the URL prefix alone can't tell them apart.)
+      source: generated ? "openai" : "placeholder",
       createdAt: now,
     };
     s.items.unshift(image);
@@ -138,15 +178,20 @@ export class ImageGenStore {
   private async viaApi(prompt: string): Promise<string | null> {
     const base = (process.env.IMAGE_GEN_BASE_URL ?? "https://api.openai.com/v1").replace(/\/+$/, "");
     const model = process.env.IMAGE_GEN_MODEL ?? "gpt-image-1";
+    // Smaller sizes generate far faster on local diffusion (512² ≈ ¼ the compute of 1024²);
+    // hosted APIs keep the 1024² default when IMAGE_GEN_SIZE is unset.
+    const size = process.env.IMAGE_GEN_SIZE ?? "1024x1024";
     try {
       const res = await fetchWithTimeout(
         `${base}/images/generations`,
         {
           method: "POST",
           headers: { authorization: `Bearer ${process.env.IMAGE_GEN_API_KEY}`, "content-type": "application/json" },
-          body: JSON.stringify({ model, prompt, n: 1, size: "1024x1024" }),
+          body: JSON.stringify({ model, prompt, n: 1, size }),
         },
-        30_000,
+        // Local diffusion (Ollama z-image/flux) is far slower than hosted APIs → configurable.
+        // Observed: warm 512² on an M3 Pro ≈ 50s, so the 30s default is too low for local gen.
+        Number(process.env.IMAGE_GEN_TIMEOUT_MS) || 30_000,
       );
       if (!res.ok) {
         this.log.warn(`Image gen ${res.status} — using theme-aware placeholder`);
