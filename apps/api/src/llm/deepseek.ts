@@ -70,7 +70,13 @@ Return JSON exactly matching:
           ],
           response_format: { type: "json_object" },
           temperature: 0.7,
-          max_tokens: spec.depth === "long" ? 4096 : spec.depth === "short" ? 1400 : 2800,
+          // Per-type budget, but cap-able via LLM_MAX_TOKENS so a slow/host-limited
+          // backend (e.g. Ollama behind Render's ~30s outbound window) can keep each
+          // generation under the limit. Unset = full per-type budget (hosted/local-rich).
+          max_tokens: Math.min(
+            spec.depth === "long" ? 4096 : spec.depth === "short" ? 1400 : 2800,
+            Number(process.env.LLM_MAX_TOKENS) || Infinity,
+          ),
         }),
       },
       // Local models (Ollama) are far slower than hosted APIs — make the budget configurable.
