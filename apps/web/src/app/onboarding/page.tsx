@@ -12,7 +12,7 @@ export const dynamic = "force-dynamic";
 export default function OnboardingPage() {
   return (
     <AppFeedbackProvider>
-      <main className="min-h-dvh w-full bg-[#F5F6F8] px-4 py-8 sm:py-12">
+      <main className="min-h-dvh w-full bg-card">
         <OnboardingWizard />
       </main>
     </AppFeedbackProvider>

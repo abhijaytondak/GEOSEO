@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   Globe,
@@ -31,98 +31,6 @@ const SCAN_STAGES = ["Reading homepage", "Finding metadata", "Extracting topics"
 
 type Brand = { company: string; valueProp: string; audience: string; topics: string; industry: string; competitors: string };
 type Publishing = { requireApproval: boolean; autoSitemap: boolean; autoLlms: boolean };
-
-/** Orbital AI-visibility motif for the rail: the brand at center, answer engines
- *  orbiting, with a subtle scanning sweep. Canvas-rendered; honours reduced motion. */
-function OrbitCanvas({ scan = false }: { scan?: boolean }) {
-  const ref = useRef<HTMLCanvasElement>(null);
-  useEffect(() => {
-    const cv = ref.current;
-    if (!cv) return;
-    const ctx = cv.getContext("2d");
-    if (!ctx) return;
-    const reduce = matchMedia("(prefers-reduced-motion:reduce)").matches;
-    const cols = ["#6C4CF1", "#10A37F", "#1FB8CD", "#4285F4", "#D97757"];
-    let raf = 0;
-    let t = 0;
-    const size = () => {
-      const r = cv.getBoundingClientRect();
-      cv.width = r.width * devicePixelRatio;
-      cv.height = r.height * devicePixelRatio;
-      ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
-    };
-    size();
-    const draw = () => {
-      const w = cv.clientWidth,
-        h = cv.clientHeight,
-        cx = w / 2,
-        cy = h / 2,
-        R = Math.min(w, h) * 0.34;
-      ctx.clearRect(0, 0, w, h);
-      for (let k = 1; k <= 3; k++) {
-        ctx.beginPath();
-        ctx.arc(cx, cy, (R * k) / 1.6, 0, 7);
-        ctx.strokeStyle = "rgba(255,255,255," + (0.1 - k * 0.02) + ")";
-        ctx.lineWidth = 1;
-        ctx.stroke();
-      }
-      if (scan && !reduce) {
-        const a = t * 0.9;
-        ctx.save();
-        ctx.beginPath();
-        ctx.moveTo(cx, cy);
-        ctx.arc(cx, cy, R * 1.9, a, a + 0.6);
-        ctx.closePath();
-        const lg = ctx.createRadialGradient(cx, cy, 0, cx, cy, R * 1.9);
-        lg.addColorStop(0, "rgba(108,76,241,.28)");
-        lg.addColorStop(1, "rgba(108,76,241,0)");
-        ctx.fillStyle = lg;
-        ctx.fill();
-        ctx.restore();
-      }
-      cols.forEach((c, k) => {
-        const rad = R * (0.78 + (k % 2) * 0.5),
-          ang = t * (reduce ? 0 : 0.5) * (0.5 + k * 0.12) + k * 1.27;
-        const x = cx + Math.cos(ang) * rad,
-          y = cy + Math.sin(ang) * rad * 0.82;
-        ctx.beginPath();
-        ctx.moveTo(cx, cy);
-        ctx.lineTo(x, y);
-        ctx.strokeStyle = "rgba(255,255,255,.06)";
-        ctx.stroke();
-        ctx.beginPath();
-        ctx.arc(x, y, k === 0 ? 5 : 4, 0, 7);
-        ctx.fillStyle = c;
-        ctx.shadowColor = c;
-        ctx.shadowBlur = 12;
-        ctx.fill();
-        ctx.shadowBlur = 0;
-      });
-      ctx.beginPath();
-      ctx.arc(cx, cy, 15, 0, 7);
-      ctx.fillStyle = "#fff";
-      ctx.fill();
-      ctx.lineWidth = 2;
-      ctx.strokeStyle = "rgba(108,76,241,.6)";
-      ctx.stroke();
-      ctx.fillStyle = "#0E1116";
-      ctx.font = "600 11px Inter, system-ui, sans-serif";
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
-      ctx.fillText("You", cx, cy + 1);
-      t += 0.016;
-      if (!reduce) raf = requestAnimationFrame(draw);
-    };
-    draw();
-    const onResize = () => size();
-    addEventListener("resize", onResize);
-    return () => {
-      cancelAnimationFrame(raf);
-      removeEventListener("resize", onResize);
-    };
-  }, [scan]);
-  return <canvas ref={ref} className="pointer-events-none absolute inset-0 h-full w-full opacity-[0.45]" />;
-}
 
 function Toggle({ on, onChange }: { on: boolean; onChange: (v: boolean) => void }) {
   return (
@@ -167,7 +75,7 @@ export function OnboardingWizard() {
   // Drive the scan checklist while a scan is running.
   useEffect(() => {
     if (!scanning) return;
-    const t = window.setInterval(() => setScanStage((s) => Math.min(s + 1, SCAN_STAGES.length - 1)), 600);
+    const t = window.setInterval(() => setScanStage((s) => Math.min(s + 1, SCAN_STAGES.length - 1)), 2600);
     return () => window.clearInterval(t);
   }, [scanning]);
 
@@ -191,7 +99,16 @@ export function OnboardingWizard() {
     setScanStage(0);
     setScanError(null);
     try {
-      const d = await pageEngineApi.extractBrand(url.trim());
+      // Async crawl + LLM extract — the LLM reads the page and pulls the main points
+      // (value prop, industry, audience, topics). Slow (~30-80s) → poll the job.
+      const job = await pageEngineApi.startExtractBrand(url.trim());
+      let res = await pageEngineApi.getExtractBrandJob(job.id);
+      for (let i = 0; i < 70 && res.job.status === "running"; i++) {
+        await new Promise((r) => setTimeout(r, 1500));
+        res = await pageEngineApi.getExtractBrandJob(job.id);
+      }
+      if (res.job.status === "failed" || !res.result) throw new Error(res.job.error ?? "We couldn't reach that site.");
+      const d = res.result;
       applyDraft(d);
       api
         .scanSiteTheme(url.trim())
@@ -336,10 +253,9 @@ export function OnboardingWizard() {
   const pct = Math.round(((step + 1) / STEPS.length) * 100);
 
   return (
-    <div className="mx-auto max-w-5xl overflow-hidden rounded-[26px] border border-border bg-card shadow-card lg:grid lg:grid-cols-[330px_1fr]">
+    <div className="grid min-h-dvh w-full lg:grid-cols-[minmax(300px,360px)_1fr]">
       {/* ---------- LEFT EDITORIAL RAIL (desktop) ---------- */}
-      <aside className="relative hidden overflow-hidden bg-[#0E1116] p-8 text-white lg:flex lg:flex-col">
-        <OrbitCanvas scan={step === 5} />
+      <aside className="relative hidden overflow-hidden bg-[#0E1116] p-9 text-white lg:flex lg:flex-col">
         <div className="relative z-10 flex items-center gap-2.5 text-[15px] font-semibold tracking-tight">
           <span className="grid size-7 place-items-center rounded-lg bg-white">
             <span className="size-3 rounded-full ring-2 ring-[#0E1116]" style={{ background: "#0E1116" }} />
@@ -392,7 +308,8 @@ export function OnboardingWizard() {
       </div>
 
       {/* ---------- RIGHT CONTENT PANEL ---------- */}
-      <div className="min-w-0 p-6 sm:p-9">
+      <div className="flex min-w-0 flex-col overflow-y-auto bg-card px-6 py-10 sm:px-12">
+        <div className="mx-auto w-full max-w-xl">
         {/* subtle step indicator */}
         {step < 5 && (
           <div className="mb-7 flex items-center gap-3">
@@ -743,6 +660,7 @@ export function OnboardingWizard() {
             </button>
           </div>
         )}
+        </div>
       </div>
     </div>
   );

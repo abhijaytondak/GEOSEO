@@ -316,6 +316,14 @@ export const pageEngineApi = {
 
   // onboarding (brand)
   extractBrand: (url: string) => send<BrandDraft>("POST", "/brand-profile/extract-from-site", { url }),
+  // Async crawl + LLM extract — the LLM (~30-80s) exceeds the hosted sync budget; start + poll.
+  startExtractBrand: (url: string) =>
+    send<{ job: { id: string; status: string } }>("POST", "/brand-profile/extract-from-site-async", { url }).then((r) => r.job),
+  getExtractBrandJob: (jobId: string) =>
+    get<{ job: { id: string; status: string; error?: string }; result: BrandDraft | null }>(
+      `/brand-profile/extract-async/${jobId}`,
+      () => ({ job: { id: jobId, status: "failed", error: "offline" }, result: null }),
+    ),
   saveBrand: (profile: BrandProfile) =>
     send<{ completeness: number }>("PUT", "/brand-profile", profile),
 };
