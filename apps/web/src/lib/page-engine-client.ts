@@ -169,6 +169,14 @@ export const pageEngineApi = {
       "/opportunities/discover",
       { seeds },
     ),
+  // Async discovery — LLM tiers (~20-40s) exceed the hosted sync request budget; start + poll.
+  startDiscover: (seeds: string[]) =>
+    send<{ id: string; status: string; created: number; opportunityIds: string[]; error?: string }>("POST", "/opportunities/discover-async", { seeds }),
+  getDiscoverJob: (jobId: string) =>
+    get<{ id: string; status: string; created: number; opportunityIds: string[]; error?: string }>(
+      `/opportunities/discover-async/${jobId}`,
+      () => ({ id: jobId, status: "failed", created: 0, opportunityIds: [], error: "offline" }),
+    ),
   generatePage: (opportunityId: string, content?: import("./puter-ai").PuterDraft) =>
     send<GeneratedPage>("POST", "/pages/generate", { opportunityId, content }),
   /** Kick off background drafting of N opportunities; returns a poll-able job handle. */

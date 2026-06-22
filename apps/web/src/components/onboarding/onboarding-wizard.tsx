@@ -276,10 +276,21 @@ export function OnboardingWizard() {
     }
     setDiscovering(true);
     try {
-      const { created } = await pageEngineApi.discoverOpportunities(list);
-      setDiscovered(created);
+      // Async job + poll — LLM discovery (~20-40s) exceeds hosted backends' sync request
+      // budget (Render ~30s). Start a job and poll, then load the created opportunities.
+      const job = await pageEngineApi.startDiscover(list);
+      let j = job;
+      for (let i = 0; i < 40 && j.status === "running"; i++) {
+        await new Promise((r) => setTimeout(r, 1500));
+        j = await pageEngineApi.getDiscoverJob(job.id);
+      }
+      if (j.status === "failed") throw new Error(j.error ?? "Discovery failed");
+      const all = await pageEngineApi.getOpportunities();
+      const ids = new Set(j.opportunityIds);
+      const created = all.filter((o) => ids.has(o.id));
+      setDiscovered(created.length ? created : all.slice(0, Math.max(j.created, 0)));
       setStep(4);
-      notify({ kind: "success", title: "Opportunities discovered", message: `${created.length} ready to review.` });
+      notify({ kind: "success", title: "Opportunities discovered", message: `${j.created} ready to review.` });
     } catch (err) {
       notify({ kind: "error", title: "Discovery failed", message: err instanceof Error ? err.message : "Try again." });
     } finally {
