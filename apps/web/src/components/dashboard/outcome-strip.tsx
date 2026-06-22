@@ -36,13 +36,13 @@ export function OutcomeStrip() {
   return (
     <div className="rounded-2xl border border-border bg-card p-4 shadow-card">
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2 text-[13px] font-semibold text-foreground">
+        <div className="flex items-center gap-2 text-h-card text-foreground">
           <Target className="size-4 text-brand" />
           Business outcome
         </div>
         <Link
           href="/leads"
-          className="inline-flex items-center gap-1 text-[12.5px] font-semibold text-brand hover:underline"
+          className="inline-flex items-center gap-1 rounded-md text-label font-semibold text-brand hover:underline focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/40"
         >
           View leads
           <ArrowRight className="size-3.5" />
@@ -53,11 +53,11 @@ export function OutcomeStrip() {
           const Icon = s.icon;
           return (
             <div key={s.label} className="rounded-xl border border-border bg-surface-sunken p-3">
-              <div className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+              <div className="flex items-center gap-1.5 text-micro font-semibold uppercase text-muted-foreground">
                 <Icon className="size-3.5" />
                 <span className="truncate">{s.label}</span>
               </div>
-              <div className="tnum mt-1 text-2xl font-semibold text-foreground">
+              <div className="tnum mt-1 text-kpi text-foreground">
                 {leads === null ? (
                   <Loader2 className="size-5 animate-spin text-muted-foreground" />
                 ) : (

@@ -34,13 +34,13 @@ export function Panel({
         <header className="flex items-center justify-between gap-3 px-5 pt-4">
           <div className="min-w-0">
             {title && (
-              <h2 className="flex items-center gap-1.5 text-[15px] font-semibold tracking-tight text-foreground">
+              <h2 className="flex items-center gap-1.5 text-h-card font-semibold tracking-tight text-foreground">
                 {title}
                 {hint && <InfoHint>{hint}</InfoHint>}
               </h2>
             )}
             {description && (
-              <p className="mt-0.5 text-[12.5px] text-muted-foreground">
+              <p className="mt-0.5 text-label text-muted-foreground">
                 {description}
               </p>
             )}

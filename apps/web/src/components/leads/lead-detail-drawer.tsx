@@ -93,13 +93,19 @@ function Detail({ lead }: { lead: Lead }) {
       pageEngineApi.getLeadScore(lead.id),
       pageEngineApi.getLeadJourney(lead.id),
       pageEngineApi.getLeadActivity(lead.id),
-    ]).then(([s, j, a]) => {
-      if (cancelled) return;
-      setScore(s);
-      setJourney(j);
-      setActivity(a);
-      setLoaded(true);
-    });
+    ])
+      .then(([s, j, a]) => {
+        if (cancelled) return;
+        setScore(s);
+        setJourney(j);
+        setActivity(a);
+      })
+      .catch(() => {
+        // Don't trap the drawer in a spinner on a failed fetch — show what loaded.
+      })
+      .finally(() => {
+        if (!cancelled) setLoaded(true);
+      });
     // Load any existing AI-SDR follow-up draft (self-contained — avoids the shared client).
     fetch(`/api/v1/leads/${lead.id}/followup`, { headers: { accept: "application/json" }, cache: "no-store" })
       .then((r) => readApiEnvelope<{ draft?: { subject: string; body: string; source: string } }>(r, `/leads/${lead.id}/followup`))

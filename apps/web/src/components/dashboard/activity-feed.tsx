@@ -33,8 +33,8 @@ export function ActivityFeed({ events }: { events: ActivityEvent[] }) {
               <Icon className="size-4" strokeWidth={2} />
             </div>
             <div className="min-w-0 flex-1 pt-1">
-              <p className="text-[13px] leading-snug text-foreground">{e.message}</p>
-              <span className="text-[11px] text-muted-foreground/70">
+              <p className="text-label leading-snug text-foreground">{e.message}</p>
+              <span className="text-micro text-muted-foreground">
                 {relativeTime(e.at)}
               </span>
             </div>

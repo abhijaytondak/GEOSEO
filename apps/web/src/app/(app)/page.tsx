@@ -119,10 +119,49 @@ export default async function AuthorityHQ() {
       />
 
       <div className="space-y-5 p-6 sm:p-8">
-        {/* Insight summary band (§7) */}
+        {/* Insight summary band (§7) — the one-sentence read on the dashboard */}
         <InsightBand status={insightStatus} headline={insightHeadline} source="Sample data" />
 
-        {/* Growth Plan — holistic, one-click actionable hub (nav-optimization PRD §6.1) */}
+        {/* KPI hero row — the most scannable metrics lead the page; each deep-links (§8).
+            Momentum rides under it as a slim caption instead of a duplicate full band. */}
+        <section aria-label="Key metrics" className="space-y-2.5">
+          <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+            {kpis.map((kpi, i) => (
+              <Link
+                key={kpi.id}
+                href={KPI_HREF[kpi.id]}
+                aria-label={`${kpi.label}: open details`}
+                className="block rounded-2xl transition-transform ease-expo hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/40"
+              >
+                <KpiCard kpi={kpi} index={i} />
+              </Link>
+            ))}
+          </div>
+          <div className="flex items-center gap-2 px-1 text-label text-muted-foreground">
+            <span
+              className={cn(
+                "flex size-5 shrink-0 items-center justify-center rounded-md",
+                momentum.direction === "up"
+                  ? "bg-positive/12 text-positive"
+                  : momentum.direction === "down"
+                    ? "bg-negative/12 text-negative"
+                    : "bg-muted text-muted-foreground",
+              )}
+            >
+              {momentum.direction === "up" ? (
+                <TrendingUp className="size-3" />
+              ) : momentum.direction === "down" ? (
+                <TrendingDown className="size-3" />
+              ) : (
+                <Minus className="size-3" />
+              )}
+            </span>
+            <span className="font-medium text-foreground">Momentum</span>
+            <span>{momentum.summary}</span>
+          </div>
+        </section>
+
+        {/* Growth Plan — primary action hub, lifted above supporting cards (raised elevation) */}
         <GrowthPlan />
 
         {/* Home cockpit — business outcome (leads-first) + setup health (nav-optimization PRD §6.1) */}
@@ -136,44 +175,6 @@ export default async function AuthorityHQ() {
 
         {/* Brand Scorecard — auto-analysis of the workspace's own domain (self-fetching) */}
         <BrandScorecard />
-
-        {/* Momentum / forecast (Authority HQ §Phase2) */}
-        <div className="flex items-center gap-2.5 rounded-xl border border-border bg-card px-4 py-2.5 text-[13px] shadow-card">
-          <span
-            className={cn(
-              "flex size-7 shrink-0 items-center justify-center rounded-lg",
-              momentum.direction === "up"
-                ? "bg-positive/12 text-positive"
-                : momentum.direction === "down"
-                  ? "bg-negative/12 text-negative"
-                  : "bg-muted text-muted-foreground",
-            )}
-          >
-            {momentum.direction === "up" ? (
-              <TrendingUp className="size-4" />
-            ) : momentum.direction === "down" ? (
-              <TrendingDown className="size-4" />
-            ) : (
-              <Minus className="size-4" />
-            )}
-          </span>
-          <span className="font-medium text-foreground">Momentum</span>
-          <span className="text-muted-foreground">{momentum.summary}</span>
-        </div>
-
-        {/* KPI strip — each card deep-links to its detail route (§8) */}
-        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-          {kpis.map((kpi, i) => (
-            <Link
-              key={kpi.id}
-              href={KPI_HREF[kpi.id]}
-              aria-label={`${kpi.label}: open details`}
-              className="block rounded-2xl transition-transform hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            >
-              <KpiCard kpi={kpi} index={i} />
-            </Link>
-          ))}
-        </div>
 
         {/* Workspace: two independent columns. On mobile the Action Center
             (right rail) comes first (§17.1 priority); on desktop the analytical
@@ -221,7 +222,7 @@ export default async function AuthorityHQ() {
                     </span>
                   </div>
                   <div className="mt-2.5">
-                    <ProgressBar value={acquiredPct} from="#6C4CF1" to="#2D6BFF" height={8} />
+                    <ProgressBar value={acquiredPct} height={8} />
                   </div>
                   <div className="mt-2 text-[11.5px] text-muted-foreground">
                     {acquiredPct}% of discovered opportunities captured

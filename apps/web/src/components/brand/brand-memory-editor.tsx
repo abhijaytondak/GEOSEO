@@ -207,7 +207,7 @@ export function BrandMemoryEditor({ initial }: { initial: BrandProfile }) {
             )}
           </div>
           <div className="mt-3">
-            <ProgressBar value={completeness} from="#6C4CF1" to="#2D6BFF" height={10} />
+            <ProgressBar value={completeness} height={10} />
           </div>
         </Panel>
 

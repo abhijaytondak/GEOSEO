@@ -158,9 +158,8 @@ export default async function AiFeedIndex() {
       </main>
 
       <footer className="border-t border-border">
-        <div className="mx-auto max-w-5xl px-6 py-6 text-[12px] text-muted-foreground">
-          AI Feed by {brandName} · built for AI agents and humans ·{" "}
-          <a href="https://puter.com" className="hover:underline">Powered by Puter</a>
+        <div className="mx-auto max-w-5xl px-6 py-6 text-label text-muted-foreground">
+          © {new Date().getFullYear()} {brandName} · built for AI agents and humans
         </div>
       </footer>
     </div>

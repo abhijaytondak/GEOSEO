@@ -1,16 +1,29 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Users, BadgeCheck, ShieldAlert, Gauge, Download, Cloud, Check, Trash2 } from "lucide-react";
+import { Users, BadgeCheck, ShieldAlert, Gauge, Download, Cloud, Check, Trash2, Inbox } from "lucide-react";
 import type { Lead, LeadStatus, SpamStatus } from "@geoseo/types";
 import { Panel } from "@/components/dashboard/panel";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { EmptyState } from "@/components/ui/empty-state";
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+} from "@/components/ui/table";
 import { relativeTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { useAppFeedback } from "@/components/system/app-feedback";
 import { pageEngineApi } from "@/lib/page-engine-client";
 import { LeadDetailDrawer } from "./lead-detail-drawer";
 
+type BadgeVariant = "brand" | "positive" | "negative" | "warning" | "info" | "muted";
+
+// status (editable via <select>) keeps the tint classes; spam → semantic Badge variant.
 const STATUS: Record<LeadStatus, string> = {
   new: "bg-info/12 text-info",
   qualified: "bg-brand/12 text-brand",
@@ -18,13 +31,14 @@ const STATUS: Record<LeadStatus, string> = {
   won: "bg-positive/12 text-positive",
   lost: "bg-muted text-muted-foreground",
 };
-const SPAM: Record<SpamStatus, { label: string; cls: string }> = {
-  clean: { label: "Clean", cls: "bg-positive/12 text-positive" },
-  spam: { label: "Spam", cls: "bg-negative/12 text-negative" },
-  duplicate: { label: "Duplicate", cls: "bg-warning/15 text-warning" },
+const SPAM: Record<SpamStatus, { label: string; variant: BadgeVariant }> = {
+  clean: { label: "Clean", variant: "positive" },
+  spam: { label: "Spam", variant: "negative" },
+  duplicate: { label: "Duplicate", variant: "warning" },
 };
 
 type Filter = "all" | SpamStatus;
+const FILTERS: Filter[] = ["all", "clean", "spam", "duplicate"];
 
 function scoreColor(s: number) {
   return s >= 75 ? "text-positive" : s >= 50 ? "text-warning" : "text-muted-foreground";
@@ -151,10 +165,10 @@ export function LeadsView({ leads }: { leads: Lead[] }) {
           return (
             <div key={s.label} className="rounded-2xl border border-border bg-card p-4 shadow-card">
               <div className="flex items-center justify-between">
-                <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">{s.label}</span>
-                <Icon className="size-4 text-muted-foreground" />
+                <span className="text-micro text-muted-foreground">{s.label}</span>
+                <Icon className="size-4 text-muted-foreground" aria-hidden="true" />
               </div>
-              <div className="tnum mt-1.5 text-[26px] font-bold tracking-[-0.02em] text-foreground">{s.value}</div>
+              <div className="tnum mt-1.5 text-kpi text-foreground">{s.value}</div>
             </div>
           );
         })}
@@ -166,13 +180,18 @@ export function LeadsView({ leads }: { leads: Lead[] }) {
         bodyClassName="p-0"
         action={
           <div className="flex items-center gap-2">
-            <div className="hidden items-center gap-1 rounded-xl border border-border bg-card p-1 sm:flex">
-              {(["all", "clean", "spam", "duplicate"] as const).map((f) => (
+            <div
+              role="group"
+              aria-label="Filter leads by spam status"
+              className="hidden items-center gap-1 rounded-xl border border-border bg-card p-1 sm:flex"
+            >
+              {FILTERS.map((f) => (
                 <button
                   key={f}
                   onClick={() => setFilter(f)}
+                  aria-pressed={filter === f}
                   className={cn(
-                    "rounded-lg px-2.5 py-1 text-[12px] font-medium capitalize transition-colors",
+                    "rounded-lg px-2.5 py-1 text-label font-medium capitalize transition-colors focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/40",
                     filter === f ? "bg-foreground text-background" : "text-muted-foreground hover:bg-muted hover:text-foreground",
                   )}
                 >
@@ -187,42 +206,158 @@ export function LeadsView({ leads }: { leads: Lead[] }) {
           </div>
         }
       >
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[820px] border-collapse text-left">
-            <thead>
-              <tr className="border-b border-border bg-surface-sunken text-[11px] font-semibold uppercase tracking-[0.04em] text-muted-foreground">
-                <th className="px-5 py-3">Lead</th>
-                <th className="px-3 py-3">Company</th>
-                <th className="px-3 py-3">Source page</th>
-                <th className="px-3 py-3">Score</th>
-                <th className="px-3 py-3">Status</th>
-                <th className="px-3 py-3">Spam</th>
-                <th className="px-5 py-3">Created</th>
-                <th className="px-5 py-3 text-right">CRM</th>
-              </tr>
-            </thead>
-            <tbody>
+        {/* mobile-reachable filter — the pill group above is sm:flex-only, so a phone
+            user otherwise had no way to filter the card list below (§1). */}
+        <div className="border-b border-border p-3 sm:hidden">
+          <label className="flex items-center gap-2">
+            <span className="text-micro text-muted-foreground">Filter</span>
+            <select
+              value={filter}
+              onChange={(e) => setFilter(e.target.value as Filter)}
+              aria-label="Filter leads by spam status"
+              className="h-8 flex-1 rounded-lg border border-border bg-card px-2 text-label capitalize outline-none transition-colors focus-visible:ring-3 focus-visible:ring-ring/40 focus:border-ring"
+            >
+              {FILTERS.map((f) => (
+                <option key={f} value={f} className="capitalize">
+                  {f}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+        {filtered.length === 0 ? (
+          <EmptyState
+            icon={Inbox}
+            title="No leads match this filter"
+            description={
+              filter === "all"
+                ? "Captured leads from your published pages will appear here."
+                : "Try a different spam filter to see more leads."
+            }
+            action={filter === "all" ? undefined : { label: "Show all leads", onClick: () => setFilter("all") }}
+            className="py-16"
+          />
+        ) : (
+          <>
+            {/* desktop table */}
+            <div className="hidden md:block">
+              <Table className="text-left">
+                <TableHeader>
+                  <TableRow className="border-b border-border bg-surface-sunken hover:bg-surface-sunken">
+                    <TableHead scope="col" className="px-5 py-3 text-micro text-muted-foreground">Lead</TableHead>
+                    <TableHead scope="col" className="px-3 py-3 text-micro text-muted-foreground">Company</TableHead>
+                    <TableHead scope="col" className="px-3 py-3 text-micro text-muted-foreground">Source page</TableHead>
+                    <TableHead scope="col" className="px-3 py-3 text-micro text-muted-foreground">Score</TableHead>
+                    <TableHead scope="col" className="px-3 py-3 text-micro text-muted-foreground">Status</TableHead>
+                    <TableHead scope="col" className="px-3 py-3 text-micro text-muted-foreground">Spam</TableHead>
+                    <TableHead scope="col" className="px-5 py-3 text-micro text-muted-foreground">Created</TableHead>
+                    <TableHead scope="col" className="px-5 py-3 text-right text-micro text-muted-foreground">CRM</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filtered.map((l) => (
+                    <TableRow
+                      key={l.id}
+                      className={cn("border-b border-border hover:bg-surface-sunken", l.spamStatus !== "clean" && "opacity-70")}
+                    >
+                      <TableCell className="px-5 py-3">
+                        <button
+                          onClick={() => openDetail(l)}
+                          className="rounded-md text-left transition-colors hover:text-brand focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/40"
+                        >
+                          <div className="text-body font-semibold text-foreground hover:text-brand">{l.name}</div>
+                          <div className="text-label text-muted-foreground">{l.email}</div>
+                        </button>
+                      </TableCell>
+                      <TableCell className="px-3 py-3 text-label text-muted-foreground">{l.company}</TableCell>
+                      <TableCell className="px-3 py-3 text-label text-muted-foreground">{l.pageTitle}</TableCell>
+                      <TableCell className="px-3 py-3">
+                        <span className={cn("tnum text-label font-semibold", scoreColor(l.score))}>{l.score}</span>
+                      </TableCell>
+                      <TableCell className="px-3 py-3">
+                        <select
+                          value={l.status}
+                          onChange={(e) => setStatus(l.id, e.target.value as LeadStatus)}
+                          aria-label={`Status for ${l.name}`}
+                          className={cn(
+                            "cursor-pointer rounded-full border-0 px-2 py-0.5 text-micro font-semibold capitalize outline-none focus-visible:ring-3 focus-visible:ring-ring/40",
+                            STATUS[l.status],
+                          )}
+                        >
+                          {(["new", "qualified", "contacted", "won", "lost"] as LeadStatus[]).map((s) => (
+                            <option key={s} value={s}>
+                              {s}
+                            </option>
+                          ))}
+                        </select>
+                      </TableCell>
+                      <TableCell className="px-3 py-3">
+                        <Badge variant={SPAM[l.spamStatus].variant}>{SPAM[l.spamStatus].label}</Badge>
+                      </TableCell>
+                      <TableCell className="px-5 py-3 text-label text-muted-foreground">{relativeTime(l.createdAt)}</TableCell>
+                      <TableCell className="px-5 py-3">
+                        <div className="flex items-center justify-end gap-1.5">
+                          <button
+                            onClick={() => syncLead(l.id)}
+                            disabled={l.crmSyncStatus === "synced"}
+                            className="flex size-7 items-center justify-center rounded-lg border border-border text-muted-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/40 disabled:opacity-50"
+                            aria-label={l.crmSyncStatus === "synced" ? `${l.name} synced to CRM` : `Sync ${l.name} to CRM`}
+                            title={l.crmSyncStatus === "synced" ? "Synced" : "Sync to CRM"}
+                          >
+                            {l.crmSyncStatus === "synced" ? <Check className="size-3.5 text-positive" /> : <Cloud className="size-3.5" />}
+                          </button>
+                          <button
+                            onClick={() => deleteLead(l.id)}
+                            className="flex size-7 items-center justify-center rounded-lg border border-border text-muted-foreground transition-colors hover:bg-negative/10 hover:text-negative focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/40"
+                            aria-label={`Delete lead ${l.name}`}
+                            title="Delete (GDPR)"
+                          >
+                            <Trash2 className="size-3.5" />
+                          </button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+
+            {/* mobile cards — same data, no horizontal scroll */}
+            <ul className="space-y-2.5 p-3 md:hidden">
               {filtered.map((l) => (
-                <tr key={l.id} className={cn("border-b border-border last:border-0 hover:bg-surface-sunken", l.spamStatus !== "clean" && "opacity-70")}>
-                  <td className="px-5 py-3">
-                    <button onClick={() => openDetail(l)} className="text-left transition-colors hover:text-brand">
-                      <div className="text-[13.5px] font-semibold text-foreground hover:text-brand">{l.name}</div>
-                      <div className="text-[12px] text-muted-foreground">{l.email}</div>
+                <li
+                  key={l.id}
+                  className={cn(
+                    "rounded-xl border border-border bg-card p-3.5 shadow-xs",
+                    l.spamStatus !== "clean" && "opacity-70",
+                  )}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <button
+                      onClick={() => openDetail(l)}
+                      className="min-w-0 rounded-md text-left transition-colors hover:text-brand focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/40"
+                    >
+                      <div className="truncate text-body font-semibold text-foreground">{l.name}</div>
+                      <div className="truncate text-label text-muted-foreground">{l.email}</div>
                     </button>
-                  </td>
-                  <td className="px-3 py-3 text-[13px] text-muted-foreground">{l.company}</td>
-                  <td className="px-3 py-3">
-                    <span className="text-[12.5px] text-muted-foreground">{l.pageTitle}</span>
-                  </td>
-                  <td className="px-3 py-3">
-                    <span className={cn("tnum text-[13px] font-semibold", scoreColor(l.score))}>{l.score}</span>
-                  </td>
-                  <td className="px-3 py-3">
+                    <Badge variant={SPAM[l.spamStatus].variant} className="shrink-0">
+                      {SPAM[l.spamStatus].label}
+                    </Badge>
+                  </div>
+                  <div className="mt-2.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-label text-muted-foreground">
+                    {l.company && <span className="truncate">{l.company}</span>}
+                    <span className="tnum">
+                      Score <span className={cn("font-semibold", scoreColor(l.score))}>{l.score}</span>
+                    </span>
+                    <span className="ml-auto tnum text-micro">{relativeTime(l.createdAt)}</span>
+                  </div>
+                  <div className="mt-3 flex items-center gap-2">
                     <select
                       value={l.status}
                       onChange={(e) => setStatus(l.id, e.target.value as LeadStatus)}
+                      aria-label={`Status for ${l.name}`}
                       className={cn(
-                        "cursor-pointer rounded-full border-0 px-2 py-0.5 text-[11.5px] font-semibold capitalize outline-none",
+                        "h-7 cursor-pointer rounded-full border-0 px-2.5 text-micro font-semibold capitalize outline-none focus-visible:ring-3 focus-visible:ring-ring/40",
                         STATUS[l.status],
                       )}
                     >
@@ -232,38 +367,29 @@ export function LeadsView({ leads }: { leads: Lead[] }) {
                         </option>
                       ))}
                     </select>
-                  </td>
-                  <td className="px-3 py-3">
-                    <span className={cn("rounded-full px-2 py-0.5 text-[11.5px] font-semibold", SPAM[l.spamStatus].cls)}>{SPAM[l.spamStatus].label}</span>
-                  </td>
-                  <td className="px-5 py-3 text-[12px] text-muted-foreground">{relativeTime(l.createdAt)}</td>
-                  <td className="px-5 py-3">
-                    <div className="flex items-center justify-end gap-1.5">
+                    <div className="ml-auto flex items-center gap-1.5">
                       <button
                         onClick={() => syncLead(l.id)}
                         disabled={l.crmSyncStatus === "synced"}
-                        className="flex size-7 items-center justify-center rounded-lg border border-border text-muted-foreground transition-colors hover:bg-muted disabled:opacity-50"
-                        aria-label="Sync to CRM"
-                        title={l.crmSyncStatus === "synced" ? "Synced" : "Sync to CRM"}
+                        className="flex size-8 items-center justify-center rounded-lg border border-border text-muted-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/40 disabled:opacity-50"
+                        aria-label={l.crmSyncStatus === "synced" ? `${l.name} synced to CRM` : `Sync ${l.name} to CRM`}
                       >
                         {l.crmSyncStatus === "synced" ? <Check className="size-3.5 text-positive" /> : <Cloud className="size-3.5" />}
                       </button>
                       <button
                         onClick={() => deleteLead(l.id)}
-                        className="flex size-7 items-center justify-center rounded-lg border border-border text-muted-foreground transition-colors hover:bg-negative/10 hover:text-negative"
-                        aria-label="Delete lead"
-                        title="Delete (GDPR)"
+                        className="flex size-8 items-center justify-center rounded-lg border border-border text-muted-foreground transition-colors hover:bg-negative/10 hover:text-negative focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/40"
+                        aria-label={`Delete lead ${l.name}`}
                       >
                         <Trash2 className="size-3.5" />
                       </button>
                     </div>
-                  </td>
-                </tr>
+                  </div>
+                </li>
               ))}
-            </tbody>
-          </table>
-        </div>
-        {filtered.length === 0 && <div className="py-16 text-center text-sm text-muted-foreground">No leads match this filter.</div>}
+            </ul>
+          </>
+        )}
       </Panel>
 
       <LeadDetailDrawer lead={selected} open={detailOpen} onOpenChange={setDetailOpen} />

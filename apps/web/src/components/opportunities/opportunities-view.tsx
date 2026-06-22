@@ -16,6 +16,7 @@ import {
   X,
   Tag,
   Download,
+  Inbox,
 } from "lucide-react";
 import type { BacklinkProspect, BrandProfile, ProspectStatus } from "@geoseo/types";
 import { api } from "@/lib/api-client";
@@ -23,6 +24,15 @@ import { compact } from "@/lib/format";
 import { toCsv, downloadFile, dateStamp } from "@/lib/csv";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/empty-state";
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+} from "@/components/ui/table";
 import { StatusPill, PROSPECT_STATUSES } from "./status-pill";
 import { OutreachDrawer } from "./outreach-drawer";
 import { ProspectEditDrawer } from "./prospect-edit-drawer";
@@ -59,7 +69,7 @@ function ScoreBar({ score }: { score: number }) {
       <div className="h-1.5 w-14 overflow-hidden rounded-full bg-muted">
         <div className={cn("h-full rounded-full", impactColor(score))} style={{ width: `${score}%` }} />
       </div>
-      <span className="tnum text-[13px] font-semibold text-foreground">{score}</span>
+      <span className="tnum text-label font-semibold text-foreground">{score}</span>
     </div>
   );
 }
@@ -359,10 +369,10 @@ export function OpportunitiesView({
           <button
             key={m.label}
             onClick={m.onClick}
-            className="rounded-2xl border border-border bg-card p-4 text-left shadow-card transition-colors hover:bg-surface-sunken focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="rounded-2xl border border-border bg-card p-4 text-left shadow-card transition-colors hover:bg-surface-sunken focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/40"
           >
-            <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{m.label}</div>
-            <div className="tnum mt-1.5 text-2xl font-semibold text-foreground">{m.value}</div>
+            <div className="text-micro text-muted-foreground">{m.label}</div>
+            <div className="tnum mt-1.5 text-kpi text-foreground">{m.value}</div>
           </button>
         ))}
       </div>
@@ -455,21 +465,21 @@ export function OpportunitiesView({
 
       {showArchived && (
         <div className="rounded-2xl border border-border bg-card p-4 shadow-card">
-          <div className="mb-2 flex items-center gap-2 text-[13px] font-semibold text-foreground">
-            <Archive className="size-4 text-muted-foreground" /> Archived prospects
-            <span className="tnum rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">{archived.length}</span>
+          <div className="mb-2 flex items-center gap-2 text-body font-semibold text-foreground">
+            <Archive className="size-4 text-muted-foreground" aria-hidden="true" /> Archived prospects
+            <span className="tnum rounded-full bg-muted px-2 py-0.5 text-micro font-medium text-muted-foreground">{archived.length}</span>
           </div>
           {loadingArchived ? (
-            <p className="py-4 text-center text-[13px] text-muted-foreground">Loading…</p>
+            <p className="py-4 text-center text-label text-muted-foreground">Loading…</p>
           ) : archived.length === 0 ? (
-            <p className="py-4 text-center text-[13px] text-muted-foreground">No archived prospects.</p>
+            <p className="py-4 text-center text-label text-muted-foreground">No archived prospects.</p>
           ) : (
             <div className="divide-y divide-border">
               {archived.map((p) => (
                 <div key={p.id} className="flex items-center gap-3 py-2.5">
                   <div className="min-w-0 flex-1">
-                    <div className="truncate text-[13px] font-medium text-foreground">{p.domain}</div>
-                    <div className="truncate text-[12px] text-muted-foreground">
+                    <div className="truncate text-body font-medium text-foreground">{p.domain}</div>
+                    <div className="truncate text-label text-muted-foreground">
                       {p.industry} · DA {p.domainAuthority}
                     </div>
                   </div>
@@ -573,7 +583,7 @@ export function OpportunitiesView({
       {/* bulk action bar (§8.5) */}
       {selectedIds.size > 0 && (
         <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-brand/30 bg-brand/5 p-2.5">
-          <span className="px-1 text-[12.5px] font-semibold text-foreground">{selectedIds.size} selected</span>
+          <span className="px-1 text-label font-semibold text-foreground">{selectedIds.size} selected</span>
           <select
             onChange={(e) => {
               const v = e.target.value;
@@ -582,7 +592,7 @@ export function OpportunitiesView({
             }}
             defaultValue=""
             aria-label="Set status for selected"
-            className="h-8 rounded-lg border border-border bg-card px-2 text-[12.5px] capitalize outline-none focus:border-ring"
+            className="h-8 rounded-lg border border-border bg-card px-2 text-label capitalize outline-none transition-colors focus-visible:ring-3 focus-visible:ring-ring/40 focus:border-ring"
           >
             <option value="" disabled>
               Set status…
@@ -602,7 +612,7 @@ export function OpportunitiesView({
               }}
               placeholder="Add tag…"
               aria-label="Tag to add to selected"
-              className="h-8 w-28 rounded-lg border border-border bg-card px-2 text-[12.5px] outline-none focus:border-ring"
+              className="h-8 w-28 rounded-lg border border-border bg-card px-2 text-label outline-none transition-colors focus-visible:ring-3 focus-visible:ring-ring/40 focus:border-ring"
             />
             <Button size="sm" variant="outline" className="h-8" onClick={bulkAddTag} disabled={!bulkTag.trim()}>
               <Tag className="size-3.5" />
@@ -619,7 +629,7 @@ export function OpportunitiesView({
           </Button>
           <button
             onClick={clearSelection}
-            className="ml-auto inline-flex h-8 items-center gap-1 rounded-lg px-2 text-[12.5px] text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            className="ml-auto inline-flex h-8 items-center gap-1 rounded-lg px-2 text-label text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/40"
           >
             <X className="size-3.5" />
             Clear
@@ -627,167 +637,166 @@ export function OpportunitiesView({
         </div>
       )}
 
-      <div className="text-[12.5px] text-muted-foreground">
+      <div className="text-label text-muted-foreground">
         <span className="font-semibold text-foreground">{filtered.length}</span> prospects
         · ranked by {SORTS.find((s) => s.key === sort)?.label.toLowerCase()}
       </div>
 
       {filtered.length === 0 ? (
-        <div className="rounded-2xl border border-border bg-card py-16 text-center shadow-card">
-          <p className="text-sm text-muted-foreground">No prospects match your filters.</p>
-          {hasFilters && (
-            <Button variant="outline" className="mt-3 h-9" onClick={resetFilters}>
-              Reset filters
-            </Button>
-          )}
+        <div className="rounded-2xl border border-border bg-card shadow-card">
+          <EmptyState
+            icon={Inbox}
+            title="No prospects match your filters"
+            description={hasFilters ? "Adjust or clear your filters to see more backlink prospects." : "Discover backlink prospects to populate your pipeline."}
+            action={hasFilters ? { label: "Reset filters", onClick: resetFilters } : undefined}
+            className="py-16"
+          />
         </div>
       ) : (
        <>
       {/* desktop table */}
       <div className="hidden overflow-hidden rounded-2xl border border-border bg-card shadow-card md:block">
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[860px] border-collapse text-left">
-            <thead>
-              <tr className="border-b border-border bg-surface-sunken text-[11px] font-semibold uppercase tracking-[0.04em] text-muted-foreground">
-                <th className="py-3 pl-5 pr-2 font-semibold">
+        <Table className="text-left">
+          <TableHeader>
+            <TableRow className="border-b border-border bg-surface-sunken hover:bg-surface-sunken">
+              <TableHead className="py-3 pl-5 pr-2">
+                <input
+                  type="checkbox"
+                  checked={allVisibleSelected}
+                  onChange={toggleSelectAll}
+                  aria-label="Select all prospects"
+                  className="size-3.5 accent-[var(--brand)]"
+                />
+              </TableHead>
+              <TableHead scope="col" className="py-3 pr-3 text-micro text-muted-foreground">Prospect</TableHead>
+              <TableHead scope="col" className="px-3 py-3 text-micro text-muted-foreground">DA</TableHead>
+              <TableHead scope="col" className="px-3 py-3 text-micro text-muted-foreground">Relevance</TableHead>
+              <TableHead scope="col" className="px-3 py-3 text-micro text-muted-foreground">Impact</TableHead>
+              <TableHead scope="col" className="px-3 py-3 text-micro text-muted-foreground">Traffic</TableHead>
+              <TableHead scope="col" className="px-3 py-3 text-micro text-muted-foreground">Status</TableHead>
+              <TableHead scope="col" className="px-5 py-3 text-right text-micro text-muted-foreground">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {filtered.map((p) => (
+              <TableRow
+                key={p.id}
+                className={cn(
+                  "group border-b border-border hover:bg-surface-sunken",
+                  selectedIds.has(p.id) && "bg-brand/5",
+                  highlightId === p.id && "animate-pulse bg-brand/10 ring-1 ring-inset ring-brand/40",
+                )}
+              >
+                <TableCell className="py-3.5 pl-5 pr-2">
                   <input
                     type="checkbox"
-                    checked={allVisibleSelected}
-                    onChange={toggleSelectAll}
-                    aria-label="Select all prospects"
+                    checked={selectedIds.has(p.id)}
+                    onChange={() => toggleSelect(p.id)}
+                    aria-label={`Select ${p.domain}`}
                     className="size-3.5 accent-[var(--brand)]"
                   />
-                </th>
-                <th className="py-3 pr-3 font-semibold">Prospect</th>
-                <th className="px-3 py-3 font-semibold">DA</th>
-                <th className="px-3 py-3 font-semibold">Relevance</th>
-                <th className="px-3 py-3 font-semibold">Impact</th>
-                <th className="px-3 py-3 font-semibold">Traffic</th>
-                <th className="px-3 py-3 font-semibold">Status</th>
-                <th className="px-5 py-3 text-right font-semibold">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((p) => (
-                <tr
-                  key={p.id}
-                  className={cn(
-                    "group border-b border-border last:border-0 transition-colors hover:bg-surface-sunken",
-                    selectedIds.has(p.id) && "bg-brand/5",
-                    highlightId === p.id && "animate-pulse bg-brand/10 ring-1 ring-inset ring-brand/40",
-                  )}
-                >
-                  <td className="py-3.5 pl-5 pr-2">
-                    <input
-                      type="checkbox"
-                      checked={selectedIds.has(p.id)}
-                      onChange={() => toggleSelect(p.id)}
-                      aria-label={`Select ${p.domain}`}
-                      className="size-3.5 accent-[var(--brand)]"
-                    />
-                  </td>
-                  <td className="py-3.5 pr-3">
-                    <div className="flex items-center gap-3">
-                      <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-brand/15 to-info/15 text-[12px] font-bold text-brand">
-                        {p.domain.slice(0, 2).toUpperCase()}
-                      </span>
-                      <div className="min-w-0">
-                        <div className="truncate text-[13.5px] font-semibold text-foreground">
-                          {p.domain}
-                        </div>
-                        <div className="mt-0.5 flex items-center gap-1.5">
-                          <span className="text-[11.5px] text-muted-foreground">
-                            {p.industry}
+                </TableCell>
+                <TableCell className="py-3.5 pr-3">
+                  <div className="flex items-center gap-3">
+                    <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-brand/15 to-info/15 text-label font-bold text-brand">
+                      {p.domain.slice(0, 2).toUpperCase()}
+                    </span>
+                    <div className="min-w-0">
+                      <div className="truncate text-body font-semibold text-foreground">
+                        {p.domain}
+                      </div>
+                      <div className="mt-0.5 flex items-center gap-1.5">
+                        <span className="text-micro text-muted-foreground normal-case tracking-normal">
+                          {p.industry}
+                        </span>
+                        {p.tags.slice(0, 2).map((t) => (
+                          <span
+                            key={t}
+                            className="rounded-md bg-muted px-1.5 py-0.5 text-micro font-medium text-muted-foreground normal-case tracking-normal"
+                          >
+                            {t}
                           </span>
-                          {p.tags.slice(0, 2).map((t) => (
-                            <span
-                              key={t}
-                              className="rounded-md bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground"
-                            >
-                              {t}
-                            </span>
-                          ))}
-                        </div>
+                        ))}
                       </div>
                     </div>
-                  </td>
-                  <td className="px-3 py-3.5">
-                    <span className="tnum text-[13px] font-semibold text-foreground">
-                      {p.domainAuthority}
-                    </span>
-                  </td>
-                  <td className="px-3 py-3.5">
-                    <span className="tnum text-[13px] text-foreground">{p.relevanceScore}</span>
-                  </td>
-                  <td className="px-3 py-3.5">
-                    <ScoreBar score={p.impactScore} />
-                  </td>
-                  <td className="px-3 py-3.5">
-                    <span className="tnum text-[13px] text-muted-foreground">
-                      {compact(p.trafficEstimate)}
-                    </span>
-                  </td>
-                  <td className="px-3 py-3.5">
-                    <StatusPill status={p.status} />
-                  </td>
-                  <td className="px-5 py-3.5">
-                    <div className="flex items-center justify-end gap-1.5">
-                      <a
-                        href={p.url}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="flex size-9 items-center justify-center rounded-lg border border-border text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-                        aria-label={`Open ${p.domain}`}
-                      >
-                        <ExternalLink className="size-3.5" />
-                      </a>
-                      <button
-                        onClick={() => copyEmail(p)}
-                        className="flex size-9 items-center justify-center rounded-lg border border-border text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-                        aria-label="Copy contact email"
-                      >
-                        {copiedId === p.id ? (
-                          <Check className="size-3.5 text-positive" />
-                        ) : (
-                          <Copy className="size-3.5" />
-                        )}
-                      </button>
-                      <button
-                        onClick={() => openEdit(p)}
-                        className="flex size-9 items-center justify-center rounded-lg border border-border text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-                        aria-label={`Edit ${p.domain}`}
-                      >
-                        <Pencil className="size-3.5" />
-                      </button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="h-9 rounded-full px-3"
-                        disabled={pendingId === p.id}
-                        onClick={() => updateStatus(p)}
-                      >
-                        {pendingId === p.id ? <RotateCw className="size-3.5 animate-spin" /> : <ArrowUpDown className="size-3.5" />}
-                        Status
-                      </Button>
-                      <Button size="sm" className="h-9 rounded-full px-3" onClick={() => openOutreach(p)}>
-                        <Mail className="size-3.5" />
-                        Outreach
-                      </Button>
-                      <button
-                        onClick={() => archiveProspect(p)}
-                        disabled={isPending}
-                        className="flex size-9 items-center justify-center rounded-lg border border-border text-muted-foreground transition-colors hover:bg-negative/10 hover:text-negative disabled:opacity-50"
-                        aria-label={`Archive ${p.domain}`}
-                      >
-                        <Archive className="size-3.5" />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                  </div>
+                </TableCell>
+                <TableCell className="px-3 py-3.5">
+                  <span className="tnum text-label font-semibold text-foreground">
+                    {p.domainAuthority}
+                  </span>
+                </TableCell>
+                <TableCell className="px-3 py-3.5">
+                  <span className="tnum text-label text-foreground">{p.relevanceScore}</span>
+                </TableCell>
+                <TableCell className="px-3 py-3.5">
+                  <ScoreBar score={p.impactScore} />
+                </TableCell>
+                <TableCell className="px-3 py-3.5">
+                  <span className="tnum text-label text-muted-foreground">
+                    {compact(p.trafficEstimate)}
+                  </span>
+                </TableCell>
+                <TableCell className="px-3 py-3.5">
+                  <StatusPill status={p.status} />
+                </TableCell>
+                <TableCell className="px-5 py-3.5">
+                  <div className="flex items-center justify-end gap-1.5">
+                    <a
+                      href={p.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="flex size-9 items-center justify-center rounded-lg border border-border text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/40"
+                      aria-label={`Open ${p.domain}`}
+                    >
+                      <ExternalLink className="size-3.5" />
+                    </a>
+                    <button
+                      onClick={() => copyEmail(p)}
+                      className="flex size-9 items-center justify-center rounded-lg border border-border text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/40"
+                      aria-label={`Copy contact email for ${p.domain}`}
+                    >
+                      {copiedId === p.id ? (
+                        <Check className="size-3.5 text-positive" />
+                      ) : (
+                        <Copy className="size-3.5" />
+                      )}
+                    </button>
+                    <button
+                      onClick={() => openEdit(p)}
+                      className="flex size-9 items-center justify-center rounded-lg border border-border text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/40"
+                      aria-label={`Edit ${p.domain}`}
+                    >
+                      <Pencil className="size-3.5" />
+                    </button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-9 rounded-full px-3"
+                      disabled={pendingId === p.id}
+                      onClick={() => updateStatus(p)}
+                    >
+                      {pendingId === p.id ? <RotateCw className="size-3.5 animate-spin" /> : <ArrowUpDown className="size-3.5" />}
+                      Status
+                    </Button>
+                    <Button size="sm" variant="brand" className="h-9 rounded-full px-3" onClick={() => openOutreach(p)}>
+                      <Mail className="size-3.5" />
+                      Outreach
+                    </Button>
+                    <button
+                      onClick={() => archiveProspect(p)}
+                      disabled={isPending}
+                      className="flex size-9 items-center justify-center rounded-lg border border-border text-muted-foreground transition-colors hover:bg-negative/10 hover:text-negative focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/40 disabled:opacity-50"
+                      aria-label={`Archive ${p.domain}`}
+                    >
+                      <Archive className="size-3.5" />
+                    </button>
+                  </div>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
       </div>
 
       {/* mobile cards */}
@@ -802,12 +811,12 @@ export function OpportunitiesView({
           >
             <div className="flex items-start justify-between gap-3">
               <div className="flex min-w-0 items-center gap-3">
-                <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-brand/15 to-info/15 text-[12px] font-bold text-brand">
+                <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-brand/15 to-info/15 text-label font-bold text-brand">
                   {p.domain.slice(0, 2).toUpperCase()}
                 </span>
                 <div className="min-w-0">
-                  <div className="truncate text-[14px] font-semibold text-foreground">{p.domain}</div>
-                  <div className="text-[11.5px] text-muted-foreground">{p.industry}</div>
+                  <div className="truncate text-body font-semibold text-foreground">{p.domain}</div>
+                  <div className="truncate text-label text-muted-foreground">{p.industry}</div>
                 </div>
               </div>
               <StatusPill status={p.status} />
@@ -815,27 +824,27 @@ export function OpportunitiesView({
 
             <div className="mt-3 grid grid-cols-3 gap-2 rounded-xl bg-surface-sunken p-2.5 text-center">
               <div>
-                <div className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">DA</div>
-                <div className="tnum text-[14px] font-semibold text-foreground">{p.domainAuthority}</div>
+                <div className="text-micro text-muted-foreground">DA</div>
+                <div className="tnum text-body font-semibold text-foreground">{p.domainAuthority}</div>
               </div>
               <div>
-                <div className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Impact</div>
-                <div className="tnum text-[14px] font-semibold text-foreground">{p.impactScore}</div>
+                <div className="text-micro text-muted-foreground">Impact</div>
+                <div className="tnum text-body font-semibold text-foreground">{p.impactScore}</div>
               </div>
               <div>
-                <div className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Traffic</div>
-                <div className="tnum text-[14px] font-semibold text-foreground">{compact(p.trafficEstimate)}</div>
+                <div className="text-micro text-muted-foreground">Traffic</div>
+                <div className="tnum text-body font-semibold text-foreground">{compact(p.trafficEstimate)}</div>
               </div>
             </div>
 
             <div className="mt-3 flex items-center gap-1.5">
-              <Button size="sm" className="h-9 flex-1 rounded-full" onClick={() => openOutreach(p)}>
+              <Button size="sm" variant="brand" className="h-9 flex-1 rounded-full" onClick={() => openOutreach(p)}>
                 <Mail className="size-3.5" />
                 Outreach
               </Button>
               <button
                 onClick={() => openEdit(p)}
-                className="flex size-9 items-center justify-center rounded-lg border border-border text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                className="flex size-9 items-center justify-center rounded-lg border border-border text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/40"
                 aria-label={`Edit ${p.domain}`}
               >
                 <Pencil className="size-3.5" />
@@ -843,15 +852,15 @@ export function OpportunitiesView({
               <button
                 onClick={() => updateStatus(p)}
                 disabled={pendingId === p.id}
-                className="flex size-9 items-center justify-center rounded-lg border border-border text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-50"
-                aria-label="Advance status"
+                className="flex size-9 items-center justify-center rounded-lg border border-border text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/40 disabled:opacity-50"
+                aria-label={`Advance status for ${p.domain}`}
               >
                 {pendingId === p.id ? <RotateCw className="size-3.5 animate-spin" /> : <ArrowUpDown className="size-3.5" />}
               </button>
               <button
                 onClick={() => archiveProspect(p)}
                 disabled={isPending}
-                className="flex size-9 items-center justify-center rounded-lg border border-border text-muted-foreground transition-colors hover:bg-negative/10 hover:text-negative disabled:opacity-50"
+                className="flex size-9 items-center justify-center rounded-lg border border-border text-muted-foreground transition-colors hover:bg-negative/10 hover:text-negative focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/40 disabled:opacity-50"
                 aria-label={`Archive ${p.domain}`}
               >
                 <Archive className="size-3.5" />

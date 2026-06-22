@@ -5,6 +5,8 @@ import Link from "next/link";
 import { Loader2, RefreshCw, Sparkles, Swords, ArrowUpRight, Info, Search, ShieldAlert, Check } from "lucide-react";
 import type { CompetitorAnalysis, CompetitorSource, CompetitorPageAnalysis } from "@geoseo/types";
 import { Panel } from "@/components/dashboard/panel";
+import { Badge } from "@/components/ui/badge";
+import { EmptyState } from "@/components/ui/empty-state";
 import { api } from "@/lib/api-client";
 import { puterReady, discoverCompetitorsWithPuter, type PuterCompetitor } from "@/lib/puter-ai";
 import { useAppFeedback } from "@/components/system/app-feedback";
@@ -42,13 +44,14 @@ function sourceBadge(source: CompetitorSource): { label: string; live: boolean; 
   };
 }
 
-const INTENT_TONE: Record<string, string> = {
-  transactional: "bg-positive/12 text-positive",
-  commercial: "bg-brand/12 text-brand",
-  comparison: "bg-warning/12 text-warning",
-  informational: "bg-muted text-muted-foreground",
-  local: "bg-muted text-muted-foreground",
-  navigational: "bg-muted text-muted-foreground",
+type BadgeVariant = "brand" | "positive" | "negative" | "warning" | "info" | "muted";
+const INTENT_VARIANT: Record<string, BadgeVariant> = {
+  transactional: "positive",
+  commercial: "brand",
+  comparison: "warning",
+  informational: "muted",
+  local: "muted",
+  navigational: "muted",
 };
 
 type PageJob = { id: string; status: "running" | "completed" | "failed"; result?: CompetitorPageAnalysis; error?: string };
@@ -172,8 +175,8 @@ export function CompetitorAnalysisView() {
 
   if (loading) {
     return (
-      <div className="flex items-center gap-2 py-10 text-[13px] text-muted-foreground">
-        <Loader2 className="size-4 animate-spin" /> Analyzing the search landscape…
+      <div className="flex items-center gap-2 py-10 text-body text-muted-foreground">
+        <Loader2 className="size-4 animate-spin" aria-hidden="true" /> Analyzing the search landscape…
       </div>
     );
   }
@@ -182,29 +185,29 @@ export function CompetitorAnalysisView() {
   if (empty) {
     return (
       <Panel>
-        <div className="flex flex-col items-center gap-3 py-10 text-center">
-          <Swords className="size-8 text-muted-foreground" />
-          <div>
-            <p className="text-[14px] font-semibold text-foreground">No competitor data yet</p>
-            <p className="mx-auto mt-1 max-w-md text-[12.5px] text-muted-foreground">
-              Add competitor domains in Brand Memory (or set a free Brave Search key) and run the analysis to see who
-              ranks for your keywords and where the gaps are.
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
+        <EmptyState
+          tone="prompt"
+          icon={Swords}
+          title="No competitor data yet"
+          description="Add competitor domains in Brand Memory (or set a free Brave Search key) and run the analysis to see who ranks for your keywords and where the gaps are."
+        >
+          <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
             <button
               onClick={refresh}
               disabled={running}
-              className="inline-flex items-center gap-1.5 rounded-xl bg-brand px-3.5 py-2 text-[13px] font-semibold text-white transition-colors hover:bg-brand/90 disabled:opacity-60"
+              className="inline-flex items-center gap-1.5 rounded-xl bg-brand px-3.5 py-2 text-label font-semibold text-white transition-colors ease-expo hover:bg-brand/90 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/40 disabled:opacity-60"
             >
-              {running ? <Loader2 className="size-4 animate-spin" /> : <Sparkles className="size-4" />}
+              {running ? <Loader2 className="size-4 animate-spin" aria-hidden="true" /> : <Sparkles className="size-4" aria-hidden="true" />}
               {running ? "Analyzing…" : "Run analysis"}
             </button>
-            <Link href="/brand" className="rounded-xl border border-border px-3.5 py-2 text-[13px] font-semibold text-foreground hover:bg-muted">
+            <Link
+              href="/brand"
+              className="rounded-xl border border-border px-3.5 py-2 text-label font-semibold text-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/40"
+            >
               Edit Brand Memory
             </Link>
           </div>
-        </div>
+        </EmptyState>
       </Panel>
     );
   }
@@ -328,9 +331,7 @@ export function CompetitorAnalysisView() {
                   <tr key={g.keyword} className="border-b border-border/60 last:border-0">
                     <td className="py-2.5 pr-3 font-medium text-foreground">{g.keyword}</td>
                     <td className="py-2.5 pr-3">
-                      <span className={cn("rounded-full px-2 py-0.5 text-[10.5px] font-semibold", INTENT_TONE[g.intent] ?? "bg-muted text-muted-foreground")}>
-                        {g.intent}
-                      </span>
+                      <Badge variant={INTENT_VARIANT[g.intent] ?? "muted"}>{g.intent}</Badge>
                     </td>
                     <td className="py-2.5 pr-3 tabular-nums text-muted-foreground">{g.volume.toLocaleString()}</td>
                     <td className="py-2.5 pr-3 tabular-nums text-muted-foreground">{g.difficulty}</td>

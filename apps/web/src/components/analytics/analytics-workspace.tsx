@@ -31,6 +31,8 @@ import { Panel } from "@/components/dashboard/panel";
 import { ConnectDataPrompt } from "@/components/dashboard/connect-data-prompt";
 import { InsightBand, type InsightStatus } from "@/components/dashboard/insight-band";
 import { InfoHint } from "@/components/ui/info-hint";
+import { Badge } from "@/components/ui/badge";
+import { EmptyState } from "@/components/ui/empty-state";
 import { RankChartLazy, TrafficChartLazy, AiVisibilityLazy } from "@/components/performance/lazy-charts";
 import { TrackedPagesTable } from "@/components/performance/tracked-pages-table";
 import { compact } from "@/lib/format";
@@ -162,16 +164,24 @@ export function AnalyticsWorkspace({
   return (
     <div className="space-y-5">
       {/* tabs */}
-      <div className="flex items-center gap-1 overflow-x-auto rounded-xl border border-border bg-card p-1">
+      <div
+        role="tablist"
+        aria-label="Analytics views"
+        className="flex items-center gap-1 overflow-x-auto rounded-xl border border-border bg-card p-1"
+      >
         {TABS.map((t) => {
           const Icon = t.icon;
+          const active = tab === t.id;
           return (
             <button
               key={t.id}
+              role="tab"
+              type="button"
+              aria-selected={active}
               onClick={() => setTab(t.id)}
               className={cn(
-                "inline-flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-[12.5px] font-medium transition-colors",
-                tab === t.id ? "bg-foreground text-background" : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                "inline-flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-label font-medium transition-colors focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/40",
+                active ? "bg-foreground text-background" : "text-muted-foreground hover:bg-muted hover:text-foreground",
               )}
             >
               <Icon className="size-3.5" />
@@ -205,18 +215,18 @@ export function AnalyticsWorkspace({
               return (
                 <div key={k.label} className="rounded-2xl border border-border bg-card p-4 shadow-card">
                   <div className="flex items-center justify-between gap-2">
-                    <span className="flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                    <span className="flex items-center gap-1 text-micro font-semibold uppercase text-muted-foreground">
                       {k.label}
                       <InfoHint>{k.def}</InfoHint>
                     </span>
                     <Icon className="size-3.5 text-muted-foreground" />
                   </div>
-                  <div className="tnum mt-1.5 text-2xl font-semibold text-foreground">{k.value}</div>
+                  <div className="tnum mt-1.5 text-kpi text-foreground">{k.value}</div>
                 </div>
               );
             })}
           </div>
-          <p className="text-[12px] text-muted-foreground">
+          <p className="text-label text-muted-foreground">
             Human-traffic, AI-bot, and conversion analytics appear once the analytics tracker and event pipeline are connected.
           </p>
 
@@ -227,7 +237,11 @@ export function AnalyticsWorkspace({
               className="lg:col-span-2"
             >
               {needsAction.length === 0 ? (
-                <div className="py-8 text-center text-[13px] text-muted-foreground">All tracked pages are holding or gaining. 🎉</div>
+                <EmptyState
+                  icon={ShieldCheck}
+                  title="Every tracked page is holding or gaining"
+                  description="No pages are slipping in rank right now — nothing needs a refresh."
+                />
               ) : (
                 <ul className="space-y-2">
                   {needsAction.map((p) => (
@@ -236,11 +250,14 @@ export function AnalyticsWorkspace({
                         <LineChart className="size-4" />
                       </span>
                       <div className="min-w-0 flex-1">
-                        <div className="truncate text-[13.5px] font-medium text-foreground">{p.title}</div>
-                        <div className="truncate font-mono text-[11.5px] text-muted-foreground">{p.path}</div>
+                        <div className="truncate text-h-card text-foreground">{p.title}</div>
+                        <div className="truncate font-mono text-micro text-muted-foreground">{p.path}</div>
                       </div>
-                      <span className="tnum text-[12px] text-negative">#{p.prevRank} → #{p.currentRank}</span>
-                      <Link href="/content" className="inline-flex items-center gap-1 text-[12px] font-semibold text-brand hover:underline">
+                      <span className="tnum text-label text-negative">#{p.prevRank} → #{p.currentRank}</span>
+                      <Link
+                        href="/content"
+                        className="inline-flex items-center gap-1 rounded-md text-label font-semibold text-brand hover:underline focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/40"
+                      >
                         Refresh <ArrowRight className="size-3.5" />
                       </Link>
                     </li>
@@ -250,7 +267,15 @@ export function AnalyticsWorkspace({
             </Panel>
 
             <Panel title="AI Search Visibility" description="Brand citations in AI answers">
-              <AiVisibilityLazy signals={aiSignals} />
+              {!hasAiData ? (
+                <EmptyState
+                  icon={Sparkles}
+                  title="No AI mentions yet"
+                  description="Citations appear once the AI-mention tracker starts monitoring answer engines."
+                />
+              ) : (
+                <AiVisibilityLazy signals={aiSignals} />
+              )}
             </Panel>
           </div>
         </div>
@@ -259,17 +284,36 @@ export function AnalyticsWorkspace({
       {tab === "rankings" && (
         <div className="space-y-5">
           <div className="flex items-center justify-between">
-            <p className="text-[12.5px] text-muted-foreground">Ranking momentum and search traffic across tracked pages.</p>
-            <Link href="/performance" className="inline-flex items-center gap-1 text-[12.5px] font-semibold text-brand hover:underline">
+            <p className="text-label text-muted-foreground">Ranking momentum and search traffic across tracked pages.</p>
+            <Link
+              href="/performance"
+              className="inline-flex items-center gap-1 rounded-md text-label font-semibold text-brand hover:underline focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/40"
+            >
               Date-range view <ExternalLink className="size-3.5" />
             </Link>
           </div>
           <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
             <Panel title="Average Ranking" description="Mean SERP position over time — lower is better">
-              <RankChartLazy data={ranks} />
+              {ranks.length === 0 ? (
+                <EmptyState
+                  icon={LineChart}
+                  title="No ranking data yet"
+                  description="Connect Google Search Console to chart SERP position over time."
+                />
+              ) : (
+                <RankChartLazy data={ranks} />
+              )}
             </Panel>
             <Panel title="Search Traffic" description="Impressions and clicks over time">
-              <TrafficChartLazy data={impressions} />
+              {!hasSearchData ? (
+                <EmptyState
+                  icon={Bot}
+                  title="No search traffic yet"
+                  description="Impressions and clicks appear once Search Console is connected."
+                />
+              ) : (
+                <TrafficChartLazy data={impressions} />
+              )}
             </Panel>
           </div>
           <Panel title="Tracked Pages" description="Click any row to drill into its history" bodyClassName="px-1.5 pb-1.5">
@@ -281,24 +325,42 @@ export function AnalyticsWorkspace({
       {tab === "ai" && (
         <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
           <Panel title="AI Search Visibility" description="Share of voice across AI answer engines">
-            <AiVisibilityLazy signals={aiSignals} />
+            {!hasAiData ? (
+              <EmptyState
+                icon={Sparkles}
+                title="No AI mentions yet"
+                description="Share of voice appears once the AI-mention tracker starts monitoring answer engines."
+              />
+            ) : (
+              <AiVisibilityLazy signals={aiSignals} />
+            )}
           </Panel>
           <Panel title="By engine" description="Mentions & share of voice" className="lg:col-span-2">
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              {aiSignals.map((s) => (
-                <div key={s.engine} className="rounded-xl border border-border p-3.5">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[13px] font-semibold text-foreground">{s.label}</span>
-                    <span className="tnum text-[12px] text-muted-foreground">{s.shareOfVoice}% SOV</span>
-                  </div>
-                  <div className="tnum mt-1 text-xl font-bold text-foreground">{s.mentions}</div>
-                  <div className="text-[11.5px] text-muted-foreground">mentions this period</div>
+            {aiSignals.length === 0 ? (
+              <EmptyState
+                icon={Bot}
+                title="No engines tracked yet"
+                description="Per-engine mentions and share of voice appear once the AI-mention tracker is connected."
+              />
+            ) : (
+              <>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  {aiSignals.map((s) => (
+                    <div key={s.engine} className="rounded-xl border border-border p-3.5">
+                      <div className="flex items-center justify-between">
+                        <span className="text-h-card text-foreground">{s.label}</span>
+                        <Badge variant="muted" className="tnum">{s.shareOfVoice}% SOV</Badge>
+                      </div>
+                      <div className="tnum mt-1 text-title text-foreground">{s.mentions}</div>
+                      <div className="text-micro text-muted-foreground">mentions this period</div>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-            <p className="mt-3 text-[11.5px] text-muted-foreground">
-              Per-prompt citations, cited URLs, and competitor mentions arrive with the AI-mention tracker (server jobs).
-            </p>
+                <p className="mt-3 text-micro text-muted-foreground">
+                  Per-prompt citations, cited URLs, and competitor mentions arrive with the AI-mention tracker (server jobs).
+                </p>
+              </>
+            )}
           </Panel>
         </div>
       )}

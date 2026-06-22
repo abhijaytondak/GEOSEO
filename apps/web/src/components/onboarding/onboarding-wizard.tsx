@@ -255,10 +255,10 @@ export function OnboardingWizard() {
   return (
     <div className="grid min-h-dvh w-full lg:grid-cols-[minmax(300px,360px)_1fr]">
       {/* ---------- LEFT EDITORIAL RAIL (desktop) ---------- */}
-      <aside className="relative hidden overflow-hidden bg-[#0E1116] p-9 text-white lg:flex lg:flex-col">
+      <aside className="relative hidden overflow-hidden bg-foreground p-9 text-background lg:flex lg:flex-col">
         <div className="relative z-10 flex items-center gap-2.5 text-[15px] font-semibold tracking-tight">
-          <span className="grid size-7 place-items-center rounded-lg bg-white">
-            <span className="size-3 rounded-full ring-2 ring-[#0E1116]" style={{ background: "#0E1116" }} />
+          <span className="grid size-7 place-items-center rounded-lg bg-background">
+            <span className="size-3 rounded-full ring-2 ring-foreground" style={{ background: "var(--foreground)" }} />
           </span>
           GEOSEO
         </div>
@@ -297,9 +297,9 @@ export function OnboardingWizard() {
       </aside>
 
       {/* ---------- mobile top bar ---------- */}
-      <div className="flex items-center gap-3 bg-[#0E1116] px-5 py-4 text-white lg:hidden">
-        <span className="grid size-6 place-items-center rounded-md bg-white">
-          <span className="size-2.5 rounded-full" style={{ background: "#0E1116" }} />
+      <div className="flex items-center gap-3 bg-foreground px-5 py-4 text-background lg:hidden">
+        <span className="grid size-6 place-items-center rounded-md bg-background">
+          <span className="size-2.5 rounded-full" style={{ background: "var(--foreground)" }} />
         </span>
         <span className="text-[14px] font-semibold tracking-tight">GEOSEO</span>
         <span className="ml-auto h-1 w-28 overflow-hidden rounded-full bg-white/15">

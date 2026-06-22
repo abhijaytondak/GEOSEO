@@ -19,6 +19,13 @@ const badgeVariants = cva(
         ghost:
           "hover:bg-muted hover:text-muted-foreground dark:hover:bg-muted/50",
         link: "text-primary underline-offset-4 hover:underline",
+        // semantic status tints — one tint step (/12) so status colour is defined once
+        brand: "bg-brand/12 text-brand",
+        positive: "bg-positive/12 text-positive",
+        negative: "bg-negative/12 text-negative",
+        warning: "bg-warning/15 text-warning",
+        info: "bg-info/12 text-info",
+        muted: "bg-muted text-muted-foreground",
       },
     },
     defaultVariants: {
