@@ -32,7 +32,7 @@ Return JSON exactly: {"keywords": string[]}`;
           max_tokens: 700,
         }),
       },
-      20_000,
+      Number(process.env.LLM_TIMEOUT_MS) || 20_000,
     );
     if (!res.ok) return null;
     const data = (await res.json()) as { choices?: { message?: { content?: string } }[] };

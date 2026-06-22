@@ -68,7 +68,7 @@ Return JSON exactly matching this shape:
           max_tokens: 1800,
         }),
       },
-      30_000,
+      Number(process.env.LLM_TIMEOUT_MS) || 30_000,
     );
     if (!res.ok) return null; // 402 insufficient balance, etc. → heuristic fallback
     const data = (await res.json()) as { choices?: { message?: { content?: string } }[] };
