@@ -1,9 +1,10 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Loader2, Sparkles, Plus, Highlighter, Check, X, Target } from "lucide-react";
+import { Sparkles, Plus, Highlighter, Check, X, Target } from "lucide-react";
 import type { GeneratedPage } from "@geoseo/types";
 import { pageEngineApi } from "@/lib/page-engine-client";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 /** All searchable text on a page (for keyword coverage). */
@@ -95,8 +96,8 @@ export function KeywordReview({ page, onRewritten, highlightOn, onToggleHighligh
         <div className="flex items-center gap-2">
           <span className="grid size-7 place-items-center rounded-lg bg-brand/10 text-brand"><Target className="size-4" /></span>
           <div>
-            <div className="text-[13px] font-semibold text-foreground">Keyword coverage</div>
-            <div className="text-[11.5px] text-muted-foreground">{covered} of {targets.length} target keywords appear in the page</div>
+            <div className="text-label font-semibold text-foreground">Keyword coverage</div>
+            <div className="text-micro text-muted-foreground">{covered} of {targets.length} target keywords appear in the page</div>
           </div>
         </div>
         <button
@@ -104,8 +105,8 @@ export function KeywordReview({ page, onRewritten, highlightOn, onToggleHighligh
           onClick={onToggleHighlight}
           aria-pressed={highlightOn}
           className={cn(
-            "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[12px] font-medium transition-colors",
-            highlightOn ? "border-brand bg-brand text-white" : "border-border bg-card text-muted-foreground hover:text-foreground",
+            "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-label font-medium transition-colors focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+            highlightOn ? "border-brand bg-brand text-brand-foreground" : "border-border bg-card text-muted-foreground hover:text-foreground",
           )}
         >
           <Highlighter className="size-3.5" /> Highlight
@@ -123,18 +124,18 @@ export function KeywordReview({ page, onRewritten, highlightOn, onToggleHighligh
           <span
             key={k}
             className={cn(
-              "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[12px]",
+              "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-label",
               n > 0 ? "border-positive/30 bg-positive/8 text-foreground" : "border-warning/40 bg-warning/8 text-foreground",
             )}
             title={n > 0 ? `appears ${n}×` : "not found in the content yet"}
           >
             {n > 0 ? <Check className="size-3 text-positive" /> : <X className="size-3 text-warning" />}
             {k}
-            <span className="tnum font-mono text-[10.5px] text-muted-foreground">{n}×</span>
+            <span className="tnum font-mono text-micro text-muted-foreground">{n}×</span>
           </span>
         ))}
         {pending.map((k) => (
-          <span key={k} className="inline-flex items-center gap-1.5 rounded-full border border-brand/40 bg-brand/10 px-2.5 py-1 text-[12px] text-brand">
+          <span key={k} className="inline-flex items-center gap-1.5 rounded-full border border-brand/40 bg-brand/10 px-2.5 py-1 text-label text-brand">
             <Plus className="size-3" />
             {k}
             <button onClick={() => setPending((p) => p.filter((x) => x !== k))} aria-label={`Remove ${k}`} className="hover:text-foreground"><X className="size-3" /></button>
@@ -156,23 +157,25 @@ export function KeywordReview({ page, onRewritten, highlightOn, onToggleHighligh
               }
             }}
             placeholder="Add target keywords (Enter to add)…"
-            className="h-10 w-full border-0 bg-transparent text-[13.5px] text-foreground outline-none"
+            className="h-10 w-full border-0 bg-transparent text-body text-foreground outline-none"
           />
           {draftKw.trim() && (
-            <button onClick={addPending} className="shrink-0 text-[12px] font-medium text-brand hover:underline">Add</button>
+            <button onClick={addPending} className="shrink-0 text-label font-medium text-brand hover:underline">Add</button>
           )}
         </div>
-        <button
+        <Button
+          variant="brand"
           onClick={rewrite}
-          disabled={rewriting || pending.length === 0}
-          className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-xl bg-brand px-4 text-[13.5px] font-semibold text-white transition-transform hover:scale-[1.02] disabled:cursor-not-allowed disabled:opacity-50"
+          disabled={pending.length === 0}
+          loading={rewriting}
+          className="h-10 shrink-0 rounded-xl px-4 text-body font-semibold"
         >
-          {rewriting ? <Loader2 className="size-4 animate-spin" /> : <Sparkles className="size-4" />}
+          {!rewriting && <Sparkles className="size-4" />}
           {rewriting ? "Rewriting…" : "Rewrite with keywords"}
-        </button>
+        </Button>
       </div>
       {rewriting && (
-        <p className="mt-2 text-[12px] text-muted-foreground">The AI is re-drafting the page around your keywords — this takes a moment.</p>
+        <p className="mt-2 text-label text-muted-foreground">The AI is re-drafting the page around your keywords — this takes a moment.</p>
       )}
     </section>
   );

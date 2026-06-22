@@ -36,6 +36,8 @@ import type {
 import { api } from "@/lib/api-client";
 import { Panel } from "@/components/dashboard/panel";
 import { Button, buttonVariants } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { EmptyState } from "@/components/ui/empty-state";
 import {
   Sheet,
   SheetContent,
@@ -51,21 +53,23 @@ import { PageComposer, type ComposerType } from "@/components/pages/page-compose
 import { RichText } from "@/components/feeds/rich-text";
 import { KeywordReview } from "@/components/pages/keyword-review";
 
-const STATUS: Record<PageStatus, { label: string; cls: string }> = {
-  draft: { label: "Draft", cls: "bg-muted text-muted-foreground" },
-  "in-review": { label: "In review", cls: "bg-warning/15 text-warning" },
-  approved: { label: "Approved", cls: "bg-info/12 text-info" },
-  published: { label: "Published", cls: "bg-positive/12 text-positive" },
-  "needs-refresh": { label: "Needs refresh", cls: "bg-negative/12 text-negative" },
+type BadgeVariant = "brand" | "positive" | "negative" | "warning" | "info" | "muted";
+
+const STATUS: Record<PageStatus, { label: string; variant: BadgeVariant }> = {
+  draft: { label: "Draft", variant: "muted" },
+  "in-review": { label: "In review", variant: "warning" },
+  approved: { label: "Approved", variant: "info" },
+  published: { label: "Published", variant: "positive" },
+  "needs-refresh": { label: "Needs refresh", variant: "negative" },
 };
 
-const INTENT_CLS: Record<string, string> = {
-  commercial: "bg-brand/12 text-brand",
-  transactional: "bg-positive/12 text-positive",
-  comparison: "bg-info/12 text-info",
-  informational: "bg-muted text-muted-foreground",
-  local: "bg-warning/15 text-warning",
-  navigational: "bg-muted text-muted-foreground",
+const INTENT_VARIANT: Record<string, BadgeVariant> = {
+  commercial: "brand",
+  transactional: "positive",
+  comparison: "info",
+  informational: "muted",
+  local: "warning",
+  navigational: "muted",
 };
 
 function seoScore(p: GeneratedPage): { pass: number; total: number } {
@@ -73,11 +77,11 @@ function seoScore(p: GeneratedPage): { pass: number; total: number } {
   return { pass: checks.filter((c) => c.pass).length, total: checks.length };
 }
 
-// Theme-fidelity grade → label + chip tones (PRD §13).
-const FIDELITY_GRADE: Record<ThemeFidelity["grade"], { label: string; cls: string; dot: string }> = {
-  "native-fit": { label: "Native fit", cls: "bg-positive/12 text-positive", dot: "bg-positive" },
-  acceptable: { label: "Acceptable", cls: "bg-warning/15 text-warning", dot: "bg-warning" },
-  "needs-review": { label: "Needs review", cls: "bg-destructive/12 text-destructive", dot: "bg-destructive" },
+// Theme-fidelity grade → label + Badge variant + dot tone (PRD §13).
+const FIDELITY_GRADE: Record<ThemeFidelity["grade"], { label: string; variant: BadgeVariant; dot: string }> = {
+  "native-fit": { label: "Native fit", variant: "positive", dot: "bg-positive" },
+  acceptable: { label: "Acceptable", variant: "warning", dot: "bg-warning" },
+  "needs-review": { label: "Needs review", variant: "negative", dot: "bg-negative" },
 };
 
 export function PagesView({
@@ -429,14 +433,14 @@ export function PagesView({
         <a
           href="/theme"
           title={fidelity.recommendedAction}
-          className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1.5 text-[12px] font-medium text-foreground transition-colors hover:bg-muted"
+          className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1.5 text-label font-medium text-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
         >
           <Palette className="size-3.5 text-muted-foreground" />
           Theme fidelity
-          <span className={cn("inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[11px] font-semibold", FIDELITY_GRADE[fidelity.grade].cls)}>
+          <Badge variant={FIDELITY_GRADE[fidelity.grade].variant}>
             <span className={cn("size-1.5 rounded-full", FIDELITY_GRADE[fidelity.grade].dot)} />
             <span className="tabular-nums">{fidelity.score}</span> · {FIDELITY_GRADE[fidelity.grade].label}
-          </span>
+          </Badge>
         </a>
       )}
 
@@ -463,12 +467,12 @@ export function PagesView({
           return (
             <div key={s.label} className="rounded-2xl border border-border bg-card p-4 shadow-card">
               <div className="flex items-center justify-between">
-                <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">
+                <span className="text-micro text-muted-foreground">
                   {s.label}
                 </span>
                 <Icon className="size-4 text-muted-foreground" />
               </div>
-              <div className="tnum mt-1.5 text-[26px] font-bold tracking-[-0.02em] text-foreground">
+              <div className="tnum mt-1.5 text-kpi text-foreground">
                 {s.value}
               </div>
             </div>
@@ -486,17 +490,12 @@ export function PagesView({
           <div className="divide-y divide-border">
             {recommendations.filter((r) => !refreshedIds.has(r.pageId)).map((r) => (
               <div key={r.pageId} className="flex items-center gap-3 px-5 py-3">
-                <span
-                  className={cn(
-                    "shrink-0 rounded-full px-2 py-0.5 text-[10.5px] font-semibold capitalize",
-                    r.action === "rebuild" ? "bg-negative/12 text-negative" : "bg-warning/15 text-warning",
-                  )}
-                >
+                <Badge variant={r.action === "rebuild" ? "negative" : "warning"} className="shrink-0 capitalize">
                   {r.action}
-                </span>
+                </Badge>
                 <div className="min-w-0 flex-1">
-                  <div className="truncate text-[13px] font-semibold text-foreground">{r.title}</div>
-                  <div className="truncate text-[12px] text-muted-foreground">{r.reason}</div>
+                  <div className="truncate text-label font-semibold text-foreground">{r.title}</div>
+                  <div className="truncate text-label text-muted-foreground">{r.reason}</div>
                 </div>
                 <Button size="sm" variant="ghost" className="h-8 rounded-full px-3" onClick={() => openPage(r.pageId)}>
                   Review
@@ -514,15 +513,17 @@ export function PagesView({
       {/* your pages — visual cards */}
       <Panel title="Your pages" description="Every page you generate, ready to review and publish" bodyClassName="p-0">
         {pages.length === 0 ? (
-          <div className="flex flex-col items-center gap-2 px-6 py-14 text-center">
-            <span className="inline-flex size-10 items-center justify-center rounded-full bg-brand/10 text-brand">
-              <Sparkles className="size-5" />
-            </span>
-            <p className="text-[14px] font-semibold text-foreground">No pages yet</p>
-            <p className="max-w-xs text-[12.5px] text-muted-foreground">
-              Describe a topic in <span className="font-medium text-foreground">Create a page</span> above to generate your first one.
-            </p>
-          </div>
+          <EmptyState
+            icon={Sparkles}
+            tone="prompt"
+            title="No pages yet"
+            description={
+              <>
+                Describe a topic in <span className="font-medium text-foreground">Create a page</span> above to generate your first one.
+              </>
+            }
+            className="py-14"
+          />
         ) : (
           <>
             {/* status filters */}
@@ -544,12 +545,12 @@ export function PagesView({
                     onClick={() => setPageFilter(f.key)}
                     aria-pressed={active}
                     className={cn(
-                      "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[12px] font-medium transition-colors",
+                      "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-label font-medium transition-colors focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
                       active ? "border-brand/40 bg-brand/10 text-brand" : "border-border bg-card text-muted-foreground hover:text-foreground",
                     )}
                   >
                     {f.label}
-                    <span className={cn("rounded-full px-1.5 text-[10.5px] tabular-nums", active ? "bg-brand/15 text-brand" : "bg-muted text-muted-foreground")}>{n}</span>
+                    <span className={cn("rounded-full px-1.5 text-micro tabular-nums", active ? "bg-brand/15 text-brand" : "bg-muted text-muted-foreground")}>{n}</span>
                   </button>
                 );
               })}
@@ -558,7 +559,7 @@ export function PagesView({
               const filtered = pageFilter === "all" ? pages : pages.filter((p) => p.status === pageFilter);
               if (filtered.length === 0) {
                 return (
-                  <p className="px-6 py-12 text-center text-[13px] text-muted-foreground">
+                  <p className="px-6 py-12 text-center text-label text-muted-foreground">
                     No {(STATUS[pageFilter as PageStatus]?.label ?? "matching").toLowerCase()} pages.
                   </p>
                 );
@@ -581,17 +582,17 @@ export function PagesView({
                     ) : (
                       <div className="size-full bg-gradient-to-br from-brand/25 via-brand/8 to-card" />
                     )}
-                    <span className="absolute left-2.5 top-2.5 rounded-full bg-card/85 px-2 py-0.5 text-[10.5px] font-semibold capitalize text-foreground backdrop-blur">
+                    <span className="absolute left-2.5 top-2.5 rounded-full bg-card/85 px-2 py-0.5 text-micro font-semibold capitalize text-foreground backdrop-blur">
                       {p.pageType}
                     </span>
-                    <span className={cn("absolute right-2.5 top-2.5 rounded-full px-2 py-0.5 text-[10.5px] font-semibold", st.cls)}>
+                    <Badge variant={st.variant} className="absolute right-2.5 top-2.5">
                       {st.label}
-                    </span>
+                    </Badge>
                   </button>
                   {/* body */}
                   <button onClick={() => openPage(p.id)} className="flex-1 px-4 pt-3 text-left">
-                    <div className="line-clamp-2 text-[13.5px] font-semibold leading-snug text-foreground">{p.title}</div>
-                    <div className="mt-1 flex items-center gap-1.5 truncate text-[11.5px] text-muted-foreground">
+                    <div className="line-clamp-2 text-body font-semibold leading-snug text-foreground">{p.title}</div>
+                    <div className="mt-1 flex items-center gap-1.5 truncate text-micro text-muted-foreground">
                       <span className="truncate">{p.slug}</span>
                       <span>·</span>
                       <span className={cn("shrink-0 tabular-nums", s.total > 0 && s.pass === s.total ? "text-positive" : "text-warning")}>
@@ -645,8 +646,8 @@ export function PagesView({
           className="flex w-full items-center gap-2 px-5 py-3.5 text-left"
         >
           <Sparkles className="size-4 text-muted-foreground" />
-          <span className="text-[13.5px] font-semibold text-foreground">Need ideas?</span>
-          <span className="text-[12.5px] text-muted-foreground">Discover buyer-intent keywords to generate from</span>
+          <span className="text-body font-semibold text-foreground">Need ideas?</span>
+          <span className="text-label text-muted-foreground">Discover buyer-intent keywords to generate from</span>
           <ArrowRight className={cn("ml-auto size-4 text-muted-foreground transition-transform", ideasOpen && "rotate-90")} />
         </button>
         {ideasOpen && (
@@ -657,7 +658,7 @@ export function PagesView({
                 onChange={(e) => setSeeds(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && runDiscover()}
                 placeholder="Seed topics, comma-separated…"
-                className="h-9 flex-1 rounded-lg border border-border bg-surface-sunken px-3 text-[13px] outline-none focus:border-ring focus:bg-card"
+                className="h-9 flex-1 rounded-lg border border-border bg-surface-sunken px-3 text-label outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 focus:bg-card"
               />
               <Button size="sm" className="h-9 shrink-0 rounded-full px-3" disabled={discovering || !seeds.trim()} onClick={runDiscover}>
                 {discovering ? <Loader2 className="size-3.5 animate-spin" /> : <Sparkles className="size-3.5" />}
@@ -665,18 +666,18 @@ export function PagesView({
               </Button>
             </div>
             {newOpps.length === 0 ? (
-              <p className="py-6 text-center text-[13px] text-muted-foreground">No open opportunities — discover some above.</p>
+              <p className="py-6 text-center text-label text-muted-foreground">No open opportunities — discover some above.</p>
             ) : (
               <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
                 {newOpps.map((o) => (
                   <div key={o.id} className="rounded-xl border border-border bg-surface-sunken p-3">
                     <div className="flex items-center gap-2">
-                      <span className="truncate text-[13px] font-semibold text-foreground">{o.query}</span>
-                      <span className={cn("shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-semibold capitalize", INTENT_CLS[o.intent] ?? "bg-muted text-muted-foreground")}>
+                      <span className="truncate text-label font-semibold text-foreground">{o.query}</span>
+                      <Badge variant={INTENT_VARIANT[o.intent] ?? "muted"} className="shrink-0 capitalize">
                         {o.intent}
-                      </span>
+                      </Badge>
                     </div>
-                    <div className="mt-1 flex items-center gap-2 text-[11.5px] text-muted-foreground tabular-nums">
+                    <div className="mt-1 flex items-center gap-2 text-micro text-muted-foreground tabular-nums">
                       <span>Vol {o.volume.toLocaleString()}</span>
                       <span>·</span>
                       <span>KD {o.difficulty}</span>
@@ -716,15 +717,15 @@ export function PagesView({
           {current && (
             <>
               <SheetHeader className="mx-auto w-full max-w-5xl border-b border-border px-6 pb-4 pt-6">
-                <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.06em] text-brand">
+                <div className="flex items-center gap-2 text-micro font-semibold uppercase text-brand">
                   <FileText className="size-3.5" />
                   {current.pageType} page
                 </div>
-                <SheetTitle className="mt-1 flex items-center gap-2 text-lg">
+                <SheetTitle className="mt-1 flex items-center gap-2 text-title">
                   {current.title}
-                  <span className={cn("rounded-full px-1.5 py-0.5 text-[11px] font-semibold", (STATUS[current.status] ?? STATUS.draft).cls)}>
+                  <Badge variant={(STATUS[current.status] ?? STATUS.draft).variant}>
                     {(STATUS[current.status] ?? STATUS.draft).label}
-                  </span>
+                  </Badge>
                 </SheetTitle>
                 <SheetDescription>
                   {current.publishedUrl ? (
@@ -764,7 +765,7 @@ export function PagesView({
                             <div key={s.key} className="flex flex-1 items-center gap-1">
                               <span
                                 className={cn(
-                                  "inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[11px] font-semibold",
+                                  "inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-micro font-semibold",
                                   state === "done" && "bg-positive/12 text-positive",
                                   state === "active" && (stale ? "bg-negative/12 text-negative" : "bg-brand/12 text-brand"),
                                   state === "pending" && "text-muted-foreground",
@@ -781,7 +782,7 @@ export function PagesView({
                           );
                         })}
                       </div>
-                      <p className="mt-2.5 text-[12.5px] text-muted-foreground">{HINT[current.status] ?? HINT.draft}</p>
+                      <p className="mt-2.5 text-label text-muted-foreground">{HINT[current.status] ?? HINT.draft}</p>
                     </section>
                   );
                 })()}
@@ -800,10 +801,10 @@ export function PagesView({
 
                 {/* SEO checks */}
                 <section>
-                  <h3 className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">SEO validation</h3>
+                  <h3 className="text-micro font-semibold uppercase text-muted-foreground">SEO validation</h3>
                   <div className="mt-2 grid grid-cols-1 gap-1.5 sm:grid-cols-2">
                     {(current.seoChecks ?? []).map((c) => (
-                      <div key={c.label} className="flex items-center gap-1.5 text-[12.5px]">
+                      <div key={c.label} className="flex items-center gap-1.5 text-label">
                         {c.pass ? <Check className="size-3.5 text-positive" /> : <X className="size-3.5 text-negative" />}
                         <span className={c.pass ? "text-muted-foreground" : "text-foreground"}>{c.label}</span>
                       </div>
@@ -811,10 +812,10 @@ export function PagesView({
                   </div>
                   {(current.qualityChecks ?? []).length > 0 && (
                     <>
-                      <h3 className="mt-4 text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">Content quality</h3>
+                      <h3 className="mt-4 text-micro font-semibold uppercase text-muted-foreground">Content quality</h3>
                       <div className="mt-2 grid grid-cols-1 gap-1.5 sm:grid-cols-2">
                         {(current.qualityChecks ?? []).map((c) => (
-                          <div key={c.label} className="flex items-center gap-1.5 text-[12.5px]">
+                          <div key={c.label} className="flex items-center gap-1.5 text-label">
                             {c.pass ? <Check className="size-3.5 text-positive" /> : <X className="size-3.5 text-negative" />}
                             <span className={c.pass ? "text-muted-foreground" : "text-foreground"}>{c.label}</span>
                           </div>
@@ -827,7 +828,7 @@ export function PagesView({
                 {/* metadata — editable (PRD §9.4 page editor) */}
                 <section className="rounded-xl border border-border bg-surface-sunken p-3.5">
                   <div className="mb-2 flex items-center justify-between">
-                    <h3 className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">
+                    <h3 className="text-micro font-semibold uppercase text-muted-foreground">
                       SEO metadata &amp; copy
                     </h3>
                     {editing ? (
@@ -853,21 +854,21 @@ export function PagesView({
                         value={draft.metaTitle ?? ""}
                         onChange={(e) => setDraft((d) => ({ ...d, metaTitle: e.target.value }))}
                         placeholder="Meta title"
-                        className="h-8 w-full rounded-lg border border-border bg-card px-2.5 text-[12.5px] outline-none focus:border-ring"
+                        className="h-8 w-full rounded-lg border border-border bg-card px-2.5 text-label outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
                       />
                       <textarea
                         value={draft.metaDescription ?? ""}
                         onChange={(e) => setDraft((d) => ({ ...d, metaDescription: e.target.value }))}
                         rows={2}
                         placeholder="Meta description"
-                        className="w-full resize-none rounded-lg border border-border bg-card px-2.5 py-1.5 text-[12.5px] outline-none focus:border-ring"
+                        className="w-full resize-none rounded-lg border border-border bg-card px-2.5 py-1.5 text-label outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
                       />
                       <textarea
                         value={draft.heroCopy ?? ""}
                         onChange={(e) => setDraft((d) => ({ ...d, heroCopy: e.target.value }))}
                         rows={2}
                         placeholder="Hero copy"
-                        className="w-full resize-none rounded-lg border border-border bg-card px-2.5 py-1.5 text-[12.5px] outline-none focus:border-ring"
+                        className="w-full resize-none rounded-lg border border-border bg-card px-2.5 py-1.5 text-label outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
                       />
                       <input
                         value={draft.cta?.label ?? ""}
@@ -875,16 +876,16 @@ export function PagesView({
                           setDraft((d) => ({ ...d, cta: { label: e.target.value, href: d.cta?.href ?? current.cta.href } }))
                         }
                         placeholder="CTA label"
-                        className="h-8 w-full rounded-lg border border-border bg-card px-2.5 text-[12.5px] outline-none focus:border-ring"
+                        className="h-8 w-full rounded-lg border border-border bg-card px-2.5 text-label outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
                       />
                     </div>
                   ) : (
                     <>
-                      <div className="text-[12px] font-semibold text-foreground">{current.metaTitle}</div>
-                      <div className="mt-0.5 text-[12px] text-muted-foreground">{current.metaDescription}</div>
+                      <div className="text-label font-semibold text-foreground">{current.metaTitle}</div>
+                      <div className="mt-0.5 text-label text-muted-foreground">{current.metaDescription}</div>
                       <div className="mt-2 flex flex-wrap gap-1.5">
                         {(current.targetKeywords ?? []).map((k) => (
-                          <span key={k} className="rounded-md bg-brand/10 px-1.5 py-0.5 text-[10.5px] font-medium text-brand">{k}</span>
+                          <span key={k} className="rounded-md bg-brand/10 px-1.5 py-0.5 text-micro font-medium text-brand">{k}</span>
                         ))}
                       </div>
                     </>
@@ -894,7 +895,7 @@ export function PagesView({
                 {/* content preview */}
                 <section>
                   <div className="flex items-center justify-between">
-                    <h3 className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">
+                    <h3 className="text-micro font-semibold uppercase text-muted-foreground">
                       {editing ? "Content (sections & FAQs)" : "Draft preview"}
                     </h3>
                     {!editing && (
@@ -906,7 +907,7 @@ export function PagesView({
                             aria-pressed={previewDevice === d}
                             aria-label={`${d} preview`}
                             className={
-                              "rounded-md px-2 py-0.5 text-[11px] font-medium capitalize transition-colors " +
+                              "rounded-md px-2 py-0.5 text-micro font-medium capitalize transition-colors focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 " +
                               (previewDevice === d
                                 ? "bg-brand/10 text-brand"
                                 : "text-muted-foreground hover:text-foreground")
@@ -928,9 +929,9 @@ export function PagesView({
                               value={sec.heading}
                               onChange={(e) => setSection(i, { heading: e.target.value })}
                               placeholder="Section heading"
-                              className="h-8 flex-1 rounded-lg border border-border bg-card px-2.5 text-[13px] font-semibold outline-none focus:border-ring"
+                              className="h-8 flex-1 rounded-lg border border-border bg-card px-2.5 text-label font-semibold outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
                             />
-                            <button onClick={() => removeSection(i)} className="text-muted-foreground hover:text-negative" aria-label="Remove section">
+                            <button onClick={() => removeSection(i)} className="rounded-md text-muted-foreground transition-colors hover:text-negative focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50" aria-label="Remove section">
                               <Trash2 className="size-3.5" />
                             </button>
                           </div>
@@ -939,7 +940,7 @@ export function PagesView({
                             onChange={(e) => setSection(i, { body: e.target.value })}
                             rows={6}
                             placeholder="Section body — paragraphs, and '- ' bullets or '1.' steps render as lists"
-                            className="mt-2 w-full resize-y rounded-lg border border-border bg-card px-2.5 py-1.5 text-[12.5px] leading-relaxed outline-none focus:border-ring"
+                            className="mt-2 w-full resize-y rounded-lg border border-border bg-card px-2.5 py-1.5 text-label leading-relaxed outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
                           />
                         </div>
                       ))}
@@ -949,7 +950,7 @@ export function PagesView({
 
                       {/* faqs */}
                       <div className="border-t border-border pt-3">
-                        <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">FAQs</div>
+                        <div className="mb-2 text-micro font-semibold uppercase text-muted-foreground">FAQs</div>
                         {(draft.faqs ?? []).map((f, i) => (
                           <div key={i} className="mb-2 rounded-xl border border-border p-3">
                             <div className="flex items-center gap-2">
@@ -957,9 +958,9 @@ export function PagesView({
                                 value={f.q}
                                 onChange={(e) => setFaq(i, { q: e.target.value })}
                                 placeholder="Question"
-                                className="h-8 flex-1 rounded-lg border border-border bg-card px-2.5 text-[12.5px] font-semibold outline-none focus:border-ring"
+                                className="h-8 flex-1 rounded-lg border border-border bg-card px-2.5 text-label font-semibold outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
                               />
-                              <button onClick={() => removeFaq(i)} className="text-muted-foreground hover:text-negative" aria-label="Remove FAQ">
+                              <button onClick={() => removeFaq(i)} className="rounded-md text-muted-foreground transition-colors hover:text-negative focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50" aria-label="Remove FAQ">
                                 <Trash2 className="size-3.5" />
                               </button>
                             </div>
@@ -968,7 +969,7 @@ export function PagesView({
                               onChange={(e) => setFaq(i, { a: e.target.value })}
                               rows={2}
                               placeholder="Answer"
-                              className="mt-2 w-full resize-none rounded-lg border border-border bg-card px-2.5 py-1.5 text-[12.5px] outline-none focus:border-ring"
+                              className="mt-2 w-full resize-none rounded-lg border border-border bg-card px-2.5 py-1.5 text-label outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
                             />
                           </div>
                         ))}
@@ -984,10 +985,10 @@ export function PagesView({
                         (previewDevice === "mobile" ? "mx-auto max-w-[360px]" : "")
                       }
                     >
-                      <p className="text-[15px] font-semibold text-foreground">{current.heroCopy}</p>
+                      <p className="text-h-card font-semibold text-foreground">{current.heroCopy}</p>
                       {(current.sections ?? []).map((sec) => (
                         <div key={sec.heading} className="mt-3">
-                          <div className="text-[13px] font-semibold text-foreground">{sec.heading}</div>
+                          <div className="text-label font-semibold text-foreground">{sec.heading}</div>
                           <div className="mt-0.5">
                             <RichText text={sec.body} dense highlight={highlightKw ? current.targetKeywords : undefined} />
                           </div>
@@ -997,8 +998,8 @@ export function PagesView({
                         <div className="mt-3 border-t border-border pt-3">
                           {(current.faqs ?? []).map((f) => (
                             <div key={f.q} className="mb-2">
-                              <div className="text-[12.5px] font-semibold text-foreground">{f.q}</div>
-                              <div className="text-[12.5px] text-muted-foreground">{f.a}</div>
+                              <div className="text-label font-semibold text-foreground">{f.q}</div>
+                              <div className="text-label text-muted-foreground">{f.a}</div>
                             </div>
                           ))}
                         </div>
@@ -1013,11 +1014,11 @@ export function PagesView({
                   return (
                     <section>
                       <div className="flex items-center justify-between">
-                        <h3 className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">
+                        <h3 className="text-micro font-semibold uppercase text-muted-foreground">
                           Blueprint
                         </h3>
                         {bp.status === "approved" ? (
-                          <span className="inline-flex items-center gap-1 text-[11.5px] font-semibold text-positive">
+                          <span className="inline-flex items-center gap-1 text-label font-semibold text-positive">
                             <Check className="size-3.5" /> Approved
                           </span>
                         ) : (
@@ -1026,7 +1027,7 @@ export function PagesView({
                           </Button>
                         )}
                       </div>
-                      <div className="mt-2 space-y-2.5 rounded-xl border border-border bg-surface-sunken p-3.5 text-[12.5px]">
+                      <div className="mt-2 space-y-2.5 rounded-xl border border-border bg-surface-sunken p-3.5 text-label">
                         <div>
                           <span className="text-muted-foreground">Change: </span>
                           <span className="font-medium capitalize text-foreground">{bp.changeKind}</span>
@@ -1034,7 +1035,7 @@ export function PagesView({
                           <span className="text-foreground">{bp.audience}</span>
                         </div>
                         <div>
-                          <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">Outline</div>
+                          <div className="text-micro font-semibold uppercase text-muted-foreground">Outline</div>
                           <ul className="mt-1 list-disc space-y-0.5 pl-4 text-muted-foreground">
                             {bp.outline.map((o) => (
                               <li key={o.heading}>
@@ -1044,15 +1045,15 @@ export function PagesView({
                           </ul>
                         </div>
                         <div>
-                          <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">CTA plan: </span>
+                          <span className="text-micro font-semibold uppercase text-muted-foreground">CTA plan: </span>
                           <span className="text-foreground">{bp.ctaPlan}</span>
                         </div>
                         <div className="flex flex-wrap gap-1.5">
                           {bp.schemaPlan.map((s) => (
-                            <span key={s} className="rounded-md bg-info/10 px-1.5 py-0.5 text-[10.5px] font-medium text-info">{s}</span>
+                            <span key={s} className="rounded-md bg-info/10 px-1.5 py-0.5 text-micro font-medium text-info">{s}</span>
                           ))}
                           {bp.internalLinkPlan.map((l) => (
-                            <span key={l} className="rounded-md bg-muted px-1.5 py-0.5 text-[10.5px] font-medium text-muted-foreground">{l}</span>
+                            <span key={l} className="rounded-md bg-muted px-1.5 py-0.5 text-micro font-medium text-muted-foreground">{l}</span>
                           ))}
                         </div>
                         {/* risk flags (PRD §9.3) */}
@@ -1066,11 +1067,11 @@ export function PagesView({
                             risks.push("Slug collision / cannibalization risk");
                           return (
                             <div className="border-t border-border pt-2.5">
-                              <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">
+                              <div className="text-micro font-semibold uppercase text-muted-foreground">
                                 Risk flags
                               </div>
                               {risks.length === 0 ? (
-                                <div className="mt-1 inline-flex items-center gap-1 text-[12px] font-medium text-positive">
+                                <div className="mt-1 inline-flex items-center gap-1 text-label font-medium text-positive">
                                   <Check className="size-3.5" /> No risks detected
                                 </div>
                               ) : (
@@ -1078,7 +1079,7 @@ export function PagesView({
                                   {risks.map((r) => (
                                     <span
                                       key={r}
-                                      className="inline-flex items-center gap-1 rounded-md bg-warning/12 px-1.5 py-0.5 text-[10.5px] font-medium text-warning"
+                                      className="inline-flex items-center gap-1 rounded-md bg-warning/12 px-1.5 py-0.5 text-micro font-medium text-warning"
                                     >
                                       <AlertTriangle className="size-3" /> {r}
                                     </span>
@@ -1096,38 +1097,38 @@ export function PagesView({
                 {/* version history (PRD §7.6 rollback, §11.6) */}
                 {versions.length > 0 && (
                   <section>
-                    <h3 className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">
+                    <h3 className="text-micro font-semibold uppercase text-muted-foreground">
                       <History className="mr-1 inline size-3.5" />
                       Version history
                     </h3>
                     <ol className="mt-2 space-y-1.5">
                       {versions.map((v, i) => (
-                        <li key={v.id} className="rounded-lg border border-border px-3 py-2 text-[12.5px]">
+                        <li key={v.id} className="rounded-lg border border-border px-3 py-2 text-label">
                           <div className="flex items-center gap-2">
-                            <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-muted text-[10.5px] font-bold text-muted-foreground">
+                            <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-muted text-micro font-bold text-muted-foreground">
                               v{v.version}
                             </span>
                             <div className="min-w-0 flex-1">
                               <div className="truncate font-medium text-foreground">{v.changeSummary}</div>
-                              <div className="text-[11px] capitalize text-muted-foreground">{v.authorType}</div>
+                              <div className="text-micro capitalize text-muted-foreground">{v.authorType}</div>
                             </div>
                             {i === 0 ? (
-                              <span className="rounded-full bg-positive/12 px-1.5 py-0.5 text-[10px] font-semibold text-positive">
+                              <Badge variant="positive">
                                 Current
-                              </span>
+                              </Badge>
                             ) : (
                               <div className="flex items-center gap-2.5">
                                 <button
                                   onClick={() => setDiffId((id) => (id === v.id ? null : v.id))}
                                   aria-pressed={diffId === v.id}
-                                  className="inline-flex items-center gap-1 text-[11.5px] font-semibold text-muted-foreground hover:text-foreground"
+                                  className="inline-flex items-center gap-1 rounded-md text-label font-semibold text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
                                 >
                                   <GitCompare className="size-3" />
                                   {diffId === v.id ? "Hide" : "Diff"}
                                 </button>
                                 <button
                                   onClick={() => rollback(current.id, v.id)}
-                                  className="inline-flex items-center gap-1 text-[11.5px] font-semibold text-brand hover:underline"
+                                  className="inline-flex items-center gap-1 rounded-md text-label font-semibold text-brand transition-colors hover:underline focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
                                 >
                                   <RotateCcw className="size-3" />
                                   Restore
@@ -1148,21 +1149,21 @@ export function PagesView({
                               const changed = rows.filter((r) => r.before !== r.after);
                               return (
                                 <div className="mt-2 rounded-lg border border-border bg-surface-sunken p-2.5">
-                                  <div className="mb-1.5 text-[10.5px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">
+                                  <div className="mb-1.5 text-micro font-semibold uppercase text-muted-foreground">
                                     v{v.version} → current · {changed.length} field{changed.length === 1 ? "" : "s"} changed
                                   </div>
                                   {changed.length === 0 ? (
-                                    <div className="text-[11.5px] text-muted-foreground">No content differences.</div>
+                                    <div className="text-label text-muted-foreground">No content differences.</div>
                                   ) : (
                                     <div className="space-y-1.5">
                                       {changed.map((r) => (
                                         <div key={r.label} className="grid grid-cols-[64px_1fr] gap-2">
-                                          <div className="pt-0.5 text-[10.5px] font-medium text-muted-foreground">{r.label}</div>
+                                          <div className="pt-0.5 text-micro font-medium text-muted-foreground">{r.label}</div>
                                           <div className="space-y-0.5">
-                                            <div className="rounded bg-negative/10 px-1.5 py-0.5 text-[11px] text-negative line-through decoration-negative/40">
+                                            <div className="rounded bg-negative/10 px-1.5 py-0.5 text-micro text-negative line-through decoration-negative/40">
                                               {r.before || "—"}
                                             </div>
-                                            <div className="rounded bg-positive/10 px-1.5 py-0.5 text-[11px] text-positive">
+                                            <div className="rounded bg-positive/10 px-1.5 py-0.5 text-micro text-positive">
                                               {r.after || "—"}
                                             </div>
                                           </div>
@@ -1182,7 +1183,7 @@ export function PagesView({
 
               {/* action footer */}
               <div className="sticky bottom-0 mx-auto flex w-full max-w-5xl items-center gap-2 border-t border-border bg-card/95 px-6 py-4 backdrop-blur">
-                <span className="mr-auto text-[12px] text-muted-foreground tabular-nums">
+                <span className="mr-auto text-label text-muted-foreground tabular-nums">
                   {current.wordCount.toLocaleString()} words · BM v{current.brandMemoryVersion}
                 </span>
                 <Button variant="ghost" className="h-9" disabled={busy === current.id} onClick={() => regenerate(current.id)}>

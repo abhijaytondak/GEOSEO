@@ -9,6 +9,7 @@ import { brandCompleteness } from "@/lib/brand-completeness";
 import { Panel } from "@/components/dashboard/panel";
 import { ProgressBar } from "@/components/dashboard/progress-bar";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { ChipInput } from "./chip-input";
 import { useAppFeedback } from "@/components/system/app-feedback";
 
@@ -25,19 +26,19 @@ function Field({
 }) {
   return (
     <div>
-      <label className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">
+      <label className="text-micro font-semibold uppercase text-muted-foreground">
         {label}
       </label>
-      {hint && <p className="mt-0.5 mb-1.5 text-[11.5px] text-muted-foreground/80">{hint}</p>}
+      {hint && <p className="mt-0.5 mb-1.5 text-micro text-muted-foreground/80">{hint}</p>}
       <div className={hint ? "" : "mt-1.5"}>{children}</div>
     </div>
   );
 }
 
 const inputCls =
-  "h-9 w-full rounded-lg border border-border bg-surface-sunken px-3 text-sm outline-none focus:border-ring focus:bg-card";
+  "h-9 w-full rounded-lg border border-border bg-surface-sunken px-3 text-body outline-none transition-colors focus:border-ring focus:bg-card focus-visible:ring-3 focus-visible:ring-ring/50";
 const areaCls =
-  "w-full resize-none rounded-lg border border-border bg-surface-sunken p-3 text-[13.5px] leading-relaxed outline-none focus:border-ring focus:bg-card";
+  "w-full resize-none rounded-lg border border-border bg-surface-sunken p-3 text-body leading-relaxed outline-none transition-colors focus:border-ring focus:bg-card focus-visible:ring-3 focus-visible:ring-ring/50";
 
 function compile(p: BrandProfile): string {
   return [
@@ -137,7 +138,7 @@ export function BrandMemoryEditor({ initial }: { initial: BrandProfile }) {
                     key={t}
                     type="button"
                     onClick={() => set("tone", t)}
-                    className={`rounded-lg px-3 py-1.5 text-[12.5px] font-medium capitalize transition-colors ${
+                    className={`rounded-lg px-3 py-1.5 text-label font-medium capitalize transition-colors focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 ${
                       form.tone === t
                         ? "bg-brand/12 text-brand ring-1 ring-brand/30"
                         : "bg-surface-sunken text-muted-foreground hover:text-foreground"
@@ -192,18 +193,18 @@ export function BrandMemoryEditor({ initial }: { initial: BrandProfile }) {
       <div className="space-y-5">
         <Panel title="Memory Strength" hint="A richer profile produces sharper, more personalized agent output.">
           <div className="flex items-end justify-between">
-            <span className="tnum text-[40px] font-bold leading-none tracking-[-0.02em] text-foreground">
+            <span className="tnum text-display font-bold leading-none text-foreground">
               {completeness}
-              <span className="text-lg text-muted-foreground">%</span>
+              <span className="text-title text-muted-foreground">%</span>
             </span>
             {completeness >= 90 ? (
-              <span className="mb-1 inline-flex items-center gap-1 rounded-full bg-positive/12 px-2 py-0.5 text-[11.5px] font-semibold text-positive">
+              <Badge variant="positive" className="mb-1">
                 <Sparkles className="size-3" /> Excellent
-              </span>
+              </Badge>
             ) : (
-              <span className="mb-1 rounded-full bg-warning/15 px-2 py-0.5 text-[11.5px] font-semibold text-warning">
+              <Badge variant="warning" className="mb-1">
                 Add more detail
-              </span>
+              </Badge>
             )}
           </div>
           <div className="mt-3">
@@ -215,21 +216,17 @@ export function BrandMemoryEditor({ initial }: { initial: BrandProfile }) {
           title="Compiled Context"
           hint="Exactly what gets injected into agent prompts."
           action={
-            <button
-              onClick={copyContext}
-              className="inline-flex items-center gap-1 rounded-md px-1.5 py-1 text-[12px] font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-              aria-label="Copy compiled context"
-            >
+            <Button variant="ghost" size="sm" onClick={copyContext} aria-label="Copy compiled context">
               {copied ? (
                 <Check className="size-3.5 text-positive" />
               ) : (
                 <Copy className="size-3.5" />
               )}
               {copied ? "Copied" : "Copy"}
-            </button>
+            </Button>
           }
         >
-          <pre className="tnum max-h-[300px] overflow-y-auto whitespace-pre-wrap rounded-xl border border-border bg-surface-sunken p-3 font-mono text-[11.5px] leading-relaxed text-foreground">
+          <pre className="tnum max-h-[300px] overflow-y-auto whitespace-pre-wrap rounded-xl border border-border bg-surface-sunken p-3 font-mono text-micro leading-relaxed text-foreground">
             {context}
           </pre>
         </Panel>
@@ -239,7 +236,7 @@ export function BrandMemoryEditor({ initial }: { initial: BrandProfile }) {
       {/* full-width sticky action footer — never overlaps the rail content */}
       <div className="sticky bottom-4 z-20 flex items-center gap-2 rounded-2xl border border-border bg-card/95 p-3 shadow-float backdrop-blur">
         <Braces className="ml-1 size-4 shrink-0 text-brand" />
-        <span className="flex-1 text-[12.5px] text-muted-foreground">
+        <span className="flex-1 text-label text-muted-foreground">
           {error
             ? error
             : !valid

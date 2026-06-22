@@ -4,7 +4,6 @@ import { Fragment, useMemo, useState } from "react";
 import {
   Search,
   Sparkles,
-  Loader2,
   Check,
   X,
   Clock,
@@ -18,28 +17,32 @@ import type { FunnelStage, KeywordOpportunity, OpportunityStatus, SearchIntent }
 import { pageEngineApi } from "@/lib/page-engine-client";
 import { draftWithPuter } from "@/lib/puter-ai";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { EmptyState } from "@/components/ui/empty-state";
 import { compact } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { useAppFeedback } from "@/components/system/app-feedback";
 
-const INTENT_CLS: Record<SearchIntent, string> = {
-  commercial: "bg-brand/12 text-brand",
-  transactional: "bg-positive/12 text-positive",
-  comparison: "bg-info/12 text-info",
-  informational: "bg-muted text-muted-foreground",
-  local: "bg-warning/15 text-warning",
-  navigational: "bg-muted text-muted-foreground",
+type BadgeVariant = "brand" | "positive" | "negative" | "warning" | "info" | "muted";
+
+const INTENT_VARIANT: Record<SearchIntent, BadgeVariant> = {
+  commercial: "brand",
+  transactional: "positive",
+  comparison: "info",
+  informational: "muted",
+  local: "warning",
+  navigational: "muted",
 };
-const STAGE_META: Record<FunnelStage, { label: string; cls: string }> = {
-  research: { label: "Research", cls: "bg-muted text-muted-foreground" },
-  consideration: { label: "Consideration", cls: "bg-info/12 text-info" },
-  "ready-to-buy": { label: "Ready to buy", cls: "bg-positive/12 text-positive" },
+const STAGE_META: Record<FunnelStage, { label: string; variant: BadgeVariant }> = {
+  research: { label: "Research", variant: "muted" },
+  consideration: { label: "Consideration", variant: "info" },
+  "ready-to-buy": { label: "Ready to buy", variant: "positive" },
 };
-const STATUS_CLS: Record<OpportunityStatus, string> = {
-  new: "bg-info/12 text-info",
-  approved: "bg-positive/12 text-positive",
-  rejected: "bg-muted text-muted-foreground",
-  deferred: "bg-warning/15 text-warning",
+const STATUS_VARIANT: Record<OpportunityStatus, BadgeVariant> = {
+  new: "info",
+  approved: "positive",
+  rejected: "muted",
+  deferred: "warning",
 };
 
 type SortKey = "impact" | "volume" | "difficulty" | "commercialValue" | "confidence";
@@ -199,11 +202,11 @@ export function OpportunitiesExplorer({ initial }: { initial: KeywordOpportunity
             onChange={(e) => setSeeds(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && runDiscover()}
             placeholder="Seed topics to discover new opportunities (comma-separated)…"
-            className="h-10 w-full rounded-xl border border-border bg-card pl-9 pr-3 text-sm outline-none focus:border-ring"
+            className="h-10 w-full rounded-xl border border-border bg-card pl-9 pr-3 text-body outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
           />
         </div>
-        <Button className="h-10 shrink-0 rounded-full px-4" disabled={discovering || !seeds.trim()} onClick={runDiscover}>
-          {discovering ? <Loader2 className="size-4 animate-spin" /> : <Sparkles className="size-4" />}
+        <Button className="h-10 shrink-0 rounded-full px-4" loading={discovering} disabled={!seeds.trim()} onClick={runDiscover}>
+          {!discovering && <Sparkles className="size-4" />}
           Discover
         </Button>
       </div>
@@ -216,16 +219,16 @@ export function OpportunitiesExplorer({ initial }: { initial: KeywordOpportunity
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search keywords or clusters…"
-            className="h-10 w-full rounded-xl border border-border bg-card pl-9 pr-3 text-sm outline-none focus:border-ring"
+            className="h-10 w-full rounded-xl border border-border bg-card pl-9 pr-3 text-body outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
           />
         </div>
-        <select value={intent} onChange={(e) => setIntent(e.target.value as SearchIntent | "all")} className="h-10 rounded-xl border border-border bg-card px-3 text-[13px] outline-none focus:border-ring">
+        <select value={intent} onChange={(e) => setIntent(e.target.value as SearchIntent | "all")} className="h-10 rounded-xl border border-border bg-card px-3 text-label outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50">
           <option value="all">All intents</option>
           {(["commercial", "comparison", "transactional", "informational", "local", "navigational"] as SearchIntent[]).map((i) => (
             <option key={i} value={i}>{i}</option>
           ))}
         </select>
-        <select value={status} onChange={(e) => setStatus(e.target.value as OpportunityStatus | "all")} className="h-10 rounded-xl border border-border bg-card px-3 text-[13px] outline-none focus:border-ring">
+        <select value={status} onChange={(e) => setStatus(e.target.value as OpportunityStatus | "all")} className="h-10 rounded-xl border border-border bg-card px-3 text-label outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50">
           <option value="all">All statuses</option>
           {(["new", "approved", "deferred", "rejected"] as OpportunityStatus[]).map((s) => (
             <option key={s} value={s}>{s}</option>
@@ -234,7 +237,7 @@ export function OpportunitiesExplorer({ initial }: { initial: KeywordOpportunity
         <div className="flex items-center gap-1 rounded-xl border border-border bg-card p-1">
           <ArrowUpDown className="ml-1.5 size-3.5 text-muted-foreground" />
           {SORTS.map((s) => (
-            <button key={s.key} onClick={() => setSort(s.key)} className={cn("rounded-lg px-2.5 py-1.5 text-[12.5px] font-medium", sort === s.key ? "bg-brand/12 text-brand" : "text-muted-foreground hover:bg-muted hover:text-foreground")}>
+            <button key={s.key} onClick={() => setSort(s.key)} className={cn("rounded-lg px-2.5 py-1.5 text-label font-medium transition-colors focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50", sort === s.key ? "bg-brand/12 text-brand" : "text-muted-foreground hover:bg-muted hover:text-foreground")}>
               {s.label}
             </button>
           ))}
@@ -244,16 +247,16 @@ export function OpportunitiesExplorer({ initial }: { initial: KeywordOpportunity
       {/* bulk bar */}
       {selected.size > 0 && (
         <div className="flex items-center gap-3 rounded-xl border border-brand/30 bg-brand/5 px-4 py-2.5">
-          <span className="text-[13px] font-medium text-foreground">{selected.size} selected</span>
-          <Button size="sm" className="ml-auto h-8 rounded-full px-3" disabled={busy === "bulk"} onClick={bulkGenerate}>
-            {busy === "bulk" ? <Loader2 className="size-3.5 animate-spin" /> : <Sparkles className="size-3.5" />}
+          <span className="text-label font-medium text-foreground">{selected.size} selected</span>
+          <Button size="sm" className="ml-auto h-8 rounded-full px-3" loading={busy === "bulk"} onClick={bulkGenerate}>
+            {busy !== "bulk" && <Sparkles className="size-3.5" />}
             Approve &amp; generate selected
           </Button>
-          <button onClick={() => setSelected(new Set())} className="text-muted-foreground hover:text-foreground"><X className="size-4" /></button>
+          <button onClick={() => setSelected(new Set())} className="rounded-md text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50" aria-label="Clear selection"><X className="size-4" /></button>
         </div>
       )}
 
-      <div className="text-[12.5px] text-muted-foreground">
+      <div className="text-label text-muted-foreground">
         <span className="font-semibold text-foreground">{rows.length}</span> opportunities · sorted by {SORTS.find((s) => s.key === sort)?.label.toLowerCase()}
       </div>
 
@@ -261,7 +264,7 @@ export function OpportunitiesExplorer({ initial }: { initial: KeywordOpportunity
         <div className="overflow-x-auto">
           <table className="w-full min-w-[920px] border-collapse text-left">
             <thead>
-              <tr className="border-b border-border bg-surface-sunken text-[11px] font-semibold uppercase tracking-[0.04em] text-muted-foreground">
+              <tr className="border-b border-border bg-surface-sunken text-micro font-semibold uppercase text-muted-foreground">
                 <th className="px-3 py-3">
                   <input
                     type="checkbox"
@@ -290,47 +293,47 @@ export function OpportunitiesExplorer({ initial }: { initial: KeywordOpportunity
                       )}
                     </td>
                     <td className="px-2 py-3">
-                      <button onClick={() => setExpanded(expanded === o.id ? null : o.id)} className="flex items-start gap-1.5 text-left">
+                      <button onClick={() => setExpanded(expanded === o.id ? null : o.id)} className="flex items-start gap-1.5 rounded-md text-left focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50">
                         {expanded === o.id ? <ChevronDown className="mt-0.5 size-3.5 text-muted-foreground" /> : <ChevronRight className="mt-0.5 size-3.5 text-muted-foreground" />}
                         <span className="min-w-0">
-                          <span className="flex items-center gap-1.5 text-[13.5px] font-semibold text-foreground">
+                          <span className="flex items-center gap-1.5 text-body font-semibold text-foreground">
                             {o.query}
                             {o.duplicate && (
-                              <span title="May cannibalize an existing page" className="inline-flex items-center gap-0.5 rounded bg-warning/15 px-1 py-0.5 text-[10px] font-semibold text-warning">
+                              <Badge variant="warning" title="May cannibalize an existing page">
                                 <AlertTriangle className="size-3" /> dup
-                              </span>
+                              </Badge>
                             )}
                           </span>
-                          <span className="text-[11.5px] text-muted-foreground">{o.clusterLabel} · {o.recommendedPageType}</span>
+                          <span className="text-micro text-muted-foreground">{o.clusterLabel} · {o.recommendedPageType}</span>
                         </span>
                       </button>
                     </td>
                     <td className="px-3 py-3">
                       <div className="flex flex-col items-start gap-1">
-                        <span className={cn("rounded-full px-1.5 py-0.5 text-[11px] font-semibold capitalize", INTENT_CLS[o.intent])}>{o.intent}</span>
+                        <Badge variant={INTENT_VARIANT[o.intent]} className="capitalize">{o.intent}</Badge>
                         {o.funnelStage && (
-                          <span className={cn("rounded-full px-1.5 py-0.5 text-[10px] font-semibold", STAGE_META[o.funnelStage].cls)}>{STAGE_META[o.funnelStage].label}</span>
+                          <Badge variant={STAGE_META[o.funnelStage].variant}>{STAGE_META[o.funnelStage].label}</Badge>
                         )}
                       </div>
                     </td>
-                    <td className="px-3 py-3 tabular-nums text-[13px] text-muted-foreground">{compact(o.volume)}</td>
-                    <td className="px-3 py-3 tabular-nums text-[13px] text-muted-foreground">{o.difficulty}</td>
-                    <td className="px-3 py-3 tabular-nums text-[13px] text-muted-foreground">{o.commercialValue}</td>
-                    <td className="px-3 py-3 tabular-nums text-[13px] font-semibold text-foreground">{impact(o)}</td>
-                    <td className="px-3 py-3"><span className={cn("rounded-full px-2 py-0.5 text-[11.5px] font-semibold capitalize", STATUS_CLS[o.status])}>{o.status}</span></td>
+                    <td className="px-3 py-3 tabular-nums text-label text-muted-foreground">{compact(o.volume)}</td>
+                    <td className="px-3 py-3 tabular-nums text-label text-muted-foreground">{o.difficulty}</td>
+                    <td className="px-3 py-3 tabular-nums text-label text-muted-foreground">{o.commercialValue}</td>
+                    <td className="px-3 py-3 tabular-nums text-label font-semibold text-foreground">{impact(o)}</td>
+                    <td className="px-3 py-3"><Badge variant={STATUS_VARIANT[o.status]} className="capitalize">{o.status}</Badge></td>
                     <td className="px-5 py-3">
                       <div className="flex items-center justify-end gap-1.5">
                         {o.status === "new" ? (
                           <>
-                            <button onClick={() => act(o.id, "defer")} disabled={busy === o.id} className="flex size-8 items-center justify-center rounded-lg border border-border text-muted-foreground hover:bg-muted" aria-label="Defer"><Clock className="size-3.5" /></button>
-                            <button onClick={() => act(o.id, "reject")} disabled={busy === o.id} className="flex size-8 items-center justify-center rounded-lg border border-border text-muted-foreground hover:bg-negative/10 hover:text-negative" aria-label="Reject"><X className="size-3.5" /></button>
-                            <Button size="sm" className="h-8 rounded-full px-3" disabled={busy === o.id} onClick={() => generate(o)}>
-                              {busy === o.id ? <Loader2 className="size-3.5 animate-spin" /> : <FileText className="size-3.5" />}
+                            <button onClick={() => act(o.id, "defer")} disabled={busy === o.id} className="flex size-8 items-center justify-center rounded-lg border border-border text-muted-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50" aria-label="Defer"><Clock className="size-3.5" /></button>
+                            <button onClick={() => act(o.id, "reject")} disabled={busy === o.id} className="flex size-8 items-center justify-center rounded-lg border border-border text-muted-foreground transition-colors hover:bg-negative/10 hover:text-negative focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50" aria-label="Reject"><X className="size-3.5" /></button>
+                            <Button size="sm" className="h-8 rounded-full px-3" loading={busy === o.id} onClick={() => generate(o)}>
+                              {busy !== o.id && <FileText className="size-3.5" />}
                               Generate
                             </Button>
                           </>
                         ) : (
-                          <span className="inline-flex items-center gap-1 text-[12px] text-muted-foreground"><Check className="size-3.5 text-positive" /> {o.status}</span>
+                          <span className="inline-flex items-center gap-1 text-label text-muted-foreground"><Check className="size-3.5 text-positive" /> {o.status}</span>
                         )}
                       </div>
                     </td>
@@ -339,8 +342,8 @@ export function OpportunitiesExplorer({ initial }: { initial: KeywordOpportunity
                     <tr className="bg-surface-sunken">
                       <td />
                       <td colSpan={8} className="px-3 py-3">
-                        <div className="text-[12.5px] text-foreground">{o.evidence}</div>
-                        <div className="mt-1.5 flex items-center gap-2 text-[11.5px] text-muted-foreground">
+                        <div className="text-label text-foreground">{o.evidence}</div>
+                        <div className="mt-1.5 flex items-center gap-2 text-micro text-muted-foreground">
                           <span className="font-semibold">Confidence {o.confidence}</span>
                           {o.competitorUrls.length > 0 && (
                             <span>
@@ -348,7 +351,7 @@ export function OpportunitiesExplorer({ initial }: { initial: KeywordOpportunity
                               {o.competitorUrls.map((u, idx) => (
                                 <span key={u}>
                                   {idx > 0 ? ", " : ""}
-                                  <a href={`https://${u.replace(/^https?:\/\//, "")}`} target="_blank" rel="noreferrer" className="text-brand hover:underline">{u}</a>
+                                  <a href={`https://${u.replace(/^https?:\/\//, "")}`} target="_blank" rel="noreferrer" className="rounded-sm text-brand hover:underline focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50">{u}</a>
                                 </span>
                               ))}
                             </span>
@@ -362,7 +365,14 @@ export function OpportunitiesExplorer({ initial }: { initial: KeywordOpportunity
             </tbody>
           </table>
         </div>
-        {rows.length === 0 && <div className="py-16 text-center text-sm text-muted-foreground">No opportunities match your filters.</div>}
+        {rows.length === 0 && (
+          <EmptyState
+            icon={Search}
+            title="No opportunities match your filters"
+            description="Adjust the search or filters above, or discover new opportunities from seed topics."
+            className="py-16"
+          />
+        )}
       </div>
     </div>
   );

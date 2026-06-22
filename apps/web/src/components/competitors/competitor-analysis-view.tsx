@@ -6,6 +6,7 @@ import { Loader2, RefreshCw, Sparkles, Swords, ArrowUpRight, Info, Search, Shiel
 import type { CompetitorAnalysis, CompetitorSource, CompetitorPageAnalysis } from "@geoseo/types";
 import { Panel } from "@/components/dashboard/panel";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { api } from "@/lib/api-client";
 import { puterReady, discoverCompetitorsWithPuter, type PuterCompetitor } from "@/lib/puter-ai";
@@ -192,20 +193,13 @@ export function CompetitorAnalysisView() {
           description="Add competitor domains in Brand Memory (or set a free Brave Search key) and run the analysis to see who ranks for your keywords and where the gaps are."
         >
           <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
-            <button
-              onClick={refresh}
-              disabled={running}
-              className="inline-flex items-center gap-1.5 rounded-xl bg-brand px-3.5 py-2 text-label font-semibold text-white transition-colors ease-expo hover:bg-brand/90 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/40 disabled:opacity-60"
-            >
-              {running ? <Loader2 className="size-4 animate-spin" aria-hidden="true" /> : <Sparkles className="size-4" aria-hidden="true" />}
+            <Button variant="brand" onClick={refresh} disabled={running} loading={running}>
+              {!running && <Sparkles className="size-4" aria-hidden="true" />}
               {running ? "Analyzing…" : "Run analysis"}
-            </button>
-            <Link
-              href="/brand"
-              className="rounded-xl border border-border px-3.5 py-2 text-label font-semibold text-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/40"
-            >
+            </Button>
+            <Button variant="outline" render={<Link href="/brand" />}>
               Edit Brand Memory
-            </Link>
+            </Button>
           </div>
         </EmptyState>
       </Panel>
@@ -222,39 +216,29 @@ export function CompetitorAnalysisView() {
           <div className="flex items-center gap-5">
             <div>
               <div className="flex items-baseline gap-1">
-                <span className="text-3xl font-bold tabular-nums leading-none text-foreground">{data.yourVisibility}</span>
-                <span className="text-[12px] text-muted-foreground">% visibility</span>
+                <span className="tnum text-kpi font-semibold leading-none text-foreground">{data.yourVisibility}</span>
+                <span className="text-label text-muted-foreground">% visibility</span>
               </div>
-              <p className="mt-1 text-[12px] text-muted-foreground">
+              <p className="mt-1 text-label text-muted-foreground">
                 Your share of the top results across {data.keywords.length} target keyword{data.keywords.length === 1 ? "" : "s"}
               </p>
             </div>
             <div className="h-10 w-px bg-border" />
-            <div className="text-[12.5px] text-muted-foreground">
+            <div className="text-label text-muted-foreground">
               <span className="font-semibold text-foreground">{data.competitors.length}</span> competitors ·{" "}
               <span className="font-semibold text-foreground">{data.gaps.length}</span> keyword gaps
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <span
-              title={badge.hint}
-              className={cn(
-                "inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11.5px] font-medium",
-                badge.live ? "bg-positive/10 text-positive" : "bg-muted text-muted-foreground",
-              )}
-            >
+            <Badge variant={badge.live ? "positive" : "muted"} title={badge.hint}>
               <span className={cn("size-1.5 rounded-full", badge.live ? "bg-positive" : "bg-muted-foreground")} />
               {badge.label}
               <Info className="size-3" />
-            </span>
-            <button
-              onClick={refresh}
-              disabled={running}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-1.5 text-[12.5px] font-medium text-foreground transition-colors hover:bg-muted disabled:opacity-60"
-            >
+            </Badge>
+            <Button variant="outline" size="sm" onClick={refresh} disabled={running}>
               <RefreshCw className={cn("size-3.5", running && "animate-spin")} />
               {running ? "Refreshing…" : "Refresh"}
-            </button>
+            </Button>
           </div>
         </div>
       </Panel>
@@ -262,12 +246,12 @@ export function CompetitorAnalysisView() {
       {/* competitors */}
       <Panel title="Top competitors" description="Domains ranking for your target keywords, ranked by visibility">
         {data.competitors.length === 0 ? (
-          <p className="text-[12.5px] text-muted-foreground">No competing domains found for these keywords.</p>
+          <p className="text-label text-muted-foreground">No competing domains found for these keywords.</p>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-[12.5px]">
+            <table className="w-full text-label">
               <thead>
-                <tr className="border-b border-border text-left text-[11.5px] uppercase tracking-wide text-muted-foreground">
+                <tr className="border-b border-border text-left text-micro uppercase text-muted-foreground">
                   <th className="pb-2 pr-3 font-medium">Domain</th>
                   <th className="pb-2 pr-3 font-medium">Keywords</th>
                   <th className="pb-2 pr-3 font-medium">Avg position</th>
@@ -288,14 +272,14 @@ export function CompetitorAnalysisView() {
                         <ArrowUpRight className="size-3 text-muted-foreground" />
                       </a>
                     </td>
-                    <td className="py-2.5 pr-3 tabular-nums text-muted-foreground">{c.appearances}</td>
-                    <td className="py-2.5 pr-3 tabular-nums text-muted-foreground">#{c.avgPosition}</td>
+                    <td className="tnum py-2.5 pr-3 text-muted-foreground">{c.appearances}</td>
+                    <td className="tnum py-2.5 pr-3 text-muted-foreground">#{c.avgPosition}</td>
                     <td className="py-2.5">
                       <div className="flex items-center gap-2">
                         <div className="h-1.5 w-24 overflow-hidden rounded-full bg-muted">
                           <div className="h-full rounded-full bg-brand" style={{ width: `${Math.min(100, c.visibilityScore)}%` }} />
                         </div>
-                        <span className="tabular-nums text-muted-foreground">{c.visibilityScore}</span>
+                        <span className="tnum text-muted-foreground">{c.visibilityScore}</span>
                       </div>
                     </td>
                   </tr>
@@ -312,12 +296,12 @@ export function CompetitorAnalysisView() {
         description="Buyer-intent keywords a competitor ranks for and you don't — your fastest wins"
       >
         {data.gaps.length === 0 ? (
-          <p className="text-[12.5px] text-muted-foreground">No gaps found — you&apos;re competitive on your target keywords.</p>
+          <p className="text-label text-muted-foreground">No gaps found — you&apos;re competitive on your target keywords.</p>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-[12.5px]">
+            <table className="w-full text-label">
               <thead>
-                <tr className="border-b border-border text-left text-[11.5px] uppercase tracking-wide text-muted-foreground">
+                <tr className="border-b border-border text-left text-micro uppercase text-muted-foreground">
                   <th className="pb-2 pr-3 font-medium">Keyword</th>
                   <th className="pb-2 pr-3 font-medium">Intent</th>
                   <th className="pb-2 pr-3 font-medium">Volume</th>
@@ -333,15 +317,15 @@ export function CompetitorAnalysisView() {
                     <td className="py-2.5 pr-3">
                       <Badge variant={INTENT_VARIANT[g.intent] ?? "muted"}>{g.intent}</Badge>
                     </td>
-                    <td className="py-2.5 pr-3 tabular-nums text-muted-foreground">{g.volume.toLocaleString()}</td>
-                    <td className="py-2.5 pr-3 tabular-nums text-muted-foreground">{g.difficulty}</td>
+                    <td className="tnum py-2.5 pr-3 text-muted-foreground">{g.volume.toLocaleString()}</td>
+                    <td className="tnum py-2.5 pr-3 text-muted-foreground">{g.difficulty}</td>
                     <td className="py-2.5 pr-3 text-muted-foreground">
                       {g.topCompetitor} <span className="text-foreground">#{g.competitorRank}</span>
                     </td>
                     <td className="py-2.5 text-right">
                       <Link
                         href="/research"
-                        className="inline-flex items-center gap-1 text-[12px] font-semibold text-brand hover:underline"
+                        className="inline-flex items-center gap-1 text-label font-semibold text-brand hover:underline"
                       >
                         <Sparkles className="size-3.5" />
                         Generate page
@@ -365,55 +349,51 @@ export function CompetitorAnalysisView() {
               onChange={(e) => setPageUrl(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && !analyzing && analyzePage()}
               placeholder="https://competitor.com/their-winning-page"
-              className="h-10 w-full rounded-lg border border-border bg-card pl-9 pr-3 text-[13px] text-foreground outline-none focus:border-brand"
+              className="h-10 w-full rounded-lg border border-border bg-card pl-9 pr-3 text-body text-foreground outline-none transition-colors focus:border-brand focus-visible:ring-3 focus-visible:ring-ring/50"
             />
           </div>
-          <button
-            onClick={analyzePage}
-            disabled={analyzing || !pageUrl.trim()}
-            className="inline-flex h-10 shrink-0 items-center gap-1.5 rounded-lg bg-brand px-4 text-[13px] font-semibold text-brand-foreground transition-transform hover:scale-[1.02] disabled:opacity-60"
-          >
-            {analyzing ? <Loader2 className="size-4 animate-spin" /> : <Swords className="size-4" />}
+          <Button variant="brand" size="lg" className="h-10 px-4" onClick={analyzePage} disabled={analyzing || !pageUrl.trim()} loading={analyzing}>
+            {!analyzing && <Swords className="size-4" />}
             {analyzing ? "Analyzing…" : "Analyze page"}
-          </button>
+          </Button>
         </div>
 
         {pageResult?.crawled && (
           <div className="mt-4 space-y-4">
             <div>
-              <div className="text-[13.5px] font-semibold text-foreground">{pageResult.title || pageResult.url}</div>
-              <p className="mt-1 text-[12.5px] text-muted-foreground">{pageResult.summary}</p>
+              <div className="text-h-card font-semibold text-foreground">{pageResult.title || pageResult.url}</div>
+              <p className="mt-1 text-label text-muted-foreground">{pageResult.summary}</p>
             </div>
-            <div className="flex flex-wrap gap-1.5 text-[11px]">
-              <span className="rounded-full bg-muted px-2 py-0.5 text-muted-foreground">{pageResult.structure.wordCount.toLocaleString()} words</span>
-              <span className="rounded-full bg-muted px-2 py-0.5 text-muted-foreground">{pageResult.structure.headings} headings</span>
-              <span className="rounded-full bg-muted px-2 py-0.5 text-muted-foreground">{pageResult.structure.images} images</span>
-              <span className={cn("rounded-full px-2 py-0.5", pageResult.structure.hasSchema ? "bg-positive/12 text-positive" : "bg-warning/12 text-warning")}>{pageResult.structure.hasSchema ? "has schema" : "no schema"}</span>
-              <span className={cn("rounded-full px-2 py-0.5", pageResult.structure.hasFaq ? "bg-positive/12 text-positive" : "bg-warning/12 text-warning")}>{pageResult.structure.hasFaq ? "has FAQ" : "no FAQ"}</span>
-              <span className="rounded-full bg-muted px-2 py-0.5 text-muted-foreground">{pageResult.source === "llm" ? "AI-analyzed" : "heuristic"}</span>
+            <div className="flex flex-wrap gap-1.5">
+              <Badge variant="muted">{pageResult.structure.wordCount.toLocaleString()} words</Badge>
+              <Badge variant="muted">{pageResult.structure.headings} headings</Badge>
+              <Badge variant="muted">{pageResult.structure.images} images</Badge>
+              <Badge variant={pageResult.structure.hasSchema ? "positive" : "warning"}>{pageResult.structure.hasSchema ? "has schema" : "no schema"}</Badge>
+              <Badge variant={pageResult.structure.hasFaq ? "positive" : "warning"}>{pageResult.structure.hasFaq ? "has FAQ" : "no FAQ"}</Badge>
+              <Badge variant="muted">{pageResult.source === "llm" ? "AI-analyzed" : "heuristic"}</Badge>
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
               {pageResult.strengths.length > 0 && (
                 <div>
-                  <div className="mb-1.5 text-[11.5px] font-semibold uppercase tracking-wide text-muted-foreground">Their strengths</div>
+                  <div className="mb-1.5 text-micro font-semibold uppercase text-muted-foreground">Their strengths</div>
                   <ul className="space-y-1.5">
                     {pageResult.strengths.map((s, i) => (
-                      <li key={i} className="flex gap-2 text-[12.5px] text-foreground"><Check className="mt-0.5 size-3.5 shrink-0 text-positive" />{s}</li>
+                      <li key={i} className="flex gap-2 text-label text-foreground"><Check className="mt-0.5 size-3.5 shrink-0 text-positive" />{s}</li>
                     ))}
                   </ul>
                 </div>
               )}
               <div>
-                <div className="mb-1.5 text-[11.5px] font-semibold uppercase tracking-wide text-muted-foreground">Vulnerabilities to exploit</div>
+                <div className="mb-1.5 text-micro font-semibold uppercase text-muted-foreground">Vulnerabilities to exploit</div>
                 <ul className="space-y-1.5">
                   {pageResult.vulnerabilities.map((v, i) => (
-                    <li key={i} className="flex gap-2 text-[12.5px] text-foreground"><ShieldAlert className="mt-0.5 size-3.5 shrink-0 text-warning" />{v}</li>
+                    <li key={i} className="flex gap-2 text-label text-foreground"><ShieldAlert className="mt-0.5 size-3.5 shrink-0 text-warning" />{v}</li>
                   ))}
                 </ul>
               </div>
             </div>
             {pageResult.recommendation && (
-              <div className="rounded-lg border border-brand/30 bg-brand/5 p-3 text-[12.5px] text-foreground">
+              <div className="rounded-lg border border-brand/30 bg-brand/5 p-3 text-label text-foreground">
                 <span className="font-semibold">How to outrank it: </span>
                 {pageResult.recommendation}
               </div>

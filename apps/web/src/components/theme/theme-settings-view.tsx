@@ -16,6 +16,7 @@ import {
 import type { SiteThemeProfile, ThemeFidelity } from "@geoseo/types";
 import { api } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { useAppFeedback } from "@/components/system/app-feedback";
 
@@ -26,10 +27,11 @@ const VIEWPORTS: { id: Viewport; label: string; icon: typeof Monitor; width: num
   { id: "mobile", label: "Mobile", icon: Smartphone, width: 375 },
 ];
 
-const STATUS_TONE: Record<SiteThemeProfile["status"], string> = {
-  confirmed: "bg-positive/12 text-positive",
-  draft: "bg-warning/15 text-warning",
-  "needs-review": "bg-destructive/12 text-destructive",
+type BadgeVariant = "positive" | "warning" | "destructive";
+const STATUS_VARIANT: Record<SiteThemeProfile["status"], BadgeVariant> = {
+  confirmed: "positive",
+  draft: "warning",
+  "needs-review": "destructive",
 };
 
 const COLOR_KEYS: { key: keyof SiteThemeProfile["colors"]; label: string }[] = [
@@ -133,7 +135,7 @@ export function ThemeSettingsView() {
 
   if (!loaded) {
     return (
-      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+      <div className="flex items-center gap-2 text-body text-muted-foreground">
         <Loader2 className="size-4 animate-spin" /> Loading theme profile…
       </div>
     );
@@ -146,23 +148,23 @@ export function ThemeSettingsView() {
         <div className="mx-auto mb-4 flex size-12 items-center justify-center rounded-xl bg-brand/10 text-brand">
           <Palette className="size-6" />
         </div>
-        <h2 className="text-lg font-semibold text-foreground">Match your website&apos;s look</h2>
-        <p className="mx-auto mt-1.5 max-w-md text-[13.5px] text-muted-foreground">
+        <h2 className="text-title font-semibold text-foreground">Match your website&apos;s look</h2>
+        <p className="mx-auto mt-1.5 max-w-md text-label text-muted-foreground">
           Scan your site so generated pages use your real colors, fonts, and component styles — and feel native, not like a detached microsite.
         </p>
         <div className="mt-5 flex flex-col gap-2 sm:flex-row">
-          <div className="flex flex-1 items-center gap-2 rounded-lg border border-border bg-background px-3">
+          <div className="flex flex-1 items-center gap-2 rounded-lg border border-border bg-background px-3 focus-within:ring-3 focus-within:ring-ring/50">
             <Globe className="size-4 shrink-0 text-muted-foreground" />
             <input
               value={scanUrl}
               onChange={(e) => setScanUrl(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && scan()}
               placeholder="https://yourcompany.com"
-              className="h-10 w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+              className="h-10 w-full bg-transparent text-body outline-none placeholder:text-muted-foreground"
             />
           </div>
-          <Button onClick={scan} disabled={scanning || !scanUrl.trim()} className="h-10">
-            {scanning ? <Loader2 className="size-4 animate-spin" /> : <Sparkles className="size-4" />}
+          <Button variant="brand" size="lg" onClick={scan} disabled={scanning || !scanUrl.trim()} loading={scanning} className="h-10">
+            {!scanning && <Sparkles className="size-4" />}
             Scan website
           </Button>
         </div>
@@ -178,33 +180,33 @@ export function ThemeSettingsView() {
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-card p-4">
         <div className="min-w-0">
           <div className="flex items-center gap-2">
-            <span className={cn("rounded-full px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.05em]", STATUS_TONE[active.status])}>
+            <Badge variant={STATUS_VARIANT[active.status]} className="uppercase">
               {active.status === "needs-review" ? "Needs review" : active.status}
-            </span>
+            </Badge>
             <Confidence value={active.confidence} />
           </div>
-          <p className="mt-1.5 truncate text-[12.5px] text-muted-foreground">
+          <p className="mt-1.5 truncate text-label text-muted-foreground">
             {active.sourceUrls.length ? `Scanned: ${active.sourceUrls.join(", ")}` : "No source URLs recorded"}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {editing ? (
             <>
-              <Button variant="ghost" size="sm" className="h-8" onClick={() => { setEditing(false); setDraft(null); }} disabled={saving}>
+              <Button variant="ghost" size="sm" onClick={() => { setEditing(false); setDraft(null); }} disabled={saving}>
                 Cancel
               </Button>
-              <Button size="sm" className="h-8" onClick={saveEdits} disabled={saving}>
-                {saving ? <Loader2 className="size-3.5 animate-spin" /> : <Check className="size-3.5" />} Save changes
+              <Button size="sm" onClick={saveEdits} disabled={saving} loading={saving}>
+                {!saving && <Check className="size-3.5" />} Save changes
               </Button>
             </>
           ) : (
             <>
               <RescanInline url={scanUrl} setUrl={setScanUrl} onScan={scan} scanning={scanning} />
-              <Button variant="outline" size="sm" className="h-8" onClick={startEdit}>
+              <Button variant="outline" size="sm" onClick={startEdit}>
                 <Pencil className="size-3.5" /> Edit tokens
               </Button>
-              <Button size="sm" className="h-8" onClick={confirmTheme} disabled={confirming || active.status === "confirmed"}>
-                {confirming ? <Loader2 className="size-3.5 animate-spin" /> : <Check className="size-3.5" />}
+              <Button variant="brand" size="sm" onClick={confirmTheme} disabled={confirming || active.status === "confirmed"} loading={confirming}>
+                {!confirming && <Check className="size-3.5" />}
                 {active.status === "confirmed" ? "Confirmed" : "Accept theme"}
               </Button>
             </>
@@ -236,8 +238,8 @@ export function ThemeSettingsView() {
                       <span className="size-7 shrink-0 rounded-md border border-border" style={{ background: val }} />
                     )}
                     <div className="min-w-0">
-                      <div className="text-[11px] font-medium text-muted-foreground">{label}</div>
-                      <div className="truncate font-mono text-[11px] text-foreground">{val ?? "—"}</div>
+                      <div className="text-micro font-medium text-muted-foreground">{label}</div>
+                      <div className="truncate font-mono text-micro text-foreground">{val ?? "—"}</div>
                     </div>
                   </div>
                 );
@@ -247,17 +249,17 @@ export function ThemeSettingsView() {
 
           <Panel title="Typography">
             <div style={{ fontFamily: stack(shown!.typography.headingFont) }}>
-              <div className="text-[22px] font-bold leading-tight text-foreground" style={{ fontWeight: shown!.typography.headingWeight }}>
+              <div className="text-title font-bold leading-tight text-foreground" style={{ fontWeight: shown!.typography.headingWeight }}>
                 The quick brown fox
               </div>
             </div>
-            <p className="mt-1.5 text-[13px] leading-relaxed text-muted-foreground" style={{ fontFamily: stack(shown!.typography.bodyFont) }}>
+            <p className="mt-1.5 text-label leading-relaxed text-muted-foreground" style={{ fontFamily: stack(shown!.typography.bodyFont) }}>
               Body copy renders in {shown!.typography.bodyFont ?? "the detected body font"}. Headings use {shown!.typography.headingFont ?? "the detected heading font"}.
             </p>
             {shown!.typography.scale?.length > 0 && (
               <div className="mt-2.5 flex flex-wrap gap-1.5">
                 {shown!.typography.scale.slice(0, 8).map((s, i) => (
-                  <span key={i} className="rounded-md border border-border bg-background px-1.5 py-0.5 font-mono text-[10.5px] text-muted-foreground">
+                  <span key={i} className="rounded-md border border-border bg-background px-1.5 py-0.5 font-mono text-micro text-muted-foreground">
                     {s}
                   </span>
                 ))}
@@ -266,7 +268,7 @@ export function ThemeSettingsView() {
           </Panel>
 
           <Panel title="Layout">
-            <div className="grid grid-cols-2 gap-2 text-[12px]">
+            <div className="grid grid-cols-2 gap-2 text-label">
               <Token label="Max width" value={`${shown!.layout.maxWidth}px`} />
               <Token label="Header" value={shown!.layout.headerStyle} />
               <Token label="Section gap" value={`${shown!.layout.sectionSpacing}px`} />
@@ -285,8 +287,8 @@ export function ThemeSettingsView() {
                   key={v.id}
                   onClick={() => setViewport(v.id)}
                   className={cn(
-                    "flex items-center gap-1.5 rounded-md px-2.5 py-1 text-[12px] font-medium transition-colors",
-                    viewport === v.id ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground",
+                    "flex items-center gap-1.5 rounded-md px-2.5 py-1 text-label font-medium transition-colors focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+                    viewport === v.id ? "bg-card text-foreground shadow-xs" : "text-muted-foreground hover:text-foreground",
                   )}
                   aria-pressed={viewport === v.id}
                 >
@@ -296,7 +298,7 @@ export function ThemeSettingsView() {
             </div>
           }
         >
-          <p className="mb-3 text-[12px] text-muted-foreground">
+          <p className="mb-3 text-label text-muted-foreground">
             A sample page section rendered with your theme tokens — this is how generated pages will feel inside your site.
           </p>
           <div className="flex justify-center overflow-x-auto rounded-xl bg-muted/40 p-4">
@@ -314,7 +316,7 @@ function Panel({ title, action, children }: { title: string; action?: React.Reac
   return (
     <section className="rounded-xl border border-border bg-card p-4">
       <div className="mb-3 flex items-center justify-between gap-2">
-        <h3 className="text-[12px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">{title}</h3>
+        <h3 className="text-micro font-semibold uppercase text-muted-foreground">{title}</h3>
         {action}
       </div>
       {children}
@@ -325,8 +327,8 @@ function Panel({ title, action, children }: { title: string; action?: React.Reac
 function Token({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-lg border border-border bg-background px-2.5 py-1.5">
-      <div className="text-[10.5px] text-muted-foreground">{label}</div>
-      <div className="font-mono text-[12px] capitalize text-foreground">{value}</div>
+      <div className="text-micro text-muted-foreground">{label}</div>
+      <div className="font-mono text-label capitalize text-foreground">{value}</div>
     </div>
   );
 }
@@ -335,10 +337,10 @@ function Confidence({ value }: { value: number }) {
   const tone = value >= 80 ? "text-positive" : value >= 60 ? "text-warning" : "text-destructive";
   const label = value >= 80 ? "Native fit" : value >= 60 ? "Acceptable" : "Needs review";
   return (
-    <span className="inline-flex items-center gap-1.5 text-[12px]">
+    <span className="inline-flex items-center gap-1.5 text-label">
       <span className="text-muted-foreground">Confidence</span>
-      <span className={cn("font-semibold tabular-nums", tone)}>{value}</span>
-      <span className={cn("text-[11px]", tone)}>· {label}</span>
+      <span className={cn("tnum font-semibold", tone)}>{value}</span>
+      <span className={cn("text-micro", tone)}>· {label}</span>
     </span>
   );
 }
@@ -367,7 +369,7 @@ function FidelityPanel({ themeId }: { themeId: string }) {
   if (!fidelity) {
     return (
       <Panel title="Theme fidelity">
-        <div className="flex items-center gap-2 text-[12.5px] text-muted-foreground">
+        <div className="flex items-center gap-2 text-label text-muted-foreground">
           <Loader2 className="size-3.5 animate-spin" /> Scoring fit…
         </div>
       </Panel>
@@ -378,19 +380,19 @@ function FidelityPanel({ themeId }: { themeId: string }) {
     <Panel title="Theme fidelity">
       <div className="flex items-end justify-between">
         <div className="flex items-baseline gap-1.5">
-          <span className={cn("text-3xl font-bold tabular-nums leading-none", meta.tone)}>{fidelity.score}</span>
-          <span className="text-[12px] text-muted-foreground">/ 100</span>
+          <span className={cn("tnum text-kpi font-semibold leading-none", meta.tone)}>{fidelity.score}</span>
+          <span className="text-label text-muted-foreground">/ 100</span>
         </div>
-        <span className={cn("rounded-full bg-muted px-2 py-0.5 text-[11px] font-semibold", meta.tone)}>{meta.label}</span>
+        <Badge variant="muted" className={meta.tone}>{meta.label}</Badge>
       </div>
-      <p className="mt-1.5 text-[12px] leading-relaxed text-muted-foreground">{fidelity.recommendedAction}</p>
+      <p className="mt-1.5 text-label leading-relaxed text-muted-foreground">{fidelity.recommendedAction}</p>
 
       <div className="mt-3 space-y-2">
         {fidelity.breakdown.map((b) => (
           <div key={b.label}>
-            <div className="flex items-center justify-between text-[11.5px]">
+            <div className="flex items-center justify-between text-micro">
               <span className="text-muted-foreground">{b.label}</span>
-              <span className="font-medium tabular-nums text-foreground">{b.score}</span>
+              <span className="tnum font-medium text-foreground">{b.score}</span>
             </div>
             <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-muted">
               <div className={cn("h-full rounded-full", b.score >= 80 ? "bg-positive" : b.score >= 60 ? "bg-warning" : "bg-destructive")} style={{ width: `${Math.max(0, Math.min(100, b.score))}%` }} />
@@ -402,7 +404,7 @@ function FidelityPanel({ themeId }: { themeId: string }) {
       {fidelity.blockers.length > 0 && (
         <ul className="mt-3 space-y-1 border-t border-border pt-2.5">
           {fidelity.blockers.map((b, i) => (
-            <li key={i} className="flex gap-1.5 text-[11.5px] text-warning">
+            <li key={i} className="flex gap-1.5 text-micro text-warning">
               <span aria-hidden>⚠</span>
               <span>{b}</span>
             </li>
@@ -415,17 +417,17 @@ function FidelityPanel({ themeId }: { themeId: string }) {
 
 function RescanInline({ url, setUrl, onScan, scanning }: { url: string; setUrl: (v: string) => void; onScan: () => void; scanning: boolean }) {
   return (
-    <div className="flex items-center gap-1.5 rounded-lg border border-border bg-background pl-2.5">
+    <div className="flex items-center gap-1.5 rounded-lg border border-border bg-background pl-2.5 focus-within:ring-3 focus-within:ring-ring/50">
       <Globe className="size-3.5 shrink-0 text-muted-foreground" />
       <input
         value={url}
         onChange={(e) => setUrl(e.target.value)}
         onKeyDown={(e) => e.key === "Enter" && onScan()}
         placeholder="Rescan a URL…"
-        className="h-7 w-32 bg-transparent text-[12.5px] outline-none placeholder:text-muted-foreground sm:w-40"
+        className="h-7 w-32 bg-transparent text-label outline-none placeholder:text-muted-foreground sm:w-40"
       />
-      <Button variant="ghost" size="sm" className="h-7 px-2" onClick={onScan} disabled={scanning || !url.trim()}>
-        {scanning ? <Loader2 className="size-3.5 animate-spin" /> : <RefreshCw className="size-3.5" />}
+      <Button variant="ghost" size="sm" className="h-7 px-2" onClick={onScan} disabled={scanning || !url.trim()} loading={scanning}>
+        {!scanning && <RefreshCw className="size-3.5" />}
       </Button>
     </div>
   );

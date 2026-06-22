@@ -19,6 +19,8 @@ import { api } from "@/lib/api-client";
 import { relativeTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { EmptyState } from "@/components/ui/empty-state";
 import { useAppFeedback } from "@/components/system/app-feedback";
 
 type Filter = "all" | AlertSeverity;
@@ -122,10 +124,10 @@ export function AlertsFeed({ alerts: initialAlerts }: { alerts: Alert[] }) {
               <s.icon className={cn("size-5", s.iconCls)} strokeWidth={2} />
             </div>
             <div>
-              <div className="tnum text-2xl font-semibold leading-none text-foreground">
+              <div className="tnum text-kpi font-semibold leading-none text-foreground">
                 {counts[s.key]}
               </div>
-              <div className="mt-1 text-[12px] font-medium text-muted-foreground">{s.label}</div>
+              <div className="mt-1 text-label font-medium text-muted-foreground">{s.label}</div>
             </div>
           </button>
         ))}
@@ -140,14 +142,14 @@ export function AlertsFeed({ alerts: initialAlerts }: { alerts: Alert[] }) {
               key={f.key}
               onClick={() => setFilter(f.key)}
               className={cn(
-                "inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[12.5px] font-semibold transition-colors",
+                "inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-label font-semibold transition-colors focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
                 filter === f.key
                   ? "bg-foreground text-background"
                   : "bg-muted text-muted-foreground hover:bg-border",
               )}
             >
               {f.label}
-              <span className={cn("tnum text-[11px]", filter === f.key ? "opacity-70" : "opacity-60")}>
+              <span className={cn("tnum text-micro", filter === f.key ? "opacity-70" : "opacity-60")}>
                 {n}
               </span>
             </button>
@@ -175,25 +177,25 @@ export function AlertsFeed({ alerts: initialAlerts }: { alerts: Alert[] }) {
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
-                      <p className="truncate text-[13.5px] font-semibold text-foreground">{a.title}</p>
+                      <p className="truncate text-label font-semibold text-foreground">{a.title}</p>
                       {a.metric && (
-                        <span className="shrink-0 rounded-full bg-muted px-1.5 py-0.5 text-[10.5px] font-semibold text-muted-foreground tabular-nums">
+                        <Badge variant="muted" className="tnum">
                           {a.metric}
-                        </span>
+                        </Badge>
                       )}
                       {a.resolved && (
-                        <span className="shrink-0 rounded-full bg-positive/12 px-1.5 py-0.5 text-[10.5px] font-semibold text-positive">
+                        <Badge variant="positive">
                           Resolved
-                        </span>
+                        </Badge>
                       )}
                     </div>
-                    <p className="mt-0.5 line-clamp-2 text-[12.5px] leading-relaxed text-muted-foreground">
+                    <p className="mt-0.5 line-clamp-2 text-label leading-relaxed text-muted-foreground">
                       {a.description}
                     </p>
                     <div className="mt-3 flex flex-wrap items-center gap-2">
                       <Link
                         href={a.recommendedAction.href}
-                        className="inline-flex h-9 items-center gap-1 rounded-full bg-brand px-3 text-[12px] font-semibold text-brand-foreground transition-transform hover:-translate-y-0.5"
+                        className="inline-flex h-9 items-center gap-1 rounded-full bg-brand px-3 text-label font-semibold text-brand-foreground transition-transform ease-expo hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
                       >
                         {a.recommendedAction.label}
                         <ArrowRight className="size-3.5" />
@@ -213,7 +215,7 @@ export function AlertsFeed({ alerts: initialAlerts }: { alerts: Alert[] }) {
                           Snooze
                         </Button>
                       )}
-                      <span className="ml-auto text-[11px] text-muted-foreground/70">
+                      <span className="ml-auto text-micro text-muted-foreground/70">
                         {relativeTime(a.createdAt)}
                       </span>
                     </div>
@@ -224,11 +226,11 @@ export function AlertsFeed({ alerts: initialAlerts }: { alerts: Alert[] }) {
           })}
         </div>
       ) : (
-        <div className="flex flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-border py-16 text-center">
-          <Bell className="size-7 text-muted-foreground/50" />
-          <p className="text-[13.5px] font-medium text-foreground">No {filter} alerts</p>
-          <p className="text-[12.5px] text-muted-foreground">You&apos;re all caught up here.</p>
-        </div>
+        <EmptyState
+          icon={Bell}
+          title={`No ${filter} alerts`}
+          description="You're all caught up here."
+        />
       )}
     </div>
   );

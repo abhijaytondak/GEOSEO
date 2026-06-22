@@ -6,8 +6,8 @@ import { PageHeader } from "@/components/shell/page-header";
 import { Panel } from "@/components/dashboard/panel";
 import { AlertsList } from "@/components/dashboard/alerts-panel";
 import { AiVisibility } from "@/components/performance/ai-visibility";
+import { Badge } from "@/components/ui/badge";
 import { relativeTime } from "@/lib/format";
-import { cn } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
@@ -60,10 +60,10 @@ export default async function PageEngineDashboard() {
                 className="group rounded-2xl border border-border bg-card p-4 shadow-card transition-all hover:-translate-y-0.5 hover:shadow-float"
               >
                 <div className="flex items-center justify-between">
-                  <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">{k.label}</span>
+                  <span className="text-micro text-muted-foreground">{k.label}</span>
                   <Icon className="size-4 text-muted-foreground group-hover:text-brand" />
                 </div>
-                <div className="tnum mt-1.5 text-[26px] font-bold tracking-[-0.02em] text-foreground">{k.value}</div>
+                <div className="tnum mt-1.5 text-kpi text-foreground">{k.value}</div>
               </Link>
             );
           })}
@@ -77,23 +77,23 @@ export default async function PageEngineDashboard() {
             className="lg:col-span-2"
             bodyClassName={recs.length ? "p-0" : undefined}
             action={
-              <Link href="/pages" className="inline-flex items-center gap-1 text-[12.5px] font-semibold text-brand hover:underline">
+              <Link href="/pages" className="inline-flex items-center gap-1 text-label font-semibold text-brand hover:underline">
                 Open Pages <ArrowRight className="size-3.5" />
               </Link>
             }
           >
             {recs.length === 0 ? (
-              <p className="py-6 text-center text-[13px] text-muted-foreground">Everything looks healthy — no refresh needed.</p>
+              <p className="py-6 text-center text-label text-muted-foreground">Everything looks healthy — no refresh needed.</p>
             ) : (
               <div className="divide-y divide-border">
                 {recs.map((r) => (
                   <div key={r.pageId} className="flex items-center gap-3 px-5 py-3">
-                    <span className={cn("shrink-0 rounded-full px-2 py-0.5 text-[10.5px] font-semibold capitalize", r.action === "rebuild" ? "bg-negative/12 text-negative" : "bg-warning/15 text-warning")}>
+                    <Badge variant={r.action === "rebuild" ? "negative" : "warning"} className="shrink-0 capitalize">
                       {r.action}
-                    </span>
+                    </Badge>
                     <div className="min-w-0 flex-1">
-                      <div className="truncate text-[13px] font-semibold text-foreground">{r.title}</div>
-                      <div className="truncate text-[12px] text-muted-foreground">{r.reason}</div>
+                      <div className="truncate text-label font-semibold text-foreground">{r.title}</div>
+                      <div className="truncate text-label text-muted-foreground">{r.reason}</div>
                     </div>
                     <RefreshCw className="size-3.5 shrink-0 text-muted-foreground" />
                   </div>
@@ -115,7 +115,7 @@ export default async function PageEngineDashboard() {
             description="Ranking, backlink, and visibility signals"
             className="lg:col-span-2"
             action={
-              <Link href="/alerts" className="inline-flex items-center gap-1 text-[12.5px] font-semibold text-brand hover:underline">
+              <Link href="/alerts" className="inline-flex items-center gap-1 text-label font-semibold text-brand hover:underline">
                 View all <ArrowRight className="size-3.5" />
               </Link>
             }
@@ -126,18 +126,18 @@ export default async function PageEngineDashboard() {
           {/* audit / activity log */}
           <Panel title="Activity Log" description="Audited actions">
             {audit.length === 0 ? (
-              <p className="py-6 text-center text-[13px] text-muted-foreground">No actions logged yet.</p>
+              <p className="py-6 text-center text-label text-muted-foreground">No actions logged yet.</p>
             ) : (
               <ol className="space-y-2.5">
                 {audit.slice(0, 8).map((a) => (
-                  <li key={a.id} className="flex items-center gap-2 text-[12.5px]">
-                    <span className="shrink-0 rounded-md bg-muted px-1.5 py-0.5 text-[10.5px] font-semibold capitalize text-muted-foreground">
+                  <li key={a.id} className="flex items-center gap-2 text-label">
+                    <Badge variant="muted" className="shrink-0 capitalize">
                       {a.action}
-                    </span>
+                    </Badge>
                     <span className="min-w-0 flex-1 truncate text-foreground">
                       {a.entity} <span className="text-muted-foreground">{a.entityId}</span>
                     </span>
-                    <span className="shrink-0 text-[11px] text-muted-foreground/70">{relativeTime(a.at)}</span>
+                    <span className="shrink-0 text-micro text-muted-foreground/70">{relativeTime(a.at)}</span>
                   </li>
                 ))}
               </ol>

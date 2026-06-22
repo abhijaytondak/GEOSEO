@@ -6,8 +6,9 @@ import type { AiBotHit, AiMention, AiSearchOverview } from "@geoseo/types";
 import { api } from "@/lib/api-client";
 import { Panel } from "@/components/dashboard/panel";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { EmptyState } from "@/components/ui/empty-state";
 import { relativeTime } from "@/lib/format";
-import { cn } from "@/lib/utils";
 import { useAppFeedback } from "@/components/system/app-feedback";
 
 export function AiSearchView({
@@ -53,7 +54,7 @@ export function AiSearchView({
 
   return (
     <div className="space-y-5">
-      <div className="rounded-2xl border border-warning/30 bg-warning/5 p-4 text-[13px] text-foreground">
+      <div className="rounded-2xl border border-warning/30 bg-warning/5 p-4 text-body text-foreground">
         <span className="font-semibold">AI Search — beta.</span> Page creation, lead capture, and mention/bot tracking
         are live. Real per-engine citation tracking and AI-bot analytics activate once a monitoring provider is connected.
       </div>
@@ -65,10 +66,10 @@ export function AiSearchView({
           return (
             <div key={k.label} className="rounded-2xl border border-border bg-card p-4 shadow-card">
               <div className="flex items-center justify-between">
-                <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">{k.label}</span>
+                <span className="text-micro font-semibold uppercase text-muted-foreground">{k.label}</span>
                 <Icon className="size-4 text-muted-foreground" />
               </div>
-              <div className="tnum mt-1.5 text-[26px] font-bold tracking-[-0.02em] text-foreground">{k.value}</div>
+              <div className="tnum mt-1.5 text-kpi text-foreground">{k.value}</div>
             </div>
           );
         })}
@@ -85,7 +86,7 @@ export function AiSearchView({
                 onChange={(e) => setQuery(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && check()}
                 placeholder="Check a buyer query, e.g. “best product analytics tools”"
-                className="h-10 w-full rounded-lg border border-border bg-surface-sunken pl-9 pr-3 text-sm outline-none focus:border-ring focus:bg-card"
+                className="h-10 w-full rounded-lg border border-border bg-surface-sunken pl-9 pr-3 text-body outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:bg-card"
               />
             </div>
             <Button className="h-10" disabled={checking || !query.trim()} onClick={check}>
@@ -96,19 +97,19 @@ export function AiSearchView({
 
           <div className="mt-4 space-y-2">
             {mentions.length === 0 && (
-              <p className="py-8 text-center text-[13px] text-muted-foreground">No mention checks yet — run one above.</p>
+              <EmptyState icon={Quote} title="No mention checks yet" description="Run a buyer query above to check whether your brand is cited across AI answer engines." />
             )}
             {mentions.slice(0, 12).map((m) => (
               <div key={m.id} className="flex items-start gap-3 rounded-xl border border-border p-3">
-                <span className={cn("mt-0.5 shrink-0 rounded-md px-1.5 py-0.5 text-[10.5px] font-semibold capitalize", m.mentioned ? "bg-positive/12 text-positive" : "bg-muted text-muted-foreground")}>
+                <Badge variant={m.mentioned ? "positive" : "muted"} className="mt-0.5 capitalize">
                   {m.engine}
-                </span>
+                </Badge>
                 <div className="min-w-0 flex-1">
-                  <div className="truncate text-[13px] font-medium text-foreground">{m.query}</div>
-                  <div className="text-[11.5px] text-muted-foreground">
+                  <div className="truncate text-label font-medium text-foreground">{m.query}</div>
+                  <div className="text-micro text-muted-foreground">
                     {m.mentioned ? `Cited${m.position ? ` · pos ${m.position}` : ""}` : "Not cited"} · {m.source} · {relativeTime(m.checkedAt)}
                   </div>
-                  {m.snippet && <p className="mt-0.5 line-clamp-2 text-[12px] text-muted-foreground">{m.snippet}</p>}
+                  {m.snippet && <p className="mt-0.5 line-clamp-2 text-label text-muted-foreground">{m.snippet}</p>}
                 </div>
               </div>
             ))}
@@ -118,18 +119,19 @@ export function AiSearchView({
         {/* Bot activity */}
         <Panel title="AI Bot Crawls" description="AI crawlers fetching your pages">
           {botActivity.byBot.length === 0 ? (
-            <p className="py-8 text-center text-[13px] text-muted-foreground">
-              No AI-bot visits recorded yet. Once pages publish on your domain, GPTBot, PerplexityBot, ClaudeBot &amp;
-              Google-Extended hits appear here.
-            </p>
+            <EmptyState
+              icon={Bot}
+              title="No AI-bot visits recorded yet"
+              description="Once pages publish on your domain, GPTBot, PerplexityBot, ClaudeBot & Google-Extended hits appear here."
+            />
           ) : (
             <div className="space-y-2">
               {botActivity.byBot.map((b) => (
                 <div key={b.bot} className="flex items-center justify-between rounded-xl border border-border p-3">
-                  <span className="flex items-center gap-2 text-[13px] font-medium text-foreground">
+                  <span className="flex items-center gap-2 text-label font-medium text-foreground">
                     <Bot className="size-4 text-muted-foreground" /> {b.bot}
                   </span>
-                  <span className="tnum text-[14px] font-semibold text-foreground">{b.hits}</span>
+                  <span className="tnum text-body font-semibold text-foreground">{b.hits}</span>
                 </div>
               ))}
             </div>
