@@ -13,6 +13,8 @@ import {
 } from "lucide-react";
 import type { BrandAnalysis, BrandScorecardItem, CompetitorSource } from "@geoseo/types";
 import { Panel } from "@/components/dashboard/panel";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { api } from "@/lib/api-client";
 import { useAppFeedback } from "@/components/system/app-feedback";
 import { cn } from "@/lib/utils";
@@ -24,10 +26,13 @@ const GRADE_TONE: Record<string, string> = {
   D: "text-negative",
 };
 
-const STATUS_META: Record<BrandAnalysis["scorecard"]["status"], { label: string; cls: string }> = {
-  strong: { label: "Strong", cls: "bg-positive/12 text-positive" },
-  mixed: { label: "Mixed", cls: "bg-warning/12 text-warning" },
-  "needs-attention": { label: "Needs attention", cls: "bg-negative/12 text-negative" },
+const STATUS_META: Record<
+  BrandAnalysis["scorecard"]["status"],
+  { label: string; variant: "positive" | "warning" | "negative" }
+> = {
+  strong: { label: "Strong", variant: "positive" },
+  mixed: { label: "Mixed", variant: "warning" },
+  "needs-attention": { label: "Needs attention", variant: "negative" },
 };
 
 /** Real-vs-estimated label from the SERP tier that produced the competitor data. */
@@ -76,8 +81,8 @@ export function BrandScorecard() {
   if (loading) {
     return (
       <Panel title="Brand Scorecard" description="What's strong, what's weak, what to do next">
-        <div className="flex items-center gap-2 py-2 text-[13px] text-muted-foreground">
-          <Loader2 className="size-4 animate-spin" /> Loading your brand analysis…
+        <div className="flex items-center gap-2 py-2 text-label text-muted-foreground">
+          <Loader2 className="size-4 animate-spin" aria-hidden="true" /> Loading your brand analysis…
         </div>
       </Panel>
     );
@@ -88,17 +93,13 @@ export function BrandScorecard() {
     return (
       <Panel title="Brand Scorecard" description="What's strong, what's weak, what to do next">
         <div className="flex flex-col items-start gap-3 py-2">
-          <p className="text-[13px] text-muted-foreground">
+          <p className="text-label text-muted-foreground">
             Run an analysis of your domain to see a brand-specific scorecard and competitor gaps.
           </p>
-          <button
-            onClick={run}
-            disabled={running}
-            className="inline-flex items-center gap-1.5 rounded-xl bg-brand px-3.5 py-2 text-[13px] font-semibold text-white transition-colors hover:bg-brand/90 disabled:opacity-60"
-          >
-            {running ? <Loader2 className="size-4 animate-spin" /> : <Sparkles className="size-4" />}
+          <Button variant="brand" size="sm" onClick={run} loading={running}>
+            {!running && <Sparkles className="size-3.5" aria-hidden="true" />}
             {running ? "Analyzing…" : "Run your first analysis"}
-          </button>
+          </Button>
         </div>
       </Panel>
     );
@@ -115,24 +116,17 @@ export function BrandScorecard() {
       description={`${analysis.domain} · auto-analyzed`}
       action={
         <div className="flex items-center gap-2">
-          <span
-            className={cn(
-              "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium",
-              badge.live ? "bg-positive/10 text-positive" : "bg-muted text-muted-foreground",
-            )}
+          <Badge
+            variant={badge.live ? "positive" : "muted"}
             title={badge.live ? "Real SERP data" : "Estimated — add a Brave key or competitors for live data"}
           >
             <span className={cn("size-1.5 rounded-full", badge.live ? "bg-positive" : "bg-muted-foreground")} />
             {badge.label}
-          </span>
-          <button
-            onClick={run}
-            disabled={running}
-            className="inline-flex items-center gap-1 rounded-lg border border-border bg-card px-2.5 py-1 text-[12px] font-medium text-foreground transition-colors hover:bg-muted disabled:opacity-60"
-          >
-            <RefreshCw className={cn("size-3.5", running && "animate-spin")} />
+          </Badge>
+          <Button variant="outline" size="xs" onClick={run} disabled={running}>
+            <RefreshCw className={cn("size-3", running && "animate-spin")} aria-hidden="true" />
             {running ? "Re-running…" : "Re-run"}
-          </button>
+          </Button>
         </div>
       }
     >
@@ -140,12 +134,12 @@ export function BrandScorecard() {
         {/* score */}
         <div className="flex items-center gap-4 sm:flex-col sm:items-center sm:gap-1.5 sm:border-r sm:border-border sm:pr-6">
           <div className="flex items-baseline gap-1">
-            <span className={cn("text-4xl font-bold tabular-nums leading-none", tone)}>{scorecard.score}</span>
-            <span className="text-[12px] text-muted-foreground">/100</span>
+            <span className={cn("text-kpi font-bold tabular-nums leading-none", tone)}>{scorecard.score}</span>
+            <span className="text-label text-muted-foreground">/100</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <span className={cn("text-[13px] font-bold", tone)}>Grade {scorecard.grade}</span>
-            <span className={cn("rounded-full px-2 py-0.5 text-[10.5px] font-semibold", status.cls)}>{status.label}</span>
+            <span className={cn("text-label font-bold", tone)}>Grade {scorecard.grade}</span>
+            <Badge variant={status.variant}>{status.label}</Badge>
           </div>
         </div>
 
@@ -176,15 +170,15 @@ export function BrandScorecard() {
       </div>
 
       <div className="mt-4 flex items-center justify-between border-t border-border pt-3">
-        <span className="text-[12px] text-muted-foreground">
+        <span className="text-label text-muted-foreground">
           {competitor.competitors.length} competitors · {competitor.gaps.length} keyword gaps
         </span>
         <Link
           href="/competitors"
-          className="inline-flex items-center gap-1 text-[12.5px] font-semibold text-brand hover:underline"
+          className="inline-flex items-center gap-1 rounded-md text-label font-semibold text-brand hover:underline focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/40"
         >
           View competitors
-          <ArrowRight className="size-3.5" />
+          <ArrowRight className="size-3.5" aria-hidden="true" />
         </Link>
       </div>
     </Panel>
@@ -208,16 +202,16 @@ function Column({
     <div>
       <div className="mb-2 flex items-center gap-1.5">
         {icon}
-        <h3 className={cn("text-[12.5px] font-semibold", accent)}>{heading}</h3>
+        <h3 className={cn("text-label font-semibold", accent)}>{heading}</h3>
       </div>
       {items.length === 0 ? (
-        <p className="text-[12px] text-muted-foreground">{empty}</p>
+        <p className="text-label text-muted-foreground">{empty}</p>
       ) : (
         <ul className="space-y-2.5">
           {items.map((item, i) => (
-            <li key={i} className="text-[12.5px] leading-snug">
+            <li key={i} className="text-label leading-snug">
               <p className="font-medium text-foreground">{item.title}</p>
-              <p className="mt-0.5 text-[11.5px] text-muted-foreground">{item.detail}</p>
+              <p className="mt-0.5 text-micro text-muted-foreground">{item.detail}</p>
             </li>
           ))}
         </ul>

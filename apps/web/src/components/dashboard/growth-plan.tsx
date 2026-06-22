@@ -15,8 +15,8 @@ import type { KeywordOpportunity } from "@geoseo/types";
 import { pageEngineApi } from "@/lib/page-engine-client";
 import { api } from "@/lib/api-client";
 import { Panel } from "@/components/dashboard/panel";
+import { Button } from "@/components/ui/button";
 import { useAppFeedback } from "@/components/system/app-feedback";
-import { cn } from "@/lib/utils";
 
 /** How many pages a single "Initiate" run drafts in the background (bounded). */
 const MAX_GENERATE = 6;
@@ -117,13 +117,13 @@ export function GrowthPlan() {
       description="What the analysis recommends next — review and execute in one click."
     >
       {!ready ? (
-        <div className="flex items-center gap-2 py-8 text-[13px] text-muted-foreground">
-          <Loader2 className="size-4 animate-spin" /> Building your plan from the latest analysis…
+        <div className="flex items-center gap-2 py-8 text-label text-muted-foreground">
+          <Loader2 className="size-4 animate-spin" aria-hidden="true" /> Building your plan from the latest analysis…
         </div>
       ) : (
         <div className="space-y-3">
           {/* holistic one-line summary */}
-          <p className="text-[13px] leading-relaxed text-muted-foreground">
+          <p className="text-label leading-relaxed text-muted-foreground">
             <span className="font-semibold text-foreground">{toCreate.length}</span> buyer-intent pages to create
             {" · "}
             <span className="font-semibold text-foreground">{refreshCount}</span> to refresh
@@ -147,32 +147,31 @@ export function GrowthPlan() {
             }
           >
             {toCreate.length > 0 ? (
-              <button
+              <Button
+                variant="brand"
+                size="sm"
                 onClick={initiate}
-                disabled={running}
-                className={cn(
-                  "inline-flex shrink-0 items-center gap-1.5 rounded-xl bg-brand px-3.5 py-2 text-[13px] font-semibold text-brand-foreground transition-colors hover:bg-brand/90 disabled:opacity-60",
-                )}
+                loading={running}
+                className="shrink-0"
               >
                 {running ? (
-                  <>
-                    <Loader2 className="size-4 animate-spin" />
-                    Drafting {progress!.done}/{progress!.total}…
-                  </>
+                  <>Drafting {progress!.done}/{progress!.total}…</>
                 ) : (
                   <>
-                    <Wand2 className="size-4" />
+                    <Wand2 className="size-3.5" aria-hidden="true" />
                     Initiate {batchSize}
                   </>
                 )}
-              </button>
+              </Button>
             ) : (
-              <Link
-                href="/pipeline?stage=discover"
-                className="inline-flex shrink-0 items-center gap-1 rounded-xl border border-border px-3.5 py-2 text-[13px] font-semibold text-foreground hover:bg-muted"
+              <Button
+                variant="outline"
+                size="sm"
+                render={<Link href="/pipeline?stage=discover" />}
+                className="shrink-0"
               >
-                Discover <ArrowRight className="size-3.5" />
-              </Link>
+                Discover <ArrowRight className="size-3.5" aria-hidden="true" />
+              </Button>
             )}
           </PlanRow>
 

@@ -46,24 +46,24 @@ export function TrafficChart({ data }: { data: ImpressionPoint[] }) {
         <AreaChart data={series} margin={{ top: 10, right: 10, bottom: 0, left: -6 }}>
           <defs>
             <linearGradient id="impr-stroke" x1="0" y1="0" x2="1" y2="0">
-              <stop offset="0%" stopColor="#2D6BFF" />
-              <stop offset="100%" stopColor="#5BA8FF" />
+              <stop offset="0%" stopColor="var(--chart-2)" />
+              <stop offset="100%" stopColor="var(--chart-2)" stopOpacity={0.7} />
             </linearGradient>
             <linearGradient id="impr-fill" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#2D6BFF" stopOpacity={0.24} />
-              <stop offset="60%" stopColor="#2D6BFF" stopOpacity={0.05} />
-              <stop offset="100%" stopColor="#2D6BFF" stopOpacity={0} />
+              <stop offset="0%" stopColor="var(--chart-2)" stopOpacity={0.24} />
+              <stop offset="60%" stopColor="var(--chart-2)" stopOpacity={0.05} />
+              <stop offset="100%" stopColor="var(--chart-2)" stopOpacity={0} />
             </linearGradient>
             <linearGradient id="clicks-stroke" x1="0" y1="0" x2="1" y2="0">
-              <stop offset="0%" stopColor="#10B981" />
-              <stop offset="100%" stopColor="#34D399" />
+              <stop offset="0%" stopColor="var(--chart-3)" />
+              <stop offset="100%" stopColor="var(--chart-3)" stopOpacity={0.7} />
             </linearGradient>
             <linearGradient id="clicks-fill" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#10B981" stopOpacity={0.2} />
-              <stop offset="100%" stopColor="#10B981" stopOpacity={0} />
+              <stop offset="0%" stopColor="var(--chart-3)" stopOpacity={0.2} />
+              <stop offset="100%" stopColor="var(--chart-3)" stopOpacity={0} />
             </linearGradient>
             <filter id="impr-glow" x="-20%" y="-40%" width="140%" height="180%">
-              <feDropShadow dx="0" dy="4" stdDeviation="6" floodColor="#2D6BFF" floodOpacity="0.3" />
+              <feDropShadow dx="0" dy="4" stdDeviation="6" floodColor="var(--chart-2)" floodOpacity="0.3" />
             </filter>
           </defs>
           <CartesianGrid stroke="var(--border)" strokeOpacity={0.6} strokeDasharray="2 7" vertical={false} />
@@ -117,7 +117,7 @@ export function TrafficChart({ data }: { data: ImpressionPoint[] }) {
             filter="url(#impr-glow)"
             isAnimationActive={false}
             dot={(p) => (
-              <LeadingDot key={`impr-${p.index}`} cx={p.cx} cy={p.cy} index={p.index} last={last} color="#2D6BFF" />
+              <LeadingDot key={`impr-${p.index}`} cx={p.cx} cy={p.cy} index={p.index} last={last} color="var(--chart-2)" />
             )}
             activeDot={{ r: 5, strokeWidth: 2, stroke: "var(--card)", fill: "#2D6BFF" }}
           />
@@ -133,7 +133,7 @@ export function TrafficChart({ data }: { data: ImpressionPoint[] }) {
             fill="url(#clicks-fill)"
             isAnimationActive={false}
             dot={(p) => (
-              <LeadingDot key={`clicks-${p.index}`} cx={p.cx} cy={p.cy} index={p.index} last={last} color="#10B981" />
+              <LeadingDot key={`clicks-${p.index}`} cx={p.cx} cy={p.cy} index={p.index} last={last} color="var(--chart-3)" />
             )}
             activeDot={{ r: 5, strokeWidth: 2, stroke: "var(--card)", fill: "#10B981" }}
           />

@@ -13,10 +13,22 @@ export function Sparkline({
   height?: number;
 }) {
   const id = useId().replace(/:/g, "");
+
+  // Guard empty/degenerate data: never hand recharts an empty series (it can
+  // throw on scale computation). Render a flat hairline baseline instead so the
+  // decoration still reserves its slot crisply.
+  if (!data || data.length === 0) {
+    return (
+      <div style={{ height }} className="flex w-full items-center" aria-hidden="true">
+        <div className="h-px w-full bg-border" />
+      </div>
+    );
+  }
+
   const series = data.map((v, i) => ({ i, v }));
 
   return (
-    <div style={{ height }} className="w-full">
+    <div style={{ height }} className="w-full" aria-hidden="true">
       <ResponsiveContainer width="100%" height="100%">
         <AreaChart data={series} margin={{ top: 4, right: 0, bottom: 0, left: 0 }}>
           <defs>

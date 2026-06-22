@@ -15,6 +15,7 @@ import type { InternalLinkSuggestion, TrackedPage } from "@geoseo/types";
 import { api } from "@/lib/api-client";
 import { Panel } from "@/components/dashboard/panel";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { useAppFeedback } from "@/components/system/app-feedback";
 
@@ -30,10 +31,10 @@ interface ContentItem {
   reason: string;
 }
 
-const FRESH: Record<Freshness, { label: string; cls: string }> = {
-  fresh: { label: "Fresh", cls: "bg-positive/12 text-positive" },
-  aging: { label: "Aging", cls: "bg-warning/15 text-warning" },
-  stale: { label: "Stale", cls: "bg-negative/12 text-negative" },
+const FRESH: Record<Freshness, { label: string; variant: "positive" | "warning" | "negative" }> = {
+  fresh: { label: "Fresh", variant: "positive" },
+  aging: { label: "Aging", variant: "warning" },
+  stale: { label: "Stale", variant: "negative" },
 };
 
 function derive(pages: TrackedPage[]): ContentItem[] {
@@ -65,7 +66,7 @@ function HealthDot({ health }: { health: number }) {
   return (
     <div className="flex items-center gap-2">
       <span className={cn("size-2 rounded-full", color)} />
-      <span className="tnum text-[13px] font-semibold text-foreground">{health}</span>
+      <span className="tnum text-label font-semibold text-foreground">{health}</span>
     </div>
   );
 }
@@ -128,12 +129,12 @@ export function ContentView({
           return (
             <div key={s.label} className="rounded-2xl border border-border bg-card p-4 shadow-card">
               <div className="flex items-center justify-between">
-                <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">
+                <span className="text-micro font-semibold uppercase text-muted-foreground">
                   {s.label}
                 </span>
                 <Icon className="size-4 text-muted-foreground" />
               </div>
-              <div className="tnum mt-1.5 text-[26px] font-bold tracking-[-0.02em] text-foreground">
+              <div className="tnum mt-1.5 text-kpi text-foreground">
                 {s.value}
               </div>
             </div>
@@ -156,21 +157,21 @@ export function ContentView({
                 <div key={page.id} className="flex items-center gap-4 px-5 py-3.5">
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
-                      <span className="truncate text-[13.5px] font-semibold text-foreground">
+                      <span className="truncate text-label font-semibold text-foreground">
                         {page.title}
                       </span>
-                      <span className={cn("shrink-0 rounded-full px-1.5 py-0.5 text-[10.5px] font-semibold", FRESH[freshness].cls)}>
+                      <Badge variant={FRESH[freshness].variant}>
                         {FRESH[freshness].label}
-                      </span>
+                      </Badge>
                     </div>
-                    <div className="mt-0.5 truncate text-[12px] text-muted-foreground">
+                    <div className="mt-0.5 truncate text-label text-muted-foreground">
                       {page.path} · {daysSinceUpdate}d ago · {reason}
                     </div>
                   </div>
                   <HealthDot health={health} />
                   <div className="w-[150px] text-right">
                     {state === "optimized" ? (
-                      <span className="inline-flex items-center gap-1 text-[12.5px] font-semibold text-positive">
+                      <span className="inline-flex items-center gap-1 text-label font-semibold text-positive">
                         <Check className="size-4" /> Refresh queued
                       </span>
                     ) : (
@@ -204,16 +205,16 @@ export function ContentView({
           <div className="space-y-2.5">
             {links.map((link) => (
               <div key={link.id} className="rounded-xl border border-border bg-surface-sunken p-3">
-                <div className="flex items-center gap-2 text-[12.5px]">
+                <div className="flex items-center gap-2 text-label">
                   <Link2 className="size-3.5 shrink-0 text-brand" />
                   <span className="truncate font-medium text-foreground">{link.fromTitle}</span>
                 </div>
-                <div className="mt-1 flex items-center gap-1.5 pl-5 text-[11.5px] text-muted-foreground">
+                <div className="mt-1 flex items-center gap-1.5 pl-5 text-micro text-muted-foreground">
                   <ArrowRight className="size-3" />
                   <span className="truncate">link to {link.toPath}</span>
                 </div>
                 <button
-                  className="mt-2 inline-flex h-8 items-center rounded-full px-2.5 text-[12px] font-semibold text-brand hover:bg-brand/10 disabled:text-positive"
+                  className="mt-2 inline-flex h-8 items-center rounded-full px-2.5 text-label font-semibold text-brand transition-colors hover:bg-brand/10 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:text-positive"
                   disabled={link.status === "applied"}
                   onClick={() => applyLinks([link.id])}
                 >
@@ -223,7 +224,7 @@ export function ContentView({
             ))}
           </div>
           <button
-            className="mt-4 flex w-full items-center justify-center gap-1.5 rounded-xl border border-border bg-card py-2.5 text-[13px] font-semibold text-foreground transition-colors hover:bg-muted disabled:opacity-60"
+            className="mt-4 flex w-full items-center justify-center gap-1.5 rounded-xl border border-border bg-card py-2.5 text-label font-semibold text-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-60"
             disabled={links.every((link) => link.status === "applied")}
             onClick={() => applyLinks(links.filter((link) => link.status !== "applied").map((link) => link.id))}
           >

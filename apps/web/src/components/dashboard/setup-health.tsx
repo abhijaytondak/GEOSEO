@@ -45,9 +45,9 @@ export function SetupHealth() {
   return (
     <div className="rounded-2xl border border-border bg-card p-4 shadow-card">
       <div className="flex items-center justify-between">
-        <div className="text-[13px] font-semibold text-foreground">Setup health</div>
+        <div className="text-h-card text-foreground">Setup health</div>
         {!loading && (
-          <span className="tnum text-[12.5px] font-semibold text-muted-foreground">
+          <span className="tnum text-label font-semibold text-muted-foreground">
             {done}/{STEPS.length} · {pct}%
           </span>
         )}
@@ -62,11 +62,11 @@ export function SetupHealth() {
             {STEPS.map((s) => {
               const ok = !!steps?.[s.key];
               return (
-                <div key={s.key} className="flex items-center gap-2 text-[13px]">
+                <div key={s.key} className="flex items-center gap-2 text-label">
                   {ok ? (
                     <CheckCircle2 className="size-4 shrink-0 text-positive" />
                   ) : (
-                    <Circle className="size-4 shrink-0 text-muted-foreground/50" />
+                    <Circle className="size-4 shrink-0 text-muted-foreground" />
                   )}
                   <span className={cn(ok ? "text-foreground" : "text-muted-foreground")}>{s.label}</span>
                 </div>
@@ -76,7 +76,7 @@ export function SetupHealth() {
           {pct < 100 && (
             <Link
               href="/onboarding"
-              className="mt-4 flex items-center justify-center gap-1.5 rounded-xl border border-border bg-card py-2.5 text-[13px] font-semibold text-foreground transition-colors hover:bg-muted"
+              className="mt-4 flex items-center justify-center gap-1.5 rounded-xl border border-border bg-card py-2.5 text-label font-semibold text-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/40"
             >
               Finish setup
               <ArrowRight className="size-3.5" />

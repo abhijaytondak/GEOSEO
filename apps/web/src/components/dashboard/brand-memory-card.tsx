@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { BrainCircuit, ArrowRight, Package, Users, BadgeCheck, MessageSquareWarning, Loader2 } from "lucide-react";
 import { Panel } from "@/components/dashboard/panel";
+import { Button } from "@/components/ui/button";
 
 /**
  * Brand Memory entry point on the dashboard. Surfaces the single source of truth the AI
@@ -60,26 +61,36 @@ export function BrandMemoryCard() {
       title="Brand Memory"
       description="The single source of truth the AI uses for every page, lead, and analysis."
       action={
-        <Link href="/brand" className="inline-flex items-center gap-1 text-[12.5px] font-semibold text-brand hover:underline">
-          Open <ArrowRight className="size-3.5" />
+        <Link
+          href="/brand"
+          className="inline-flex items-center gap-1 rounded-md text-label font-semibold text-brand hover:underline focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/40"
+        >
+          Open <ArrowRight className="size-3.5" aria-hidden="true" />
         </Link>
       }
     >
       {lib === undefined ? (
-        <div className="flex items-center gap-2 py-6 text-[13px] text-muted-foreground">
-          <Loader2 className="size-4 animate-spin" /> Loading…
+        <div className="flex items-center gap-2 py-6 text-label text-muted-foreground">
+          <Loader2 className="size-4 animate-spin" aria-hidden="true" /> Loading…
         </div>
       ) : (
         <div className="space-y-4">
           {/* strength */}
           <div>
-            <div className="mb-1 flex items-center justify-between text-[12px]">
+            <div className="mb-1 flex items-center justify-between text-label">
               <span className="flex items-center gap-1.5 font-medium text-foreground">
-                <BrainCircuit className="size-4 text-brand" /> Memory strength
+                <BrainCircuit className="size-4 text-brand" aria-hidden="true" /> Memory strength
               </span>
               <span className="tnum font-semibold text-foreground">{strength}%</span>
             </div>
-            <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+            <div
+              className="h-2 w-full overflow-hidden rounded-full bg-muted"
+              role="progressbar"
+              aria-valuenow={strength}
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-label="Memory strength"
+            >
               <div className="h-full rounded-full bg-brand transition-all" style={{ width: `${strength}%` }} />
             </div>
           </div>
@@ -90,9 +101,9 @@ export function BrandMemoryCard() {
               const Icon = s.icon;
               return (
                 <div key={s.label} className="rounded-xl border border-border bg-surface-sunken p-2.5 text-center">
-                  <Icon className="mx-auto size-4 text-muted-foreground" />
-                  <div className="tnum mt-1 text-[18px] font-bold text-foreground">{s.value}</div>
-                  <div className="text-[10.5px] text-muted-foreground">{s.label}</div>
+                  <Icon className="mx-auto size-4 text-muted-foreground" aria-hidden="true" />
+                  <div className="tnum mt-1 text-title font-bold text-foreground">{s.value}</div>
+                  <div className="text-micro text-muted-foreground">{s.label}</div>
                 </div>
               );
             })}
@@ -101,24 +112,29 @@ export function BrandMemoryCard() {
           {/* brand colors preview */}
           {colors.length > 0 && (
             <div className="flex items-center gap-2">
-              <span className="text-[11.5px] text-muted-foreground">Brand kit</span>
+              <span className="text-micro text-muted-foreground">Brand kit</span>
               <div className="flex gap-1">
                 {colors.map((c, i) => (
                   <span key={i} className="size-5 rounded-md ring-1 ring-inset ring-black/10" style={{ background: c }} title={c} />
                 ))}
               </div>
-              <Link href="/brand?tab=kit" className="ml-auto text-[11.5px] font-medium text-brand hover:underline">
+              <Link
+                href="/brand?tab=kit"
+                className="ml-auto rounded-md text-micro font-medium text-brand hover:underline focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/40"
+              >
                 View brand kit
               </Link>
             </div>
           )}
 
-          <Link
-            href="/brand"
-            className="inline-flex w-full items-center justify-center gap-1.5 rounded-xl border border-border py-2 text-[13px] font-semibold text-foreground hover:bg-muted"
+          <Button
+            variant="outline"
+            size="lg"
+            render={<Link href="/brand" />}
+            className="w-full"
           >
-            <BrainCircuit className="size-4" /> Manage Brand Memory
-          </Link>
+            <BrainCircuit className="size-4" aria-hidden="true" /> Manage Brand Memory
+          </Button>
         </div>
       )}
     </Panel>

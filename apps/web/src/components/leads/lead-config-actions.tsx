@@ -1,16 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useState } from "react";
 import { Bell, FileText, Plus, Trash2, RefreshCw, Check } from "lucide-react";
 import type { LeadFormConfig, LeadNotificationChannel, LeadNotificationRule } from "@geoseo/types";
 import { pageEngineApi } from "@/lib/page-engine-client";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { useAppFeedback } from "@/components/system/app-feedback";
 
 const CHANNELS: LeadNotificationChannel[] = ["in_app", "email", "slack", "webhook"];
-const fieldCls = "w-full rounded-lg border border-border bg-surface-sunken px-3 py-2 text-sm outline-none focus:border-ring focus:bg-card";
+const fieldCls = "w-full rounded-lg border border-border bg-surface-sunken px-3 py-2 text-body outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:bg-card";
 
 export function LeadConfigActions() {
   return (
@@ -24,6 +26,7 @@ export function LeadConfigActions() {
 /* ----------------------------------------------- notification rules */
 function NotificationRulesSheet() {
   const { notify } = useAppFeedback();
+  const minScoreId = useId();
   const [rules, setRules] = useState<LeadNotificationRule[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [name, setName] = useState("");
@@ -82,7 +85,7 @@ function NotificationRulesSheet() {
 
   return (
     <Sheet onOpenChange={load}>
-      <SheetTrigger className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border bg-card px-3 text-[13px] font-medium transition-colors hover:bg-muted">
+      <SheetTrigger className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border bg-card px-3 text-label font-medium transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50">
         <Bell className="size-4" /> Notification rules
       </SheetTrigger>
       <SheetContent side="right" className="w-full gap-0 overflow-y-auto p-0 sm:max-w-md">
@@ -94,11 +97,11 @@ function NotificationRulesSheet() {
         <div className="space-y-5 px-6 py-5">
           {/* new rule */}
           <div className="rounded-xl border border-border bg-surface-sunken p-3.5">
-            <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">New rule</div>
-            <input className={cn(fieldCls, "mt-2")} placeholder="e.g. High-fit leads → Slack" value={name} onChange={(e) => setName(e.target.value)} />
+            <div className="text-micro font-semibold uppercase text-muted-foreground">New rule</div>
+            <input className={cn(fieldCls, "mt-2")} placeholder="e.g. High-fit leads → Slack" aria-label="Rule name" value={name} onChange={(e) => setName(e.target.value)} />
             <div className="mt-2 flex items-center gap-2">
-              <label className="text-[12px] text-muted-foreground">Min score</label>
-              <input type="number" min={0} max={100} className={cn(fieldCls, "h-9 w-20")} value={minScore} onChange={(e) => setMinScore(e.target.value)} />
+              <Label htmlFor={minScoreId} className="text-label text-muted-foreground">Min score</Label>
+              <input id={minScoreId} type="number" min={0} max={100} className={cn(fieldCls, "h-9 w-20")} value={minScore} onChange={(e) => setMinScore(e.target.value)} />
             </div>
             <div className="mt-2 flex flex-wrap gap-1.5">
               {CHANNELS.map((c) => {
@@ -107,16 +110,17 @@ function NotificationRulesSheet() {
                   <button
                     key={c}
                     type="button"
+                    aria-pressed={on}
                     onClick={() => setChannels((cur) => (on ? cur.filter((x) => x !== c) : [...cur, c]))}
-                    className={cn("rounded-full border px-2.5 py-1 text-[12px] capitalize transition-colors", on ? "border-brand bg-brand/10 text-brand" : "border-border text-muted-foreground hover:bg-muted")}
+                    className={cn("rounded-full border px-2.5 py-1 text-label capitalize transition-colors focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50", on ? "border-brand bg-brand/10 text-brand" : "border-border text-muted-foreground hover:bg-muted")}
                   >
                     {c.replace("_", "-")}
                   </button>
                 );
               })}
             </div>
-            <Button className="mt-3 h-9 w-full rounded-lg" disabled={busy} onClick={create}>
-              {busy ? <RefreshCw className="size-4 animate-spin" /> : <Plus className="size-4" />} Add rule
+            <Button variant="brand" className="mt-3 h-9 w-full rounded-lg" loading={busy} onClick={create}>
+              {!busy && <Plus className="size-4" />} Add rule
             </Button>
           </div>
 
@@ -132,15 +136,7 @@ function NotificationRulesSheet() {
                     {r.minScore != null ? `score ≥ ${r.minScore} · ` : ""}{r.channels.map((c) => c.replace("_", "-")).join(", ")}
                   </div>
                 </div>
-                <button
-                  type="button"
-                  role="switch"
-                  aria-checked={r.enabled}
-                  onClick={() => toggle(r)}
-                  className={cn("relative h-6 w-10 shrink-0 rounded-full transition-colors", r.enabled ? "bg-brand" : "bg-muted")}
-                >
-                  <span className={cn("absolute top-0.5 size-5 rounded-full bg-white shadow transition-transform", r.enabled ? "translate-x-[18px]" : "translate-x-0.5")} />
-                </button>
+                <Switch checked={r.enabled} onCheckedChange={() => toggle(r)} aria-label={`Toggle ${r.name}`} />
                 <button onClick={() => remove(r)} className="flex size-8 items-center justify-center rounded-lg border border-border text-muted-foreground hover:bg-negative/10 hover:text-negative" aria-label="Delete rule">
                   <Trash2 className="size-3.5" />
                 </button>

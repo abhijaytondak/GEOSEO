@@ -1,12 +1,11 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useId, useMemo, useState } from "react";
 import {
   Bell,
   BrainCircuit,
   Check,
   CreditCard,
-  Loader2,
   PlugZap,
   Save,
   Trash2,
@@ -20,6 +19,8 @@ import { api } from "@/lib/api-client";
 import { Panel } from "@/components/dashboard/panel";
 import { BrandScorecard } from "@/components/dashboard/brand-scorecard";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import { useAppFeedback } from "@/components/system/app-feedback";
 
@@ -34,14 +35,14 @@ const tabs: Array<{ id: Tab; label: string; icon: typeof Save }> = [
   { id: "billing", label: "Billing", icon: CreditCard },
 ];
 
-const statusStyle: Record<IntegrationStatus, string> = {
-  connected: "bg-positive/12 text-positive",
-  "needs-attention": "bg-warning/15 text-warning",
-  disabled: "bg-muted text-muted-foreground",
+const statusVariant: Record<IntegrationStatus, "positive" | "warning" | "muted"> = {
+  connected: "positive",
+  "needs-attention": "warning",
+  disabled: "muted",
 };
 
 const inputCls =
-  "h-10 w-full rounded-lg border border-border bg-surface-sunken px-3 text-sm outline-none focus:border-ring focus:bg-card";
+  "h-10 w-full rounded-lg border border-border bg-surface-sunken px-3 text-body outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:bg-card";
 
 export function SettingsView({ initial }: { initial: WorkspaceSettings }) {
   const { notify, trackJob, confirm } = useAppFeedback();
@@ -174,7 +175,7 @@ export function SettingsView({ initial }: { initial: WorkspaceSettings }) {
               <button
                 key={item.id}
                 className={cn(
-                  "flex h-11 min-w-fit items-center gap-2 rounded-xl px-3 text-left text-[13px] font-semibold transition-colors",
+                  "flex h-11 min-w-fit items-center gap-2 rounded-xl px-3 text-left text-label font-semibold transition-colors focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
                   tab === item.id ? "bg-brand/12 text-brand" : "text-muted-foreground hover:bg-muted hover:text-foreground",
                 )}
                 onClick={() => setTab(item.id)}
@@ -196,10 +197,10 @@ export function SettingsView({ initial }: { initial: WorkspaceSettings }) {
               ["defaultPublishPath", "Default publish path"],
               ["timezone", "Timezone"],
             ] as const).map(([key, label]) => (
-              <label key={key}>
-                <span className="text-[12px] font-semibold text-muted-foreground">{label}</span>
+              <label key={key} className="block">
+                <span className="text-label font-semibold text-muted-foreground">{label}</span>
                 <input
-                  className={inputCls}
+                  className={cn(inputCls, "mt-1.5")}
                   value={settings.profile[key]}
                   onChange={(event) =>
                     setSettings((current) => ({
@@ -212,8 +213,8 @@ export function SettingsView({ initial }: { initial: WorkspaceSettings }) {
             ))}
           </div>
           <div className="mt-5 flex justify-end">
-            <Button onClick={saveProfile} disabled={!dirty || saving}>
-              {saving ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
+            <Button variant="brand" onClick={saveProfile} disabled={!dirty} loading={saving}>
+              {!saving && <Save className="size-4" />}
               Save profile
             </Button>
           </div>
@@ -226,14 +227,14 @@ export function SettingsView({ initial }: { initial: WorkspaceSettings }) {
             title="Brand Context"
             description="The business facts every agent uses to ground generated pages, content, and outreach."
           >
-            <p className="text-[13px] leading-relaxed text-muted-foreground">
+            <p className="text-body leading-relaxed text-muted-foreground">
               Brand Memory is your workspace&apos;s source of truth — company, value proposition, products,
               buyer personas, and proof points. Keeping it complete is what makes generated pages accurate and
               on-brand instead of generic.
             </p>
             <Link
               href="/brand"
-              className="mt-4 inline-flex items-center gap-1.5 rounded-xl border border-border bg-card px-4 py-2.5 text-[13px] font-semibold text-foreground transition-colors hover:bg-muted"
+              className="mt-4 inline-flex items-center gap-1.5 rounded-xl border border-border bg-card px-4 py-2.5 text-label font-semibold text-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
             >
               <BrainCircuit className="size-4 text-brand" />
               Open Brand Memory
@@ -250,12 +251,12 @@ export function SettingsView({ initial }: { initial: WorkspaceSettings }) {
               <div key={integration.id} className="rounded-xl border border-border bg-surface-sunken p-4">
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <div className="text-[14px] font-semibold text-foreground">{integration.label}</div>
-                    <p className="mt-1 text-[12.5px] leading-relaxed text-muted-foreground">{integration.description}</p>
+                    <div className="text-h-card text-foreground">{integration.label}</div>
+                    <p className="mt-1 text-label leading-relaxed text-muted-foreground">{integration.description}</p>
                   </div>
-                  <span className={cn("rounded-full px-2 py-1 text-[11px] font-semibold", statusStyle[integration.status])}>
+                  <Badge variant={statusVariant[integration.status]} className="capitalize">
                     {integration.status}
-                  </span>
+                  </Badge>
                 </div>
                 <Button variant="outline" className="mt-4 h-9 w-full" onClick={() => toggleIntegration(integration.id)}>
                   {integration.status === "connected" ? "Disable" : "Connect"}
@@ -269,9 +270,9 @@ export function SettingsView({ initial }: { initial: WorkspaceSettings }) {
       {tab === "team" && (
         <Panel title="Team" description="Add, view, and remove mock workspace users.">
           <div className="grid grid-cols-1 gap-3 md:grid-cols-[1fr_1fr_160px_auto]">
-            <input className={inputCls} placeholder="Name" value={newMember.name} onChange={(e) => setNewMember((m) => ({ ...m, name: e.target.value }))} />
-            <input className={inputCls} placeholder="Email" value={newMember.email} onChange={(e) => setNewMember((m) => ({ ...m, email: e.target.value }))} />
-            <select className={inputCls} value={newMember.role} onChange={(e) => setNewMember((m) => ({ ...m, role: e.target.value as TeamMember["role"] }))}>
+            <input className={inputCls} placeholder="Name" aria-label="New member name" value={newMember.name} onChange={(e) => setNewMember((m) => ({ ...m, name: e.target.value }))} />
+            <input className={inputCls} placeholder="Email" aria-label="New member email" value={newMember.email} onChange={(e) => setNewMember((m) => ({ ...m, email: e.target.value }))} />
+            <select className={inputCls} aria-label="New member role" value={newMember.role} onChange={(e) => setNewMember((m) => ({ ...m, role: e.target.value as TeamMember["role"] }))}>
               <option value="analyst">Analyst</option>
               <option value="marketer">Marketer</option>
               <option value="admin">Admin</option>
@@ -288,14 +289,14 @@ export function SettingsView({ initial }: { initial: WorkspaceSettings }) {
                   {member.name.slice(0, 2).toUpperCase()}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <div className="truncate text-[13px] font-semibold text-foreground">{member.name}</div>
-                  <div className="truncate text-[12px] text-muted-foreground">{member.email}</div>
+                  <div className="truncate text-label font-semibold text-foreground">{member.name}</div>
+                  <div className="truncate text-label text-muted-foreground">{member.email}</div>
                 </div>
                 {member.role === "owner" ? (
-                  <span className="rounded-full bg-muted px-2 py-1 text-[11px] font-semibold capitalize text-muted-foreground">{member.role}</span>
+                  <Badge variant="muted" className="capitalize">{member.role}</Badge>
                 ) : (
                   <select
-                    className="h-8 rounded-lg border border-border bg-surface-sunken px-2 text-[12px] font-medium capitalize outline-none focus:border-ring"
+                    className="h-8 rounded-lg border border-border bg-surface-sunken px-2 text-label font-medium capitalize outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
                     value={member.role}
                     onChange={(e) => updateRole(member, e.target.value as TeamMember["role"])}
                     aria-label={`Role for ${member.name}`}
@@ -306,7 +307,7 @@ export function SettingsView({ initial }: { initial: WorkspaceSettings }) {
                   </select>
                 )}
                 <button
-                  className="flex size-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-negative/10 hover:text-negative disabled:opacity-40"
+                  className="flex size-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-negative/10 hover:text-negative focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-40"
                   disabled={member.role === "owner"}
                   onClick={() => removeMember(member)}
                   aria-label={`Remove ${member.name}`}
@@ -323,18 +324,14 @@ export function SettingsView({ initial }: { initial: WorkspaceSettings }) {
         <Panel title="Notifications" description="Control the alerts this workspace sends.">
           <div className="space-y-3">
             {Object.entries(settings.notifications).map(([key, enabled]) => (
-              <label key={key} className="flex items-center justify-between rounded-xl border border-border bg-surface-sunken p-4">
-                <span className="text-[13px] font-semibold text-foreground">
-                  {key.replace(/([A-Z])/g, " $1").replace(/^./, (c) => c.toUpperCase())}
-                </span>
-                <input
-                  type="checkbox"
-                  checked={enabled}
-                  onChange={(event) =>
-                    updateNotifications({ ...settings.notifications, [key]: event.target.checked })
-                  }
-                />
-              </label>
+              <NotificationToggle
+                key={key}
+                label={key.replace(/([A-Z])/g, " $1").replace(/^./, (c) => c.toUpperCase())}
+                checked={enabled}
+                onCheckedChange={(next) =>
+                  updateNotifications({ ...settings.notifications, [key]: next })
+                }
+              />
             ))}
           </div>
         </Panel>
@@ -344,25 +341,45 @@ export function SettingsView({ initial }: { initial: WorkspaceSettings }) {
         <Panel title="Billing" description="Mock billing state for the prototype.">
           <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
             <div className="rounded-xl border border-border bg-surface-sunken p-4">
-              <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">Plan</div>
-              <div className="mt-1 text-2xl font-bold text-foreground">{settings.billing.plan}</div>
+              <div className="text-micro font-semibold uppercase text-muted-foreground">Plan</div>
+              <div className="mt-1 text-kpi text-foreground">{settings.billing.plan}</div>
             </div>
             <div className="rounded-xl border border-border bg-surface-sunken p-4">
-              <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">Status</div>
-              <div className="mt-2 inline-flex items-center gap-1 rounded-full bg-positive/12 px-2 py-1 text-[12px] font-semibold capitalize text-positive">
+              <div className="text-micro font-semibold uppercase text-muted-foreground">Status</div>
+              <Badge variant="positive" className="mt-2 capitalize">
                 <Check className="size-3.5" />
                 {settings.billing.status}
-              </div>
+              </Badge>
             </div>
             <div className="rounded-xl border border-border bg-surface-sunken p-4">
-              <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">Seats</div>
-              <div className="mt-1 text-2xl font-bold text-foreground">
+              <div className="text-micro font-semibold uppercase text-muted-foreground">Seats</div>
+              <div className="mt-1 text-kpi text-foreground">
                 {settings.billing.seatsUsed}/{settings.billing.seatsLimit}
               </div>
             </div>
           </div>
         </Panel>
       )}
+    </div>
+  );
+}
+
+function NotificationToggle({
+  label,
+  checked,
+  onCheckedChange,
+}: {
+  label: string;
+  checked: boolean;
+  onCheckedChange: (next: boolean) => void;
+}) {
+  const id = useId();
+  return (
+    <div className="flex items-center justify-between rounded-xl border border-border bg-surface-sunken p-4">
+      <label htmlFor={id} className="text-label font-semibold text-foreground select-none">
+        {label}
+      </label>
+      <Switch id={id} checked={checked} onCheckedChange={onCheckedChange} />
     </div>
   );
 }

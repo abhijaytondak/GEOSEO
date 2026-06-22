@@ -8,6 +8,8 @@ import { api } from "@/lib/api-client";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { EmptyState } from "@/components/ui/empty-state";
 import { relativeTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { useAppFeedback } from "@/components/system/app-feedback";
@@ -23,7 +25,7 @@ function Bar({ label, value }: { label: string; value: number }) {
   const tone = value >= 70 ? "bg-positive" : value >= 45 ? "bg-warning" : "bg-muted-foreground/60";
   return (
     <div>
-      <div className="mb-1 flex items-center justify-between text-[12px]">
+      <div className="mb-1 flex items-center justify-between text-label">
         <span className="text-muted-foreground">{label}</span>
         <span className="tnum font-semibold text-foreground">{value}</span>
       </div>
@@ -93,13 +95,19 @@ function Detail({ lead }: { lead: Lead }) {
       pageEngineApi.getLeadScore(lead.id),
       pageEngineApi.getLeadJourney(lead.id),
       pageEngineApi.getLeadActivity(lead.id),
-    ]).then(([s, j, a]) => {
-      if (cancelled) return;
-      setScore(s);
-      setJourney(j);
-      setActivity(a);
-      setLoaded(true);
-    });
+    ])
+      .then(([s, j, a]) => {
+        if (cancelled) return;
+        setScore(s);
+        setJourney(j);
+        setActivity(a);
+      })
+      .catch(() => {
+        // Don't trap the drawer in a spinner on a failed fetch — show what loaded.
+      })
+      .finally(() => {
+        if (!cancelled) setLoaded(true);
+      });
     // Load any existing AI-SDR follow-up draft (self-contained — avoids the shared client).
     fetch(`/api/v1/leads/${lead.id}/followup`, { headers: { accept: "application/json" }, cache: "no-store" })
       .then((r) => readApiEnvelope<{ draft?: { subject: string; body: string; source: string } }>(r, `/leads/${lead.id}/followup`))
@@ -166,14 +174,12 @@ function Detail({ lead }: { lead: Lead }) {
         <SheetTitle className="flex items-center gap-2 text-lg">
           {lead.name}
           {score && (
-            <span
-              className={cn(
-                "rounded-full px-2 py-0.5 text-[12px] font-bold tabular-nums",
-                score.total >= 75 ? "bg-positive/12 text-positive" : score.total >= 50 ? "bg-warning/15 text-warning" : "bg-muted text-muted-foreground",
-              )}
+            <Badge
+              variant={score.total >= 75 ? "positive" : score.total >= 50 ? "warning" : "muted"}
+              className="font-bold tabular-nums"
             >
               {score.total}
-            </span>
+            </Badge>
           )}
         </SheetTitle>
         <SheetDescription>
@@ -195,17 +201,17 @@ function Detail({ lead }: { lead: Lead }) {
         {/* AI-SDR follow-up */}
         <TabsContent value="followup" className="min-h-0 flex-1 space-y-3 overflow-y-auto px-6 py-4">
           <div className="flex items-center justify-between gap-3">
-            <p className="text-[12.5px] text-muted-foreground">AI-drafted SDR follow-up from Brand Memory + this lead&apos;s context.</p>
-            <Button size="sm" className="h-8 shrink-0" onClick={genFollowup} disabled={genning}>
-              {genning ? <Loader2 className="size-3.5 animate-spin" /> : <Send className="size-3.5" />}
+            <p className="text-label text-muted-foreground">AI-drafted SDR follow-up from Brand Memory + this lead&apos;s context.</p>
+            <Button size="sm" className="h-8 shrink-0" onClick={genFollowup} loading={genning}>
+              {!genning && <Send className="size-3.5" />}
               {followup ? "Regenerate" : "Generate"}
             </Button>
           </div>
           {followup ? (
             <div className="rounded-xl border border-border bg-surface-sunken p-3.5">
-              <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">Subject</div>
-              <div className="mt-0.5 text-[13.5px] font-semibold text-foreground">{followup.subject}</div>
-              <div className="mt-3 whitespace-pre-wrap text-[13px] leading-relaxed text-foreground">{followup.body}</div>
+              <div className="text-micro font-semibold uppercase text-muted-foreground">Subject</div>
+              <div className="mt-0.5 text-body font-semibold text-foreground">{followup.subject}</div>
+              <div className="mt-3 whitespace-pre-wrap text-label leading-relaxed text-foreground">{followup.body}</div>
               <div className="mt-3 flex items-center gap-2">
                 <Button size="sm" variant="outline" className="h-8" onClick={copyFollowup}>
                   {copied ? <Check className="size-3.5 text-positive" /> : <Copy className="size-3.5" />}
@@ -213,17 +219,17 @@ function Detail({ lead }: { lead: Lead }) {
                 </Button>
                 <a
                   href={`mailto:${lead.email}?subject=${encodeURIComponent(followup.subject)}&body=${encodeURIComponent(followup.body)}`}
-                  className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-border px-3 text-[12.5px] font-medium transition-colors hover:bg-muted"
+                  className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-border px-3 text-label font-medium transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
                 >
                   <Send className="size-3.5" /> Open in email
                 </a>
                 {followup.source === "template" && (
-                  <span className="text-[11px] text-muted-foreground">Template (LLM unavailable)</span>
+                  <span className="text-micro text-muted-foreground">Template (LLM unavailable)</span>
                 )}
               </div>
             </div>
           ) : (
-            <div className="rounded-xl border border-dashed border-border py-10 text-center text-[13px] text-muted-foreground">
+            <div className="rounded-xl border border-dashed border-border py-10 text-center text-label text-muted-foreground">
               Generate a personalized follow-up for {lead.name || "this lead"}.
             </div>
           )}
@@ -237,20 +243,20 @@ function Detail({ lead }: { lead: Lead }) {
             <>
               {score && (
                 <div className="rounded-xl border border-brand/25 bg-brand/5 p-3.5">
-                  <div className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.06em] text-brand">
+                  <div className="flex items-center gap-1.5 text-micro font-semibold uppercase text-brand">
                     <TrendingUp className="size-3.5" /> Recommended action
                   </div>
-                  <p className="mt-1 text-[13.5px] text-foreground">{score.recommendedAction}</p>
+                  <p className="mt-1 text-body text-foreground">{score.recommendedAction}</p>
                 </div>
               )}
               {owners.length > 0 && (
                 <div className="flex items-center gap-2 rounded-xl border border-border bg-surface-sunken p-3">
-                  <span className="text-[12px] font-medium text-muted-foreground">Owner</span>
+                  <span className="text-label font-medium text-muted-foreground">Owner</span>
                   <select
                     value={ownerId}
                     disabled={assigning}
                     onChange={(e) => assignOwner(e.target.value)}
-                    className="ml-auto h-8 rounded-lg border border-border bg-background px-2 text-[13px] outline-none focus:border-ring disabled:opacity-60"
+                    className="ml-auto h-8 rounded-lg border border-border bg-background px-2 text-label outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-60"
                   >
                     <option value="" disabled>
                       Assign owner…
@@ -273,20 +279,20 @@ function Detail({ lead }: { lead: Lead }) {
                   </div>
                   <div className="space-y-1.5">
                     <div className="flex items-center justify-between">
-                      <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">Why this score</div>
+                      <div className="text-micro font-semibold uppercase text-muted-foreground">Why this score</div>
                       <button
                         onClick={recalcScore}
                         disabled={recalc}
-                        className="inline-flex items-center gap-1 text-[11px] font-medium text-brand transition-opacity hover:underline disabled:opacity-50"
+                        className="inline-flex items-center gap-1 rounded-md text-micro font-medium text-brand transition-opacity hover:underline focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50"
                       >
                         {recalc ? <Loader2 className="size-3 animate-spin" /> : <RefreshCw className="size-3" />} Recalculate
                       </button>
                     </div>
                     {score.reasons.map((r, i) => (
-                      <div key={i} className="flex items-start gap-2 text-[12.5px]">
+                      <div key={i} className="flex items-start gap-2 text-label">
                         <span
                           className={cn(
-                            "mt-0.5 inline-flex h-4 min-w-7 items-center justify-center rounded px-1 text-[10px] font-bold tabular-nums",
+                            "mt-0.5 inline-flex h-4 min-w-7 items-center justify-center rounded px-1 text-micro font-bold tabular-nums",
                             r.impact === "positive" ? "bg-positive/12 text-positive" : r.impact === "negative" ? "bg-negative/12 text-negative" : "bg-muted text-muted-foreground",
                           )}
                         >
@@ -300,11 +306,11 @@ function Detail({ lead }: { lead: Lead }) {
               )}
               {lead.message && (
                 <div>
-                  <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">Message</div>
-                  <p className="mt-1.5 whitespace-pre-wrap rounded-xl border border-border bg-surface-sunken p-3 text-[13px] text-foreground">{lead.message}</p>
+                  <div className="text-micro font-semibold uppercase text-muted-foreground">Message</div>
+                  <p className="mt-1.5 whitespace-pre-wrap rounded-xl border border-border bg-surface-sunken p-3 text-label text-foreground">{lead.message}</p>
                 </div>
               )}
-              <div className="flex items-center gap-2 text-[12.5px] text-muted-foreground">
+              <div className="flex items-center gap-2 text-label text-muted-foreground">
                 <Globe className="size-3.5" /> Source: <span className="font-medium text-foreground">{lead.pageTitle}</span>
               </div>
             </>
@@ -326,8 +332,8 @@ function Detail({ lead }: { lead: Lead }) {
                 {journey.events.map((e) => (
                   <li key={e.id} className="relative">
                     <span className="absolute -left-[21px] top-1 size-2 rounded-full bg-brand ring-2 ring-card" />
-                    <div className="text-[13px] font-medium text-foreground">{e.title ?? e.url}</div>
-                    <div className="text-[11.5px] text-muted-foreground">
+                    <div className="text-label font-medium text-foreground">{e.title ?? e.url}</div>
+                    <div className="text-micro text-muted-foreground">
                       <span className="capitalize">{e.type.replace(/_/g, " ")}</span> · {relativeTime(e.occurredAt)}
                     </div>
                   </li>
@@ -335,7 +341,12 @@ function Detail({ lead }: { lead: Lead }) {
               </ol>
             </>
           ) : (
-            <p className="py-12 text-center text-sm text-muted-foreground">No journey events recorded for this lead.</p>
+            <EmptyState
+              icon={Route}
+              title="No journey yet"
+              description="No journey events recorded for this lead."
+              className="py-12"
+            />
           )}
         </TabsContent>
 
@@ -347,10 +358,10 @@ function Detail({ lead }: { lead: Lead }) {
               onChange={(e) => setNote(e.target.value)}
               rows={2}
               placeholder="Log a note, call, or email…"
-              className="flex-1 resize-none rounded-lg border border-border bg-surface-sunken px-3 py-2 text-sm outline-none focus:border-ring focus:bg-card"
+              className="flex-1 resize-none rounded-lg border border-border bg-surface-sunken px-3 py-2 text-body outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:bg-card"
             />
-            <Button className="h-9" onClick={addNote} disabled={saving || !note.trim()}>
-              {saving ? <RefreshCw className="size-4 animate-spin" /> : <Send className="size-4" />}
+            <Button className="h-9" onClick={addNote} loading={saving} disabled={!note.trim()}>
+              {!saving && <Send className="size-4" />}
             </Button>
           </div>
           <div className="mt-4 min-h-0 flex-1 space-y-2 overflow-y-auto">
@@ -359,15 +370,20 @@ function Detail({ lead }: { lead: Lead }) {
             ) : activity.length ? (
               activity.map((a) => (
                 <div key={a.id} className="rounded-lg border border-border bg-surface-sunken p-2.5">
-                  <div className="flex items-center justify-between text-[11.5px] text-muted-foreground">
+                  <div className="flex items-center justify-between text-micro text-muted-foreground">
                     <span className="font-semibold capitalize text-foreground">{a.type.replace(/_/g, " ")}</span>
                     <span>{relativeTime(a.createdAt)}</span>
                   </div>
-                  <p className="mt-1 text-[13px] text-foreground">{a.body}</p>
+                  <p className="mt-1 text-label text-foreground">{a.body}</p>
                 </div>
               ))
             ) : (
-              <p className="py-8 text-center text-sm text-muted-foreground">No activity yet. Add the first note above.</p>
+              <EmptyState
+                icon={MessageSquare}
+                title="No activity yet"
+                description="Add the first note above."
+                className="py-8"
+              />
             )}
           </div>
         </TabsContent>
@@ -379,15 +395,15 @@ function Detail({ lead }: { lead: Lead }) {
 function Stat({ label, value }: { label: string; value: string | number }) {
   return (
     <div>
-      <div className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{label}</div>
-      <div className="tnum text-[15px] font-semibold text-foreground">{value}</div>
+      <div className="text-micro font-semibold uppercase text-muted-foreground">{label}</div>
+      <div className="tnum text-h-card font-semibold text-foreground">{value}</div>
     </div>
   );
 }
 
 function Loading() {
   return (
-    <div className="flex items-center justify-center py-12 text-sm text-muted-foreground">
+    <div className="flex items-center justify-center py-12 text-body text-muted-foreground">
       <RefreshCw className="mr-2 size-4 animate-spin" /> Loading…
     </div>
   );

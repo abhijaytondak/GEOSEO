@@ -10,8 +10,9 @@ import {
   SheetDescription,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import { Switch } from "@/components/ui/switch";
+import { Badge } from "@/components/ui/badge";
 import { api } from "@/lib/api-client";
-import { cn } from "@/lib/utils";
 import { useAppFeedback } from "@/components/system/app-feedback";
 
 type PublishingPolicy = { requireApproval: boolean; autoSitemap: boolean; autoLlms: boolean };
@@ -20,32 +21,22 @@ function Toggle({
   on,
   busy,
   onChange,
+  label,
 }: {
   on: boolean;
   busy?: boolean;
   onChange: (v: boolean) => void;
+  label: string;
 }) {
   return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={on}
-      disabled={busy}
-      onClick={() => onChange(!on)}
-      className={cn(
-        "relative h-6 w-10 shrink-0 rounded-full transition-colors disabled:opacity-60",
-        on ? "bg-brand" : "bg-muted",
-      )}
+    <Switch
+      checked={on}
+      busy={busy}
+      onCheckedChange={onChange}
+      aria-label={label}
     >
-      <span
-        className={cn(
-          "absolute top-0.5 flex size-5 items-center justify-center rounded-full bg-white shadow transition-transform",
-          on ? "translate-x-[18px]" : "translate-x-0.5",
-        )}
-      >
-        {busy && <Loader2 className="size-3 animate-spin text-muted-foreground" />}
-      </span>
-    </button>
+      {busy && <Loader2 className="size-3 animate-spin text-muted-foreground" aria-hidden="true" />}
+    </Switch>
   );
 }
 
@@ -90,7 +81,7 @@ export function PublishingSettings() {
 
   return (
     <Sheet onOpenChange={ensureLoaded}>
-      <SheetTrigger className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border bg-card px-3 text-[13px] font-medium transition-colors hover:bg-muted">
+      <SheetTrigger className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border bg-card px-3 text-label font-medium transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50">
         <Plug className="size-4" />
         Publishing settings
       </SheetTrigger>
@@ -103,22 +94,22 @@ export function PublishingSettings() {
         <div className="space-y-5 px-6 py-5">
           {/* destination */}
           <section>
-            <h3 className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">Destination</h3>
+            <h3 className="text-micro font-semibold uppercase text-muted-foreground">Destination</h3>
             <div className="mt-2 flex items-center gap-3 rounded-xl border border-border bg-surface-sunken p-3.5">
               <span className="flex size-9 items-center justify-center rounded-lg bg-positive/12 text-positive">
                 <Check className="size-4" />
               </span>
               <div className="min-w-0 flex-1">
-                <div className="text-[13.5px] font-semibold text-foreground">Managed subdirectory</div>
-                <div className="font-mono text-[12px] text-muted-foreground">{(domain || "your-domain.com") + "/feeds/…"}</div>
+                <div className="text-h-card text-foreground">Managed subdirectory</div>
+                <div className="font-mono text-label text-muted-foreground">{(domain || "your-domain.com") + "/feeds/…"}</div>
               </div>
-              <span className="rounded-full bg-positive/12 px-2 py-0.5 text-[11px] font-semibold text-positive">Active</span>
+              <Badge variant="positive">Active</Badge>
             </div>
           </section>
 
           {/* AI crawler surfaces */}
           <section>
-            <h3 className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">Crawler surfaces</h3>
+            <h3 className="text-micro font-semibold uppercase text-muted-foreground">Crawler surfaces</h3>
             <div className="mt-2 space-y-2">
               {([
                 { label: "sitemap.xml", href: "/sitemap.xml", key: "autoSitemap" as const },
@@ -126,16 +117,17 @@ export function PublishingSettings() {
               ]).map((row) => (
                 <div key={row.label} className="flex items-center gap-3 rounded-xl border border-border p-3">
                   <div className="min-w-0 flex-1">
-                    <div className="font-mono text-[13px] font-medium text-foreground">{row.label}</div>
-                    <div className="text-[11.5px] text-muted-foreground">Auto-updated on publish</div>
+                    <div className="font-mono text-label font-medium text-foreground">{row.label}</div>
+                    <div className="text-micro text-muted-foreground">Auto-updated on publish</div>
                   </div>
-                  <a href={row.href} target="_blank" rel="noreferrer" className="text-muted-foreground hover:text-brand" aria-label={`View ${row.label}`}>
+                  <a href={row.href} target="_blank" rel="noreferrer" className="rounded-md text-muted-foreground transition-colors hover:text-brand focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50" aria-label={`View ${row.label}`}>
                     <ExternalLink className="size-4" />
                   </a>
                   <Toggle
                     on={policy?.[row.key] ?? true}
                     busy={savingKey === row.key || !loaded}
                     onChange={(v) => save(row.key, v, row.label)}
+                    label={`Auto-update ${row.label}`}
                   />
                 </div>
               ))}
@@ -144,24 +136,25 @@ export function PublishingSettings() {
 
           {/* policy */}
           <section>
-            <h3 className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">Policy</h3>
+            <h3 className="text-micro font-semibold uppercase text-muted-foreground">Policy</h3>
             <div className="mt-2 space-y-2">
               <div className="flex items-center gap-3 rounded-xl border border-border p-3">
                 <ShieldCheck className="size-4 text-muted-foreground" />
-                <div className="min-w-0 flex-1 text-[13px] font-medium text-foreground">
+                <div className="min-w-0 flex-1 text-label font-medium text-foreground">
                   Require human approval before publish
                 </div>
                 <Toggle
                   on={policy?.requireApproval ?? true}
                   busy={savingKey === "requireApproval" || !loaded}
                   onChange={(v) => save("requireApproval", v, "Approval gate")}
+                  label="Require human approval before publish"
                 />
               </div>
               <div className="flex items-center gap-3 rounded-xl border border-border p-3">
                 <History className="size-4 text-muted-foreground" />
                 <div className="min-w-0 flex-1">
-                  <div className="text-[13px] font-medium text-foreground">Rollback retention</div>
-                  <div className="text-[11.5px] text-muted-foreground">Keep the last 10 published versions per page</div>
+                  <div className="text-label font-medium text-foreground">Rollback retention</div>
+                  <div className="text-micro text-muted-foreground">Keep the last 10 published versions per page</div>
                 </div>
               </div>
             </div>

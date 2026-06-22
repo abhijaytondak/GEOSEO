@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { Search, Loader2, Check, AlertTriangle, X, Gauge } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { EmptyState } from "@/components/ui/empty-state";
 import { cn } from "@/lib/utils";
 import { useAppFeedback } from "@/components/system/app-feedback";
 import { apiError, readApiEnvelope } from "@/lib/api-envelope";
@@ -37,10 +39,10 @@ async function call<T>(path: string, init?: RequestInit): Promise<T> {
   return json.data;
 }
 
-const STATUS: Record<AuditStatus, { cls: string; Icon: typeof Check }> = {
-  pass: { cls: "text-positive", Icon: Check },
-  warn: { cls: "text-warning", Icon: AlertTriangle },
-  fail: { cls: "text-negative", Icon: X },
+const STATUS: Record<AuditStatus, { cls: string; Icon: typeof Check; variant: "positive" | "warning" | "negative" }> = {
+  pass: { cls: "text-positive", Icon: Check, variant: "positive" },
+  warn: { cls: "text-warning", Icon: AlertTriangle, variant: "warning" },
+  fail: { cls: "text-negative", Icon: X, variant: "negative" },
 };
 const GRADE_CLS: Record<AuditResult["grade"], string> = {
   A: "text-positive",
@@ -103,7 +105,7 @@ export function ConversionAuditView() {
               onChange={(e) => setUrl(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && run()}
               placeholder="https://yourcompany.com"
-              className="h-11 w-full rounded-xl border border-border bg-surface-sunken pl-9 pr-3 text-sm outline-none transition-colors focus:border-ring focus:bg-card"
+              className="h-11 w-full rounded-xl border border-border bg-surface-sunken pl-9 pr-3 text-body outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:bg-card"
             />
           </div>
           <Button className="h-11 rounded-xl px-5" onClick={run} disabled={running || !url.trim()}>
@@ -111,7 +113,7 @@ export function ConversionAuditView() {
             Run audit
           </Button>
         </div>
-        <p className="mt-2 text-[12px] text-muted-foreground">
+        <p className="mt-2 text-label text-muted-foreground">
           Crawls the page (public, SSRF-guarded) and scores conversion readiness — capture form, CTA, headline, proof, and mobile.
         </p>
       </div>
@@ -121,13 +123,13 @@ export function ConversionAuditView() {
           {/* score */}
           <div className="flex items-center gap-4 rounded-2xl border border-border bg-card p-5 shadow-card">
             <div className="flex size-20 shrink-0 flex-col items-center justify-center rounded-2xl bg-surface-sunken">
-              <span className={cn("tnum text-3xl font-bold", GRADE_CLS[audit.grade])}>{audit.grade}</span>
-              <span className="tnum text-[11px] text-muted-foreground">{audit.score}/100</span>
+              <span className={cn("tnum text-kpi font-bold", GRADE_CLS[audit.grade])}>{audit.grade}</span>
+              <span className="tnum text-micro text-muted-foreground">{audit.score}/100</span>
             </div>
             <div className="min-w-0">
-              <div className="text-[13px] font-semibold text-foreground">Conversion readiness</div>
-              <div className="truncate font-mono text-[12px] text-muted-foreground">{audit.url}</div>
-              <div className="mt-1 text-[12.5px] text-muted-foreground">
+              <div className="text-label font-semibold text-foreground">Conversion readiness</div>
+              <div className="truncate font-mono text-label text-muted-foreground">{audit.url}</div>
+              <div className="mt-1 text-label text-muted-foreground">
                 {passes} of {audit.findings.length} checks passing.
               </div>
             </div>
@@ -145,12 +147,12 @@ export function ConversionAuditView() {
                   </span>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
-                      <span className="text-[13.5px] font-semibold text-foreground">{f.label}</span>
-                      <span className={cn("text-[11px] font-semibold uppercase", s.cls)}>{f.status}</span>
+                      <span className="text-label font-semibold text-foreground">{f.label}</span>
+                      <Badge variant={s.variant} className="uppercase">{f.status}</Badge>
                     </div>
-                    <p className="mt-0.5 text-[12.5px] text-muted-foreground">{f.detail}</p>
+                    <p className="mt-0.5 text-label text-muted-foreground">{f.detail}</p>
                     {f.status !== "pass" && (
-                      <p className="mt-1 text-[12.5px] text-foreground">
+                      <p className="mt-1 text-label text-foreground">
                         <span className="font-medium text-brand">Fix:</span> {f.recommendation}
                       </p>
                     )}
@@ -163,15 +165,18 @@ export function ConversionAuditView() {
       )}
 
       {audit && !audit.crawled && (
-        <div className="rounded-2xl border border-negative/30 bg-negative/5 p-4 text-[13px] text-negative">
+        <div className="rounded-2xl border border-negative/30 bg-negative/5 p-4 text-body text-negative">
           {audit.error ?? "Couldn't reach that site."}
         </div>
       )}
 
       {!audit && (
-        <div className="rounded-2xl border border-dashed border-border py-16 text-center text-[13px] text-muted-foreground">
-          Enter a URL and run an audit to score its conversion readiness.
-        </div>
+        <EmptyState
+          tone="prompt"
+          icon={Gauge}
+          title="No audit yet"
+          description="Enter a URL and run an audit to score its conversion readiness."
+        />
       )}
     </div>
   );

@@ -9,6 +9,7 @@ import { classifyIntents, type ClassifiedIntent } from "../llm/intent";
 import { BrandMemoryStore } from "./brand.service";
 import { BrandLibraryStore, composeBrandContext } from "./brand-library.service";
 import { KeywordResearchService, type KeywordIdea, type ResearchSource } from "./keyword-research.service";
+import { ImageGenStore } from "./image-gen.service";
 
 const T = {
   opps: "pe_opportunities",
@@ -196,7 +197,20 @@ export class PageEngineStore implements OnModuleInit {
     @Inject(BrandMemoryStore) private readonly brand: BrandMemoryStore,
     @Inject(BrandLibraryStore) private readonly library: BrandLibraryStore,
     @Inject(KeywordResearchService) private readonly research: KeywordResearchService,
+    @Inject(ImageGenStore) private readonly images: ImageGenStore,
   ) {}
+
+  /** Best-effort brand hero image for a generated page. Returns the image URL (a real
+   *  raster when IMAGE_GEN is configured, else a theme-aware SVG data URI), or undefined
+   *  on any failure — never blocks or breaks page generation. */
+  private async heroImageFor(tenantId: string, title: string): Promise<{ url: string; alt: string } | undefined> {
+    try {
+      const img = await this.images.generate(tenantId, title, "hero", this.now);
+      return img?.url ? { url: img.url, alt: `${title} — brand illustration` } : undefined;
+    } catch {
+      return undefined;
+    }
+  }
 
   /**
    * Populate demo fixtures (demo mode only) from the allowlisted demo-seed module —
@@ -494,6 +508,12 @@ export class PageEngineStore implements OnModuleInit {
       updatedAt: this.now,
     };
     page.wordCount = countWords(page);
+    // Brand hero image — real raster when IMAGE_GEN is configured, else a theme-aware SVG.
+    const hero = await this.heroImageFor(tenantId, title);
+    if (hero) {
+      page.heroImageUrl = hero.url;
+      page.heroImageAlt = hero.alt;
+    }
     s.pages.unshift(page);
     this.snapshot(tenantId, page, ai ? "AI-generated draft" : "Template draft", "ai");
     opp.status = "approved";

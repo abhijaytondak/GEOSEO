@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Loader2, Plus, Trash2, Package, Users, Award, Check, Type, MessageSquareWarning, Sparkles, Mic2, Image as ImageIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { useAppFeedback } from "@/components/system/app-feedback";
 import { apiError, readApiEnvelope } from "@/lib/api-envelope";
 import { puterReady, extractBrandLibraryWithPuter } from "@/lib/puter-ai";
@@ -29,7 +30,7 @@ const uid = () => (typeof crypto !== "undefined" && crypto.randomUUID ? crypto.r
 const fromList = (s: string) => s.split(",").map((x) => x.trim()).filter(Boolean);
 
 const inputCls =
-  "h-9 w-full rounded-lg border border-border bg-background px-3 text-[13px] outline-none transition-colors focus:border-brand";
+  "h-9 w-full rounded-lg border border-border bg-background px-3 text-body outline-none transition-colors focus:border-brand focus-visible:ring-3 focus-visible:ring-ring/50";
 
 const EMPTY_LIB: Library = {
   products: [],
@@ -225,7 +226,7 @@ export function BrandLibrary() {
 
   if (!lib) {
     return (
-      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+      <div className="flex items-center gap-2 text-body text-muted-foreground">
         <Loader2 className="size-4 animate-spin" /> Loading library…
       </div>
     );
@@ -234,22 +235,22 @@ export function BrandLibrary() {
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="max-w-xl text-[12.5px] text-muted-foreground">
+        <p className="max-w-xl text-label text-muted-foreground">
           Ground every generated page and outreach draft in real business facts — your products, who you sell to, and the proof
           that backs your claims. Nothing here is invented by the AI.
         </p>
-        <Button size="sm" className="h-8 shrink-0" onClick={save} disabled={!dirty || saving}>
-          {saving ? <Loader2 className="size-3.5 animate-spin" /> : <Check className="size-3.5" />}
+        <Button size="sm" className="shrink-0" onClick={save} disabled={!dirty || saving} loading={saving}>
+          {!saving && <Check className="size-3.5" />}
           {dirty ? "Save changes" : "Saved"}
         </Button>
       </div>
 
       {/* Extract from site — replaces sample data with the customer's real brand */}
       <section className="rounded-2xl border border-brand/30 bg-brand/[0.04] p-5 shadow-card">
-        <h3 className="mb-1 flex items-center gap-2 text-[13px] font-semibold text-foreground">
+        <h3 className="mb-1 flex items-center gap-2 text-h-card font-semibold text-foreground">
           <Sparkles className="size-4 text-brand" /> Extract from your site
         </h3>
-        <p className="mb-3 text-[12px] text-muted-foreground">
+        <p className="mb-3 text-label text-muted-foreground">
           Pull your real products, audience, proof, tone of voice, and images straight from your website — then review and save.
           This replaces the sample data with facts from your own site.
         </p>
@@ -263,8 +264,8 @@ export function BrandLibrary() {
               if (e.key === "Enter" && !extracting) extractFromSite();
             }}
           />
-          <Button size="sm" className="h-9 shrink-0" onClick={extractFromSite} disabled={!extractUrl.trim() || extracting}>
-            {extracting ? <Loader2 className="size-3.5 animate-spin" /> : <Sparkles className="size-3.5" />}
+          <Button variant="brand" className="h-9 shrink-0" onClick={extractFromSite} disabled={!extractUrl.trim() || extracting} loading={extracting}>
+            {!extracting && <Sparkles className="size-3.5" />}
             {extracting ? "Reading your site…" : "Extract"}
           </Button>
         </div>
@@ -272,26 +273,26 @@ export function BrandLibrary() {
 
       {/* Brand images — real images scraped from the site (no placeholders) */}
       <section className="rounded-2xl border border-border bg-card p-5 shadow-card">
-        <h3 className="mb-1 flex items-center gap-2 text-[13px] font-semibold text-foreground">
+        <h3 className="mb-1 flex items-center gap-2 text-h-card font-semibold text-foreground">
           <ImageIcon className="size-4 text-brand" /> Brand images
-          <span className="tnum rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">{lib.images.length}</span>
+          <Badge variant="muted" className="tnum">{lib.images.length}</Badge>
         </h3>
-        <p className="mb-3 text-[12px] text-muted-foreground">
+        <p className="mb-3 text-label text-muted-foreground">
           Real images pulled from your site — used across generated pages instead of placeholders.
         </p>
         {lib.images.length === 0 ? (
-          <p className="rounded-xl border border-dashed border-border py-6 text-center text-[12.5px] text-muted-foreground">
+          <p className="rounded-xl border border-dashed border-border py-6 text-center text-label text-muted-foreground">
             Run “Extract from your site” to pull your real brand images.
           </p>
         ) : (
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
             {lib.images.map((src) => (
-              <div key={src} className="group relative flex aspect-video items-center justify-center overflow-hidden rounded-xl border border-border bg-white p-2">
+              <div key={src} className="group relative flex aspect-video items-center justify-center overflow-hidden rounded-xl border border-border bg-surface-sunken p-2">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={src} alt="Brand image from site" className="max-h-full max-w-full object-contain" loading="lazy" />
                 <button
                   onClick={() => mutate({ ...lib, images: lib.images.filter((x) => x !== src) })}
-                  className="absolute right-1.5 top-1.5 rounded-md bg-background/85 p-1.5 text-muted-foreground opacity-0 transition-opacity hover:text-destructive group-hover:opacity-100"
+                  className="absolute right-1.5 top-1.5 rounded-md bg-background/85 p-1.5 text-muted-foreground opacity-0 transition-opacity hover:text-destructive focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 group-hover:opacity-100"
                   aria-label="Remove image"
                 >
                   <Trash2 className="size-3.5" />
@@ -438,10 +439,10 @@ export function BrandLibrary() {
 
       {/* Terminology — brand voice rules (preferred / avoid) */}
       <section className="rounded-2xl border border-border bg-card p-5 shadow-card">
-        <h3 className="mb-1 flex items-center gap-2 text-[13px] font-semibold text-foreground">
+        <h3 className="mb-1 flex items-center gap-2 text-h-card font-semibold text-foreground">
           <Type className="size-4 text-brand" /> Terminology
         </h3>
-        <p className="mb-3 text-[12px] text-muted-foreground">Brand-voice rules every draft must follow — terms to prefer, and words to never use.</p>
+        <p className="mb-3 text-label text-muted-foreground">Brand-voice rules every draft must follow — terms to prefer, and words to never use.</p>
         <div className="grid gap-3 sm:grid-cols-2">
           <LabeledList
             label="Preferred terms"
@@ -458,15 +459,15 @@ export function BrandLibrary() {
 
       {/* Tone of voice — how every generated draft should sound */}
       <section className="rounded-2xl border border-border bg-card p-5 shadow-card">
-        <h3 className="mb-1 flex items-center gap-2 text-[13px] font-semibold text-foreground">
+        <h3 className="mb-1 flex items-center gap-2 text-h-card font-semibold text-foreground">
           <Mic2 className="size-4 text-brand" /> Tone of voice
         </h3>
-        <p className="mb-3 text-[12px] text-muted-foreground">
+        <p className="mb-3 text-label text-muted-foreground">
           How every generated page and outreach draft should sound. Folded into the AI grounding so copy stays on-brand.
         </p>
         <div className="space-y-3">
           <div>
-            <label className="mb-1.5 block text-[11px] font-medium text-muted-foreground">Tone</label>
+            <label className="mb-1.5 block text-micro font-medium text-muted-foreground">Tone</label>
             <div className="flex flex-wrap gap-2">
               {TONE_PRESETS.map((t) => {
                 const active = lib.voice.tone.trim().toLowerCase() === t;
@@ -474,7 +475,7 @@ export function BrandLibrary() {
                   <button
                     key={t}
                     onClick={() => mutate({ ...lib, voice: { ...lib.voice, tone: t } })}
-                    className={`rounded-full border px-3 py-1 text-[12px] font-medium capitalize transition-colors ${
+                    className={`rounded-full border px-3 py-1 text-label font-medium capitalize transition-colors focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 ${
                       active ? "border-brand bg-brand/10 text-brand" : "border-border bg-background text-muted-foreground hover:border-brand/50 hover:text-foreground"
                     }`}
                   >
@@ -496,7 +497,7 @@ export function BrandLibrary() {
             onChange={(arr) => mutate({ ...lib, voice: { ...lib.voice, traits: arr } })}
           />
           <div>
-            <label className="mb-1 block text-[11px] font-medium text-muted-foreground">Writing guidance</label>
+            <label className="mb-1 block text-micro font-medium text-muted-foreground">Writing guidance</label>
             <textarea
               className={`${inputCls} h-auto min-h-[58px] resize-y py-2`}
               placeholder={`Do/don't rules — e.g. "Lead with outcomes. Keep sentences short. Never use hype words."`}
@@ -509,11 +510,11 @@ export function BrandLibrary() {
 
       {/* Feedback Memory — corrections that stick everywhere (managed via dedicated endpoints) */}
       <section className="rounded-2xl border border-border bg-card p-5 shadow-card">
-        <h3 className="mb-1 flex items-center gap-2 text-[13px] font-semibold text-foreground">
+        <h3 className="mb-1 flex items-center gap-2 text-h-card font-semibold text-foreground">
           <MessageSquareWarning className="size-4 text-brand" /> Feedback Memory
-          <span className="tnum rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">{corrections.length}</span>
+          <Badge variant="muted" className="tnum">{corrections.length}</Badge>
         </h3>
-        <p className="mb-3 text-[12px] text-muted-foreground">
+        <p className="mb-3 text-label text-muted-foreground">
           Fix something once — it stays fixed everywhere. Each correction is injected with top priority into every generated page,
           lead, and outreach draft.
         </p>
@@ -535,10 +536,10 @@ export function BrandLibrary() {
           <ul className="mt-3 space-y-2">
             {corrections.map((c) => (
               <li key={c.id} className="flex items-start justify-between gap-3 rounded-xl border border-border bg-surface-sunken p-3">
-                <span className="text-[13px] text-foreground">{c.instruction}</span>
+                <span className="text-body text-foreground">{c.instruction}</span>
                 <button
                   onClick={() => removeCorrection(c.id)}
-                  className="shrink-0 rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+                  className="shrink-0 rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
                   aria-label="Remove correction"
                 >
                   <Trash2 className="size-3.5" />
@@ -570,16 +571,16 @@ function Section({
   return (
     <section className="rounded-2xl border border-border bg-card p-5 shadow-card">
       <div className="mb-3 flex items-center justify-between gap-2">
-        <h3 className="flex items-center gap-2 text-[13px] font-semibold text-foreground">
+        <h3 className="flex items-center gap-2 text-h-card font-semibold text-foreground">
           <Icon className="size-4 text-brand" /> {title}
-          <span className="tnum rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">{count}</span>
+          <Badge variant="muted" className="tnum">{count}</Badge>
         </h3>
-        <Button variant="outline" size="sm" className="h-8" onClick={onAdd}>
+        <Button variant="outline" size="sm" onClick={onAdd}>
           <Plus className="size-3.5" /> Add
         </Button>
       </div>
       {count === 0 ? (
-        <p className="rounded-xl border border-dashed border-border py-6 text-center text-[12.5px] text-muted-foreground">{empty}</p>
+        <p className="rounded-xl border border-dashed border-border py-6 text-center text-label text-muted-foreground">{empty}</p>
       ) : (
         <div className="space-y-3">{children}</div>
       )}
@@ -593,7 +594,7 @@ function Row({ children, onRemove }: { children: React.ReactNode; onRemove: () =
       {children}
       <button
         onClick={onRemove}
-        className="absolute right-2.5 top-2.5 rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+        className="absolute right-2.5 top-2.5 rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
         aria-label="Remove"
       >
         <Trash2 className="size-3.5" />
@@ -605,7 +606,7 @@ function Row({ children, onRemove }: { children: React.ReactNode; onRemove: () =
 function LabeledList({ label, value, onChange }: { label: string; value: string[]; onChange: (v: string[]) => void }) {
   return (
     <div>
-      <label className="mb-1 block text-[11px] font-medium text-muted-foreground">{label} (comma-separated)</label>
+      <label className="mb-1 block text-micro font-medium text-muted-foreground">{label} (comma-separated)</label>
       <input className={inputCls} placeholder={`${label}…`} value={value.join(", ")} onChange={(e) => onChange(fromList(e.target.value))} />
     </div>
   );

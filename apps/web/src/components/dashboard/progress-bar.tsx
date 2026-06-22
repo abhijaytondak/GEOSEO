@@ -9,13 +9,13 @@ import { cn } from "@/lib/utils";
  * glow, rounded caps, and a spring fill-in on scroll into view. Reduced-motion
  * renders the final width statically.
  *
- * `from`/`to` are CSS colors (default brand → lighter violet). Pass any pair
- * to tint per series (e.g. the AI-engine colors).
+ * `from`/`to` are CSS colors — default to brand→info tokens so the fill follows
+ * light/dark theming. Pass any pair to tint per series (e.g. AI-engine colors).
  */
 export function ProgressBar({
   value,
   from = "var(--brand)",
-  to = "#9B82FF",
+  to = "var(--info)",
   height = 8,
   className,
   delay = 0,

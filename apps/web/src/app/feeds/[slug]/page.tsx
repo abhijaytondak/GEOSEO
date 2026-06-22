@@ -74,10 +74,7 @@ export default async function FeedPage({ params }: Params) {
           <span className="flex size-7 items-center justify-center rounded-[8px] bg-brand text-brand-foreground">
             <Orbit className="size-4" strokeWidth={2.25} />
           </span>
-          <span className="text-[14px] font-semibold tracking-tight text-foreground">{brandName}</span>
-          <span className="ml-auto rounded-full bg-brand/10 px-2 py-0.5 text-[11px] font-semibold text-brand">
-            {page.pageType}
-          </span>
+          <span className="font-heading text-[15px] font-semibold tracking-tight text-foreground">{brandName}</span>
         </div>
       </header>
 
@@ -139,10 +136,6 @@ export default async function FeedPage({ params }: Params) {
               {page.cta.label}
             </a>
           </section>
-
-          <p className="mt-10 text-[11.5px] text-muted-foreground">
-            Canonical: <span className="font-mono">{canonical}</span>
-          </p>
         </article>
 
         {/* sticky lead capture */}
@@ -152,11 +145,8 @@ export default async function FeedPage({ params }: Params) {
       </main>
 
       <footer className="border-t border-border">
-        <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-5 text-[12px] text-muted-foreground">
-          <span>© {brandName}</span>
-          <a href="https://developer.puter.com" target="_blank" rel="noreferrer" className="hover:text-foreground">
-            Powered by Puter
-          </a>
+        <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-5 text-label text-muted-foreground">
+          <span>© {new Date().getFullYear()} {brandName}</span>
         </div>
       </footer>
     </div>

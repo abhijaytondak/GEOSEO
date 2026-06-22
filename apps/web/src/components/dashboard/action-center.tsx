@@ -1,12 +1,16 @@
 import Link from "next/link";
 import { ArrowRight, Flame, Zap, CircleDot } from "lucide-react";
 import type { AuthorityAction } from "@geoseo/types";
+import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
-const IMPACT_STYLE: Record<AuthorityAction["impact"], { label: string; cls: string }> = {
-  high: { label: "High impact", cls: "bg-brand/12 text-brand" },
-  medium: { label: "Medium impact", cls: "bg-info/12 text-info" },
-  low: { label: "Low impact", cls: "bg-muted text-muted-foreground" },
+const IMPACT_BADGE: Record<
+  AuthorityAction["impact"],
+  { label: string; variant: "brand" | "info" | "muted" }
+> = {
+  high: { label: "High impact", variant: "brand" },
+  medium: { label: "Medium impact", variant: "info" },
+  low: { label: "Low impact", variant: "muted" },
 };
 
 const URGENCY_ICON: Record<AuthorityAction["urgency"], typeof Flame> = {
@@ -29,8 +33,8 @@ export function ActionCenter({ actions }: { actions: AuthorityAction[] }) {
   if (actions.length === 0) {
     return (
       <div className="rounded-xl border border-dashed border-border py-10 text-center">
-        <p className="text-[13px] font-medium text-foreground">You&apos;re all caught up.</p>
-        <p className="mt-1 text-[12px] text-muted-foreground">No actions need attention right now.</p>
+        <p className="text-label font-medium text-foreground">You&apos;re all caught up.</p>
+        <p className="mt-1 text-label text-muted-foreground">No actions need attention right now.</p>
       </div>
     );
   }
@@ -38,25 +42,25 @@ export function ActionCenter({ actions }: { actions: AuthorityAction[] }) {
   return (
     <ul className="space-y-2.5">
       {actions.map((a) => {
-        const impact = IMPACT_STYLE[a.impact];
+        const impact = IMPACT_BADGE[a.impact];
         const UIcon = URGENCY_ICON[a.urgency];
         return (
           <li key={a.id}>
             <Link
               href={a.href}
-              className="group block rounded-xl border border-border bg-card p-3.5 transition-colors hover:border-brand/40 hover:bg-surface-sunken"
+              className="group block rounded-xl border border-border bg-card p-3.5 transition-colors hover:border-brand/40 hover:bg-surface-sunken focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/40"
             >
               <div className="flex items-start gap-2.5">
                 <UIcon className={cn("mt-0.5 size-4 shrink-0", URGENCY_TINT[a.urgency])} aria-hidden />
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center justify-between gap-2">
-                    <span className="truncate text-[13.5px] font-semibold text-foreground">{a.title}</span>
-                    <span className={cn("shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-semibold", impact.cls)}>
+                    <span className="truncate text-h-card text-foreground">{a.title}</span>
+                    <Badge variant={impact.variant} className="shrink-0">
                       {impact.label}
-                    </span>
+                    </Badge>
                   </div>
-                  <p className="mt-0.5 line-clamp-2 text-[12px] leading-relaxed text-muted-foreground">{a.reason}</p>
-                  <span className="mt-2 inline-flex items-center gap-1 text-[12px] font-semibold text-brand">
+                  <p className="mt-0.5 line-clamp-2 text-label leading-relaxed text-muted-foreground">{a.reason}</p>
+                  <span className="mt-2 inline-flex items-center gap-1 text-label font-semibold text-brand">
                     {a.primaryAction.label}
                     <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-0.5" />
                   </span>

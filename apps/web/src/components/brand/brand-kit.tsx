@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Palette, Type, Square, MessageSquare, Loader2, ScanLine } from "lucide-react";
 import Link from "next/link";
 import { Panel } from "@/components/dashboard/panel";
+import { Button } from "@/components/ui/button";
 
 /**
  * Brand Kit — graceful capture of the workspace's colors + typography (Gushwork-parity).
@@ -69,7 +70,7 @@ function ColorRamp({ label, baseHex }: { label: string; baseHex?: string }) {
   if (!shades.length) return null;
   return (
     <div>
-      <div className="mb-2 text-[12px] font-semibold capitalize text-foreground">{label}</div>
+      <div className="mb-2 text-label font-semibold capitalize text-foreground">{label}</div>
       <div className="grid grid-cols-9 gap-1.5">
         {shades.map((s) => (
           <div key={s.name} className="min-w-0">
@@ -78,8 +79,8 @@ function ColorRamp({ label, baseHex }: { label: string; baseHex?: string }) {
               style={{ background: s.hex }}
               title={`${label} ${s.name} · ${s.hex}`}
             />
-            <div className="mt-1 truncate text-[9.5px] font-medium text-muted-foreground">{s.name}</div>
-            <div className="truncate text-[9px] uppercase tracking-tight text-muted-foreground/70">{s.hex.replace("#", "")}</div>
+            <div className="mt-1 truncate text-micro font-medium text-foreground">{s.name}</div>
+            <div className="truncate text-micro uppercase text-muted-foreground">{s.hex.replace("#", "")}</div>
           </div>
         ))}
       </div>
@@ -108,8 +109,8 @@ export function BrandKit() {
   if (theme === undefined) {
     return (
       <Panel title="Brand Kit" description="Colors and typography the AI uses to stay on-brand.">
-        <div className="flex items-center gap-2 py-8 text-[13px] text-muted-foreground">
-          <Loader2 className="size-4 animate-spin" /> Loading brand kit…
+        <div className="flex items-center gap-2 py-8 text-label text-muted-foreground">
+          <Loader2 className="size-4 animate-spin" aria-hidden="true" /> Loading brand kit…
         </div>
       </Panel>
     );
@@ -119,16 +120,13 @@ export function BrandKit() {
     return (
       <Panel title="Brand Kit" description="Colors and typography the AI uses to stay on-brand.">
         <div className="flex flex-col items-start gap-3 py-6">
-          <p className="text-[13px] text-muted-foreground">
+          <p className="text-label text-muted-foreground">
             No brand kit yet. Scan your site to extract its colors, fonts, and styling — then every generated page
             renders natively in your brand.
           </p>
-          <Link
-            href="/theme"
-            className="inline-flex items-center gap-1.5 rounded-xl bg-brand px-3.5 py-2 text-[13px] font-semibold text-brand-foreground hover:bg-brand/90"
-          >
-            <ScanLine className="size-4" /> Scan your site
-          </Link>
+          <Button variant="brand" size="sm" render={<Link href="/theme" />}>
+            <ScanLine className="size-3.5" aria-hidden="true" /> Scan your site
+          </Button>
         </div>
       </Panel>
     );
@@ -148,8 +146,8 @@ export function BrandKit() {
     <div className="space-y-5">
       <Panel title="Color palette" description="Each brand color expanded into a 100–900 ramp for consistent, on-brand output.">
         <div className="space-y-5">
-          <div className="flex items-center gap-2 text-[12px] text-muted-foreground">
-            <Palette className="size-4" />
+          <div className="flex items-center gap-2 text-label text-muted-foreground">
+            <Palette className="size-4" aria-hidden="true" />
             {theme.status === "confirmed" ? "Confirmed from your site scan." : "Draft — confirm on the Theme page to lock it in."}
           </div>
           <ColorRamp label="primary" baseHex={c.primary} />
@@ -157,14 +155,14 @@ export function BrandKit() {
           {c.secondary && <ColorRamp label="secondary" baseHex={c.secondary} />}
           {semantic.length > 0 && (
             <div>
-              <div className="mb-2 text-[12px] font-semibold text-foreground">Neutrals</div>
+              <div className="mb-2 text-label font-semibold text-foreground">Neutrals</div>
               <div className="flex flex-wrap gap-3">
                 {semantic.map((s) => (
                   <div key={s.label} className="flex items-center gap-2">
                     <span className="size-8 rounded-md ring-1 ring-inset ring-black/10" style={{ background: s.hex }} />
                     <div className="leading-tight">
-                      <div className="text-[11.5px] font-medium text-foreground">{s.label}</div>
-                      <div className="text-[10px] uppercase text-muted-foreground">{s.hex}</div>
+                      <div className="text-micro font-medium text-foreground">{s.label}</div>
+                      <div className="text-micro uppercase text-muted-foreground">{s.hex}</div>
                     </div>
                   </div>
                 ))}
@@ -178,30 +176,30 @@ export function BrandKit() {
         <div className="space-y-4">
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="rounded-xl border border-border bg-surface-sunken p-4">
-              <div className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">
-                <Type className="size-3.5" /> Heading
+              <div className="flex items-center gap-1.5 text-micro font-semibold uppercase text-muted-foreground">
+                <Type className="size-3.5" aria-hidden="true" /> Heading
               </div>
-              <div className="mt-1.5 text-[22px] font-bold text-foreground" style={{ fontFamily: t.headingFont }}>
+              <div className="mt-1.5 text-title font-bold text-foreground" style={{ fontFamily: t.headingFont }}>
                 {t.headingFont ?? "System default"}
               </div>
-              {t.headingWeight && <div className="text-[11px] text-muted-foreground">Weight {t.headingWeight}</div>}
+              {t.headingWeight && <div className="text-micro text-muted-foreground">Weight {t.headingWeight}</div>}
             </div>
             <div className="rounded-xl border border-border bg-surface-sunken p-4">
-              <div className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">
-                <Square className="size-3.5" /> Body
+              <div className="flex items-center gap-1.5 text-micro font-semibold uppercase text-muted-foreground">
+                <Square className="size-3.5" aria-hidden="true" /> Body
               </div>
-              <div className="mt-1.5 text-[16px] text-foreground" style={{ fontFamily: t.bodyFont }}>
+              <div className="mt-1.5 text-h-card font-normal text-foreground" style={{ fontFamily: t.bodyFont }}>
                 {t.bodyFont ?? "System default"}
               </div>
-              {t.bodyWeight && <div className="text-[11px] text-muted-foreground">Weight {t.bodyWeight}</div>}
+              {t.bodyWeight && <div className="text-micro text-muted-foreground">Weight {t.bodyWeight}</div>}
             </div>
           </div>
           <div className="rounded-xl border border-border p-4">
-            <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">Type scale</div>
+            <div className="mb-2 text-micro font-semibold uppercase text-muted-foreground">Type scale</div>
             <div className="space-y-1.5" style={{ fontFamily: t.headingFont }}>
               {[...scale].reverse().slice(0, 6).map((size, i) => (
                 <div key={i} className="flex items-baseline gap-3">
-                  <span className="w-14 shrink-0 text-[10.5px] text-muted-foreground">{size}</span>
+                  <span className="w-14 shrink-0 text-micro text-muted-foreground">{size}</span>
                   <span className="truncate font-semibold text-foreground" style={{ fontSize: size, lineHeight: 1.1 }}>
                     The quick brown fox
                   </span>
@@ -209,8 +207,8 @@ export function BrandKit() {
               ))}
             </div>
           </div>
-          <p className="flex items-center gap-1.5 text-[11.5px] text-muted-foreground">
-            <MessageSquare className="size-3.5" /> Tone of voice and terminology live in the Library tab and shape every draft.
+          <p className="flex items-center gap-1.5 text-micro text-muted-foreground">
+            <MessageSquare className="size-3.5" aria-hidden="true" /> Tone of voice and terminology live in the Library tab and shape every draft.
           </p>
         </div>
       </Panel>
