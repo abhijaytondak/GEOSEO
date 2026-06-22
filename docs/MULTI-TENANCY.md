@@ -1,11 +1,11 @@
 # Multi-Tenancy — isolation plan & groundwork
 
-Status: **groundwork landed; per-store migration pending** (incremental, follow the Clerk auth landing).
+Status: **core tenant path landed; side-store migration in progress**.
 
-GEOSEO is single-tenant today: every store resolves to one workspace (`ws-default`).
-True multi-customer production needs each request's data scoped to its workspace. This
-doc is the plan + what's already in place so the migration can proceed safely and
-incrementally — no big-bang rewrite.
+GEOSEO now resolves a verified tenant for every protected request, and the highest-risk
+Page Engine state has been migrated. Several secondary stores still resolve to the legacy
+workspace (`ws-default`) and must be migrated incrementally before multi-customer production.
+This doc tracks what is live and what remains.
 
 ## What's landed (groundwork)
 
@@ -24,7 +24,8 @@ incrementally — no big-bang rewrite.
   **`ws-default` maps to the legacy `"state"` row, so existing data needs no migration.** Additive — the
   single-doc `init()`/`save()` API is unchanged (it's the `ws-default` special case).
 
-Net effect today: behavior is identical (everything is `ws-default`); the seams exist for incremental adoption.
+Net effect today: migrated surfaces isolate by tenant while `ws-default` keeps legacy rows for
+back-compat; unmigrated stores still share their single legacy document and are listed below.
 
 ## Migration steps (do incrementally, one store/slice at a time)
 
@@ -41,7 +42,7 @@ Net effect today: behavior is identical (everything is `ws-default`); the seams 
    impossible even on a bug. (Current rows are `id="state"`; per-tenant rows are `id="t:<tenant>"`.)
 5. **RBAC.** Layer role checks (admin / marketer / analyst) from the Clerk session on top of tenant scoping.
 
-## Reference implementation — `conversion-audit` (done)
+## Reference implementations — done
 
 `ConversionAuditStore` is migrated as the copy-paste pattern:
 
@@ -53,38 +54,33 @@ Net effect today: behavior is identical (everything is `ws-default`); the seams 
 - Verified: `x-workspace-id: alpha` and `x-workspace-id: beta` get fully isolated audit state; default tenant
   unaffected. Works in-memory (cache) and persists per-tenant when the DB is reachable.
 
+`PageEngineStore` has also landed as the large-state implementation:
+
+- Controllers pass `tenantId` into opportunities, blueprints, pages, leads, recommendations, monitoring, and
+  publish workflows.
+- Tenant data is partitioned so `ws-default` keeps the existing legacy rows, while other tenants use tenant
+  prefixes.
+- Public lead/event ingestion derives tenant from the owning page instead of a caller-controlled workspace.
+
+`SiteThemeStore` and `ImageGenStore` now follow the same lazy per-tenant document pattern:
+
+- `/site-theme/*` routes resolve tenant per request and read/write `cx_site_theme` tenant rows.
+- `/images` routes resolve tenant per request and read/write `cx_images` tenant rows.
+- Image generation reads the confirmed theme color from the same tenant before building prompts/placeholders.
+
 ## Store adoption checklist (each is an independent PR)
 
-Done: **conversion-audit** (reference). Remaining `cx_*`/`pe_*` stores (current = single `ws-default` doc):
-page-engine, brand, brand-library, settings, workspace, alerts, jobs, opportunities, content, site-theme, audit,
-search-index, lead-* (activity, journey, assignment, score, notification, form, routing, followup), ai-search
-(mentions, bots), onboarding, cms-publish, images, crm-sync. Follow the conversion-audit pattern; do brand-library
-next (note: its `composeBrandContext` consumer in `page-engine.service` should read the page's owning tenant —
-until page-engine is migrated, pass `DEFAULT_TENANT_ID`).
+Done: **auth tenant resolution**, **conversion-audit**, **billing**, **brand-analysis cache**,
+**page-engine**, **site-theme**, **images**.
 
-## Page Engine migration plan (P0-6, NEXT — the big rock)
+Remaining `cx_*` stores still using a single legacy document and needing tenant migration:
+brand, brand-library, settings, workspace, alerts, jobs, opportunities, content, audit, search-index,
+lead-* (activity, journey, assignment, score, notification, form, routing, followup), ai-search
+(mentions, bots), onboarding, cms-publish, crm-sync.
 
-`page-engine.service.ts` is the largest store and must migrate **first** (leads/pages/opportunities live here;
-side-stores depend on it). Surface: ~770 lines, **37 public methods, 42 controller endpoints (0 tenant-aware
-today), 68 internal state references.** All-or-nothing for consistency — do it as one focused branch
-(`p0-6-tenant-page-engine`), not a partial. Recommended approach (preserves the live demo: `ws-default` keeps
-exact current behavior + existing rows):
-
-1. **Per-tenant state struct.** Extract the mutable fields into `interface PEState { opportunities, blueprints,
-   pages, leads, pageVersions, audit, seq, vseq, aseq, batchJobs }`. Replace the instance fields with
-   `private tenants = new Map<string, PEState>()` + `private s(tenantId): PEState` that lazily creates/hydrates.
-2. **Thread `tenantId` as the FIRST param of every public method** (make it required so the compiler finds every
-   call site). Internally swap `this.opportunities` → `this.s(tenantId).opportunities`, etc. (68 refs).
-3. **Persistence keying.** Keep `ws-default` writing to the EXISTING un-prefixed rows (zero data migration, demo
-   unchanged). For other tenants, namespace row ids `t:<tenant>:<id>` and partition on load. Hydrate lazily per
-   tenant (drop the global `onModuleInit` bulk hydrate; load on first `s(tenant)` touch). Production fresh tenant
-   = empty (P0-3 already done); demo `ws-default` = seeded.
-4. **Controllers (`page-engine.controller.ts`, 42 endpoints).** Add `@Req() req: TenantRequest`, compute
-   `const t = resolveTenantId(req)` once per handler, pass `t` into every store call. Public ingestion endpoints
-   (`/public/*` leads/events) must derive tenant from the **page's owning workspace** (by slug/page), NOT the
-   caller (A5) — store the owning tenant on the page record at generation time.
-5. **Verify:** `x-workspace-id: alpha` vs `beta` get isolated pages/leads/opportunities; `ws-default` unchanged;
-   audit `actor`/`workspaceId` reflect the real tenant. Then proceed to the side-store checklist below.
+Recommended next slice: migrate **Brand Memory + Brand Library** together, then update their consumers
+(`brand-analysis`, `lead-followup`, `image-gen`, `page-engine` brand context) to read brand state from the
+same tenant as the active workflow.
 
 ## Guardrails
 

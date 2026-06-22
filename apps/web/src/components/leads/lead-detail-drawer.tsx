@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { relativeTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { useAppFeedback } from "@/components/system/app-feedback";
+import { apiError, readApiEnvelope } from "@/lib/api-envelope";
 
 interface Props {
   lead: Lead | null;
@@ -101,7 +102,7 @@ function Detail({ lead }: { lead: Lead }) {
     });
     // Load any existing AI-SDR follow-up draft (self-contained — avoids the shared client).
     fetch(`/api/v1/leads/${lead.id}/followup`, { headers: { accept: "application/json" }, cache: "no-store" })
-      .then((r) => r.json())
+      .then((r) => readApiEnvelope<{ draft?: { subject: string; body: string; source: string } }>(r, `/leads/${lead.id}/followup`))
       .then((jr) => {
         if (!cancelled && jr?.data?.draft) setFollowup(jr.data.draft);
       })
@@ -125,8 +126,8 @@ function Detail({ lead }: { lead: Lead }) {
         method: "POST",
         headers: { accept: "application/json", "content-type": "application/json" },
       });
-      const jr = (await r.json()) as { success: boolean; data?: { draft: { subject: string; body: string; source: string } }; errors?: { message: string }[] };
-      if (!r.ok || !jr.success || !jr.data) throw new Error(jr.errors?.[0]?.message ?? "Failed");
+      const jr = await readApiEnvelope<{ draft: { subject: string; body: string; source: string } }>(r, `/leads/${lead.id}/followup`);
+      if (!r.ok || !jr.success) throw apiError(jr, r, `/leads/${lead.id}/followup`);
       setFollowup(jr.data.draft);
       notify({ kind: "success", title: `Follow-up drafted${jr.data.draft.source === "template" ? " (template)" : ""}` });
     } catch (err) {

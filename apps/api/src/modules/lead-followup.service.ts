@@ -4,6 +4,7 @@ import { DocStore } from "../db/db";
 import { fetchWithTimeout } from "../common/http";
 import { PageEngineStore } from "./page-engine.service";
 import { BrandMemoryStore } from "./brand.service";
+import { BrandLibraryStore, composeBrandContext } from "./brand-library.service";
 
 export interface FollowupDraft {
   leadId: string;
@@ -51,6 +52,7 @@ export class LeadFollowupStore implements OnModuleInit {
   constructor(
     @Inject(PageEngineStore) private readonly pages: PageEngineStore,
     @Inject(BrandMemoryStore) private readonly brand: BrandMemoryStore,
+    @Inject(BrandLibraryStore) private readonly library: BrandLibraryStore,
   ) {}
 
   async onModuleInit() {
@@ -67,24 +69,28 @@ export class LeadFollowupStore implements OnModuleInit {
     const lead = this.pages.getLead(tenantId, leadId);
     if (!lead) throw new Error(`Lead ${leadId} not found`);
     const brand = this.brand.current();
+    // Rich Brand Memory (products/personas/proof/voice/terminology) so the follow-up
+    // is grounded in real facts + the brand's tone — not just company + value prop.
+    const brandContext = composeBrandContext(brand, await this.library.get(tenantId));
 
-    const draft = (await this.viaDeepseek(lead, brand, now)) ?? templateDraft(lead, brand, now);
+    const draft = (await this.viaDeepseek(lead, brand, brandContext, now)) ?? templateDraft(lead, brand, now);
     this.byLead[leadId] = draft;
     this.db.save({ byLead: this.byLead });
     return draft;
   }
 
   /** OpenAI-compatible chat call; returns null on any failure (caller falls back). */
-  private async viaDeepseek(lead: Lead, brand: BrandProfile, now: string): Promise<FollowupDraft | null> {
+  private async viaDeepseek(lead: Lead, brand: BrandProfile, brandContext: string | undefined, now: string): Promise<FollowupDraft | null> {
     const key = process.env.DEEPSEEK_API_KEY;
     const base = process.env.DEEPSEEK_BASE_URL ?? "https://api.deepseek.com";
     const model = process.env.DEEPSEEK_MODEL ?? "deepseek-chat";
     if (!key) return null;
     const prompt = [
       `You are an SDR for ${brand.company || "our company"} (${brand.valueProp || ""}, tone: ${brand.tone || "professional"}).`,
+      brandContext ? `Ground every claim in this brand context and match its tone — never fabricate: ${brandContext}` : "",
       `Write a short, warm follow-up email to ${lead.name || "the lead"}${lead.company ? ` at ${lead.company}` : ""}, who submitted this on the page "${lead.pageTitle || "our site"}": "${lead.message || "(no message)"}".`,
       `Keep it under 120 words, no fluff, one clear ask (a quick call). Reply as strict JSON: {"subject": "...", "body": "..."}.`,
-    ].join("\n");
+    ].filter(Boolean).join("\n");
     try {
       const res = await fetchWithTimeout(`${base}/chat/completions`, {
         method: "POST",

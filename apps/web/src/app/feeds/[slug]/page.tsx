@@ -91,7 +91,7 @@ export default async function FeedPage({ params }: Params) {
               </span>
             ))}
           </div>
-          <h1 className="text-[34px] font-bold leading-tight tracking-[-0.02em] text-foreground">{page.title}</h1>
+          <h1 className="text-[34px] font-bold leading-tight tracking-[-0.02em] text-foreground" style={{ fontFamily: "var(--font-heading, inherit)" }}>{page.title}</h1>
           <p className="mt-3 mb-6 text-[17px] leading-relaxed text-foreground/80">{page.heroCopy}</p>
 
           {/* branded hero — generated image if present, else a theme-matched SVG (no stock) */}
@@ -105,7 +105,7 @@ export default async function FeedPage({ params }: Params) {
           {page.sections.map((s, i) => (
             <div key={s.heading}>
               <section className="mt-8">
-                <h2 className="text-[20px] font-semibold tracking-[-0.01em] text-foreground">{s.heading}</h2>
+                <h2 className="text-[20px] font-semibold tracking-[-0.01em] text-foreground" style={{ fontFamily: "var(--font-heading, inherit)" }}>{s.heading}</h2>
                 <div className="mt-2">
                   <RichText text={s.body} />
                 </div>
@@ -117,7 +117,7 @@ export default async function FeedPage({ params }: Params) {
 
           {page.faqs.length > 0 && (
             <section className="mt-10">
-              <h2 className="text-[20px] font-semibold tracking-[-0.01em] text-foreground">Frequently asked questions</h2>
+              <h2 className="text-[20px] font-semibold tracking-[-0.01em] text-foreground" style={{ fontFamily: "var(--font-heading, inherit)" }}>Frequently asked questions</h2>
               <dl className="mt-3 divide-y divide-border rounded-2xl border border-border bg-card">
                 {page.faqs.map((f) => (
                   <div key={f.q} className="px-4 py-3.5">

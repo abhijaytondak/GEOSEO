@@ -1,9 +1,10 @@
-import { BadRequestException, Body, Controller, Get, Inject, Post, Req } from "@nestjs/common";
+import { BadRequestException, Body, Controller, Get, Inject, NotFoundException, Param, Post, Req } from "@nestjs/common";
 import { ApiTags } from "@nestjs/swagger";
 import { BrandAnalysisStore } from "./brand-analysis.service";
 import { AuditStore } from "./audit.service";
 import { resolveTenantId, type TenantRequest } from "../common/tenant";
 import { analyzeCompetitorPage } from "../llm/competitor-page";
+import { assertSafeUrl } from "../common/ssrf";
 
 /**
  * Brand auto-analysis surface — powers the dashboard Scorecard and the Competitors view.
@@ -50,5 +51,26 @@ export class BrandAnalysisController {
     } catch (e) {
       throw new BadRequestException(e instanceof Error ? e.message : "Could not analyse this URL");
     }
+  }
+
+  /** Async variant for the UI — the LLM crawl (~25s) exceeds the BFF request budget,
+   *  so start a job and poll. SSRF/invalid URL is rejected up-front (400). */
+  @Post("competitor-page-async")
+  async startCompetitorPage(@Body() body: { url?: string }) {
+    const url = body?.url?.trim();
+    if (!url) throw new BadRequestException("url is required");
+    try {
+      await assertSafeUrl(url); // reject SSRF/invalid before queueing
+    } catch (e) {
+      throw new BadRequestException(e instanceof Error ? e.message : "Invalid URL");
+    }
+    return this.analysis.startCompetitorPage(url);
+  }
+
+  @Get("competitor-page-async/:jobId")
+  competitorPageStatus(@Param("jobId") jobId: string) {
+    const job = this.analysis.getCompetitorPageJob(jobId);
+    if (!job) throw new NotFoundException(`Analysis job ${jobId} not found`);
+    return job;
   }
 }

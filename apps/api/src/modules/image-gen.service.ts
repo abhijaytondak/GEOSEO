@@ -1,4 +1,4 @@
-import { Inject, Injectable, Logger, OnModuleInit } from "@nestjs/common";
+import { Inject, Injectable, Logger } from "@nestjs/common";
 import { DocStore } from "../db/db";
 import { fetchWithTimeout } from "../common/http";
 import { BrandMemoryStore } from "./brand.service";
@@ -44,10 +44,9 @@ const escXml = (s: string) =>
  * primary color), so pages always have an on-brand asset. Never throws.
  */
 @Injectable()
-export class ImageGenStore implements OnModuleInit {
+export class ImageGenStore {
   private readonly log = new Logger(ImageGenStore.name);
-  private items: GeneratedImage[] = [];
-  private seq = 0;
+  private cache = new Map<string, ImageState>();
   private db = new DocStore<ImageState>("cx_images");
 
   constructor(
@@ -55,11 +54,17 @@ export class ImageGenStore implements OnModuleInit {
     @Inject(SiteThemeStore) private readonly themes: SiteThemeStore,
   ) {}
 
-  async onModuleInit() {
-    await this.db.init({ items: this.items, seq: this.seq }, (loaded) => {
-      this.items = loaded.items ?? [];
-      this.seq = loaded.seq ?? 0;
-    });
+  private async state(tenantId: string): Promise<ImageState> {
+    const cached = this.cache.get(tenantId);
+    if (cached) return cached;
+    const loaded = (await this.db.loadForTenant(tenantId)) ?? { items: [], seq: 0 };
+    this.cache.set(tenantId, loaded);
+    return loaded;
+  }
+
+  private persist(tenantId: string, s: ImageState): void {
+    this.cache.set(tenantId, s);
+    this.db.saveForTenant(tenantId, s);
   }
 
   get configured(): boolean {
@@ -70,31 +75,30 @@ export class ImageGenStore implements OnModuleInit {
     return this.configured ? "openai" : "placeholder";
   }
 
-  list(): GeneratedImage[] {
-    return this.items;
+  async list(tenantId: string): Promise<GeneratedImage[]> {
+    return (await this.state(tenantId)).items;
   }
 
   /** Confirmed site-theme primary color, or the design default. */
-  private primaryColor(): string {
-    return this.themes.list().find((t) => t.status === "confirmed")?.colors?.primary ?? "#6c4cf1";
+  private async primaryColor(tenantId: string): Promise<string> {
+    return (await this.themes.list(tenantId)).find((t) => t.status === "confirmed")?.colors?.primary ?? "#6c4cf1";
   }
 
   /** Brand + theme-aware generation prompt — branded, customer colors, no stock imagery. */
-  private buildPrompt(subject: string, kind: ImageKind): string {
+  private buildPrompt(subject: string, kind: ImageKind, primary: string): string {
     const b = this.brand.current();
     const company = b?.company?.trim() || "the brand";
     const bits = [
       `${KIND_HINT[kind]} for ${company}${b?.valueProp ? ` (${b.valueProp})` : ""}.`,
       `Subject: ${subject}.`,
       b?.tone ? `Brand tone: ${b.tone}.` : "",
-      `Build the palette around ${this.primaryColor()}. Professional, on-brand, no stock photography, no logos, minimal text.`,
+      `Build the palette around ${primary}. Professional, on-brand, no stock photography, no logos, minimal text.`,
     ];
     return bits.filter(Boolean).join(" ");
   }
 
   /** Theme-aware SVG placeholder (data URI) — used when image gen is unconfigured. */
-  private placeholder(subject: string, kind: ImageKind): string {
-    const primary = this.primaryColor();
+  private placeholder(subject: string, kind: ImageKind, primary: string): string {
     const dark = darken(primary);
     const label = escXml(subject.slice(0, 48));
     const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630">
@@ -109,12 +113,14 @@ export class ImageGenStore implements OnModuleInit {
     return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
   }
 
-  async generate(subject: string, kind: ImageKind, now: string): Promise<GeneratedImage> {
-    const prompt = this.buildPrompt(subject, kind);
-    const url = (this.configured ? await this.viaApi(prompt) : null) ?? this.placeholder(subject, kind);
-    this.seq += 1;
+  async generate(tenantId: string, subject: string, kind: ImageKind, now: string): Promise<GeneratedImage> {
+    const primary = await this.primaryColor(tenantId);
+    const prompt = this.buildPrompt(subject, kind, primary);
+    const url = (this.configured ? await this.viaApi(prompt) : null) ?? this.placeholder(subject, kind, primary);
+    const s = await this.state(tenantId);
+    s.seq += 1;
     const image: GeneratedImage = {
-      id: `img-${this.seq}`,
+      id: `img-${s.seq}`,
       subject,
       kind,
       url,
@@ -122,9 +128,9 @@ export class ImageGenStore implements OnModuleInit {
       source: url.startsWith("data:") ? "placeholder" : "openai",
       createdAt: now,
     };
-    this.items.unshift(image);
-    if (this.items.length > 200) this.items.length = 200;
-    this.db.save({ items: this.items, seq: this.seq });
+    s.items.unshift(image);
+    if (s.items.length > 200) s.items.length = 200;
+    this.persist(tenantId, s);
     return image;
   }
 

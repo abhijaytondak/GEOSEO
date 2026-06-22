@@ -73,43 +73,68 @@ export async function assertSafeUrl(raw: string): Promise<string> {
   return url.toString();
 }
 
-/** Fetch a URL with SSRF guard + size/time limits. Returns the response text. */
+/**
+ * Fetch a URL with SSRF guard + size/time limits. Returns the response text.
+ *
+ * Redirects are followed manually so EVERY hop is re-validated by `assertSafeUrl`
+ * (auto-follow would skip the SSRF check on intermediate hosts). This is what lets
+ * the common real-world canonicalizations work — apex→www and http→https — which a
+ * hard `redirect:"manual"` stop used to turn into an empty body (`crawled:false`),
+ * breaking onboarding for most Webflow/Framer custom domains. A redirect to an
+ * unsafe/unresolvable host stops gracefully with empty html rather than throwing.
+ */
 export async function safeFetchText(raw: string, opts: { maxBytes?: number; timeoutMs?: number } = {}): Promise<{ url: string; html: string }> {
-  const url = await assertSafeUrl(raw);
   const maxBytes = opts.maxBytes ?? 1_500_000; // 1.5 MB cap
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), opts.timeoutMs ?? 8000);
-  try {
-    const res = await fetch(url, {
-      redirect: "manual", // don't auto-follow into a blocked host
-      signal: controller.signal,
-      headers: { "user-agent": "GEOSEO-ThemeScanner/1.0", accept: "text/html" },
-    });
-    const reader = res.body?.getReader();
-    if (!reader) return { url, html: "" };
-    const chunks: Uint8Array[] = [];
-    let total = 0;
-    for (;;) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      if (value) {
-        total += value.length;
-        if (total > maxBytes) {
-          await reader.cancel();
-          break;
+  const maxHops = 5;
+  let current = await assertSafeUrl(raw);
+
+  for (let hop = 0; ; hop++) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), opts.timeoutMs ?? 8000);
+    try {
+      const res = await fetch(current, {
+        redirect: "manual", // follow manually so each hop is re-checked below
+        signal: controller.signal,
+        headers: { "user-agent": "GEOSEO-ThemeScanner/1.0", accept: "text/html" },
+      });
+
+      if (res.status >= 300 && res.status < 400) {
+        const location = res.headers.get("location");
+        if (!location || hop >= maxHops) return { url: current, html: "" };
+        try {
+          current = await assertSafeUrl(new URL(location, current).toString());
+        } catch {
+          return { url: current, html: "" }; // redirect target is unsafe/unresolvable — stop, don't throw
         }
-        chunks.push(value);
+        continue;
       }
+
+      const reader = res.body?.getReader();
+      if (!reader) return { url: current, html: "" };
+      const chunks: Uint8Array[] = [];
+      let total = 0;
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        if (value) {
+          total += value.length;
+          if (total > maxBytes) {
+            await reader.cancel();
+            break;
+          }
+          chunks.push(value);
+        }
+      }
+      const buf = new Uint8Array(total);
+      let offset = 0;
+      for (const c of chunks) {
+        buf.set(c.subarray(0, Math.min(c.length, maxBytes - offset)), offset);
+        offset += c.length;
+        if (offset >= maxBytes) break;
+      }
+      return { url: current, html: new TextDecoder().decode(buf) };
+    } finally {
+      clearTimeout(timer);
     }
-    const buf = new Uint8Array(total);
-    let offset = 0;
-    for (const c of chunks) {
-      buf.set(c.subarray(0, Math.min(c.length, maxBytes - offset)), offset);
-      offset += c.length;
-      if (offset >= maxBytes) break;
-    }
-    return { url, html: new TextDecoder().decode(buf) };
-  } finally {
-    clearTimeout(timer);
   }
 }

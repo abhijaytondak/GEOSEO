@@ -11,6 +11,7 @@
 // Demo-only fallback data. Isolated in lib/demo (the sole allowlisted mock importer);
 // only reached when FALLBACK_ALLOWED (demo/build) — production surfaces real errors.
 import { seoProvider, brandSource, outreachDrafter } from "./demo/demo-data";
+import { apiError, readApiEnvelope } from "./api-envelope";
 import type {
   ActivityEvent,
   AiVisibilitySignal,
@@ -124,7 +125,7 @@ async function get<T>(path: string, fallback: () => Promise<T> | T): Promise<T> 
     return fallback();
   }
 
-  const body = (await res.json()) as { success: boolean; data: T };
+  const body = await readApiEnvelope<T>(res, path);
   if (!body.success) {
     if (!FALLBACK_ALLOWED) throw new Error(`API returned success=false for ${path}`);
     warnFallback(`success=false for ${path} — using mock fallback`);
@@ -144,9 +145,9 @@ async function send<T>(
     headers: { "content-type": "application/json", accept: "application/json", ...authHeaders() },
     body: body === undefined ? undefined : JSON.stringify(body),
   });
-  const json = (await res.json()) as { success: boolean; data: T; errors?: { message: string }[] };
+  const json = await readApiEnvelope<T>(res, path);
   if (!res.ok || !json.success) {
-    throw new Error(json.errors?.[0]?.message ?? `API ${res.status}`);
+    throw apiError(json, res, path);
   }
   return json.data;
 }

@@ -64,7 +64,13 @@ export function themeStyle(t: SiteThemeProfile | null): CSSProperties | undefine
     const p = hexToRgb(c.primary);
     if (p) v["--brand-foreground"] = relLuminance(p) > 0.5 ? "#0a0a0a" : "#ffffff";
   }
+  if (c.accent) v["--brand-accent"] = c.accent;
   if (t.layout?.radius) v["--radius"] = `${t.layout.radius}px`;
-  if (t.typography?.bodyFont) v["fontFamily"] = `'${t.typography.bodyFont}', system-ui, -apple-system, sans-serif`;
+  // Body + heading fonts from the brand's scanned typography. Headings fall back to
+  // the body font when the scan only found one face, so they always read as the brand's.
+  const sans = "system-ui, -apple-system, sans-serif";
+  const headingFont = t.typography?.headingFont ?? t.typography?.bodyFont;
+  if (t.typography?.bodyFont) v["fontFamily"] = `'${t.typography.bodyFont}', ${sans}`;
+  if (headingFont) v["--font-heading"] = `'${headingFont}', ${sans}`;
   return v as CSSProperties;
 }

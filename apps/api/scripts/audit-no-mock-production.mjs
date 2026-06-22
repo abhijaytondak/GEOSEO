@@ -4,15 +4,12 @@
  *
  * Fails (exit 1) when production runtime code imports `@geoseo/mock`, when the API
  * binds mock DI for production, or when the web clients keep a silent mock fallback.
- * This is the enforcement mechanism the No-Dummy-Data PRD demands — run it in CI once
- * the web clients are refactored to isolate demo-only code.
+ * This is the enforcement mechanism the No-Dummy-Data PRD demands — keep it in CI.
  *
  * Usage: node apps/api/scripts/audit-no-mock-production.mjs
  *
- * Today it REPORTS the known P0 violations (api-client.ts / page-engine-client.ts /
- * seo.module.ts still wire mock fallback) so the gap is visible and tracked. Files
- * that legitimately reference the mock package (tests, explicit demo-only modules)
- * can be added to ALLOWLIST as they are isolated per §6.1.
+ * Files that legitimately reference the mock package (tests, explicit demo-only modules)
+ * can be added to ALLOWLIST only after they are isolated behind demo-mode gates per §6.1.
  */
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join, relative } from "node:path";

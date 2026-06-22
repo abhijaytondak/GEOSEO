@@ -18,15 +18,127 @@ type CmsState = { byPage: Record<string, CmsPublishResult> };
 const esc = (s: string) =>
   s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
-/** Render a generated page to clean WordPress post HTML (hero → sections → FAQ). */
-function renderHtml(page: GeneratedPage): string {
-  const parts = [`<p>${esc(page.heroCopy)}</p>`];
-  for (const s of page.sections) parts.push(`<h2>${esc(s.heading)}</h2>`, `<p>${esc(s.body)}</p>`);
+/** Inline emphasis: **bold** → <strong> (after escaping, so tags can't be injected). */
+function inlineHtml(s: string): string {
+  return esc(s).replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+}
+
+type Block = { type: "p" | "ul" | "ol"; items: string[] };
+
+/** Parse section/FAQ copy into blocks — mirrors the web RichText parser so the
+ *  blank-line paragraphs and "- " / "1." list markers the drafter emits survive
+ *  the CMS/export path instead of collapsing into one flat paragraph. */
+function parseBlocks(text: string): Block[] {
+  const blocks: Block[] = [];
+  let cur: Block | null = null;
+  const flush = () => {
+    if (cur) blocks.push(cur);
+    cur = null;
+  };
+  for (const raw of (text ?? "").replace(/\r/g, "").split("\n")) {
+    const line = raw.trim();
+    if (!line) {
+      flush();
+      continue;
+    }
+    const ul = line.match(/^[-*•]\s+(.*)$/);
+    const ol = line.match(/^\d+[.)]\s+(.*)$/);
+    if (ul) {
+      if (!cur || cur.type !== "ul") {
+        flush();
+        cur = { type: "ul", items: [] };
+      }
+      cur.items.push(ul[1]);
+    } else if (ol) {
+      if (!cur || cur.type !== "ol") {
+        flush();
+        cur = { type: "ol", items: [] };
+      }
+      cur.items.push(ol[1]);
+    } else {
+      if (!cur || cur.type !== "p") {
+        flush();
+        cur = { type: "p", items: [] };
+      }
+      cur.items.push(line);
+    }
+  }
+  flush();
+  return blocks;
+}
+
+/** Copy → semantic HTML (<p>/<ul>/<ol>/<strong>), preserving the list structure. */
+function blocksToHtml(text: string): string {
+  return parseBlocks(text)
+    .map((b) => {
+      if (b.type === "ul") return `<ul>${b.items.map((i) => `<li>${inlineHtml(i)}</li>`).join("")}</ul>`;
+      if (b.type === "ol") return `<ol>${b.items.map((i) => `<li>${inlineHtml(i)}</li>`).join("")}</ol>`;
+      return `<p>${inlineHtml(b.items.join(" "))}</p>`;
+    })
+    .join("\n");
+}
+
+/**
+ * Render a generated page to clean semantic HTML (hero image → hero copy →
+ * sections → FAQ). Preserves bullet/numbered lists and bold so the design
+ * structure survives a CMS push instead of flattening to plain paragraphs.
+ * Shared by every CMS adapter AND the page export endpoint.
+ */
+export function renderHtml(page: GeneratedPage): string {
+  const parts: string[] = [];
+  if (page.heroImageUrl) {
+    parts.push(`<figure><img src="${esc(page.heroImageUrl)}" alt="${esc(page.heroImageAlt ?? page.title)}" /></figure>`);
+  }
+  if (page.heroCopy) parts.push(blocksToHtml(page.heroCopy));
+  for (const s of page.sections) parts.push(`<h2>${esc(s.heading)}</h2>`, blocksToHtml(s.body));
   if (page.faqs.length) {
     parts.push("<h2>Frequently asked questions</h2>");
-    for (const f of page.faqs) parts.push(`<h3>${esc(f.q)}</h3>`, `<p>${esc(f.a)}</p>`);
+    for (const f of page.faqs) parts.push(`<h3>${esc(f.q)}</h3>`, blocksToHtml(f.a));
   }
-  return parts.join("\n");
+  return parts.filter(Boolean).join("\n");
+}
+
+/** Render a generated page to Markdown — for hand-coded / static / Jamstack sites
+ *  and Framer CMS imports. The drafter already writes Markdown-ish copy ("- ",
+ *  "1.", **bold**), so section bodies pass through as-is under generated headings. */
+export function renderMarkdown(page: GeneratedPage): string {
+  const out: string[] = [`# ${page.title}`, ""];
+  if (page.metaDescription) out.push(`_${page.metaDescription}_`, "");
+  if (page.heroImageUrl) out.push(`![${page.heroImageAlt ?? page.title}](${page.heroImageUrl})`, "");
+  if (page.heroCopy) out.push(page.heroCopy.trim(), "");
+  for (const s of page.sections) out.push(`## ${s.heading}`, "", (s.body ?? "").trim(), "");
+  if (page.faqs.length) {
+    out.push("## Frequently asked questions", "");
+    for (const f of page.faqs) out.push(`### ${f.q}`, "", (f.a ?? "").trim(), "");
+  }
+  return out.join("\n").replace(/\n{3,}/g, "\n\n").trim() + "\n";
+}
+
+/** Render a full, self-contained HTML document — what a hand-coded / static site
+ *  can drop in directly or extract the <main> from. Lightweight, easy to restyle. */
+export function renderStandaloneHtml(page: GeneratedPage): string {
+  const ld = {
+    "@context": "https://schema.org",
+    "@type": "WebPage",
+    name: page.metaTitle || page.title,
+    description: page.metaDescription || undefined,
+  };
+  return [
+    "<!doctype html>",
+    `<html lang="en"><head>`,
+    `<meta charset="utf-8" />`,
+    `<meta name="viewport" content="width=device-width, initial-scale=1" />`,
+    `<title>${esc(page.metaTitle || page.title)}</title>`,
+    page.metaDescription ? `<meta name="description" content="${esc(page.metaDescription)}" />` : "",
+    `<script type="application/ld+json">${JSON.stringify(ld)}</script>`,
+    `<style>body{font:16px/1.6 system-ui,sans-serif;max-width:48rem;margin:0 auto;padding:2rem 1.25rem;color:#16181d}h1{line-height:1.15}img{max-width:100%;height:auto}</style>`,
+    `</head><body>`,
+    `<main><h1>${esc(page.title)}</h1>`,
+    renderHtml(page),
+    `</main></body></html>`,
+  ]
+    .filter(Boolean)
+    .join("\n");
 }
 
 /**

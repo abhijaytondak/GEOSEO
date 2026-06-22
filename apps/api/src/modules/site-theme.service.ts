@@ -59,28 +59,77 @@ function nowIso(): string {
   return new Date().toISOString();
 }
 
-/** Pull a handful of visual tokens out of raw HTML — heuristic, best-effort. */
+/** Normalize a CSS color token (#abc / #rrggbb / #rrggbbaa / rgb()/rgba()) to #rrggbb. */
+function normalizeColor(raw: string): string | null {
+  const s = raw.trim().toLowerCase();
+  let m = /^#([0-9a-f]{3})$/.exec(s);
+  if (m) return "#" + m[1].split("").map((c) => c + c).join("");
+  m = /^#([0-9a-f]{6})(?:[0-9a-f]{2})?$/.exec(s);
+  if (m) return "#" + m[1];
+  m = /^rgba?\(\s*([\d.]+)[\s,]+([\d.]+)[\s,]+([\d.]+)/.exec(s);
+  if (m) {
+    const c = [m[1], m[2], m[3]].map((n) => Math.max(0, Math.min(255, Math.round(parseFloat(n)))));
+    return "#" + c.map((n) => n.toString(16).padStart(2, "0")).join("");
+  }
+  return null;
+}
+
+/** The page's own background/foreground, read only from explicit html/body/:root
+ *  rules — conservative, so dark sites unlock a dark theme but ambiguous ones keep
+ *  the safe light defaults rather than guessing wrong. */
+function findSurface(html: string): { background?: string; foreground?: string } {
+  let background: string | undefined;
+  let foreground: string | undefined;
+  for (const m of html.matchAll(/(?:^|[{};,>])\s*(?:html|body|:root)\s*\{([^}]*)\}/gi)) {
+    const body = m[1];
+    if (!background) {
+      const bg = /background(?:-color)?\s*:\s*(#[0-9a-f]{3,8}|rgba?\([^)]*\))/i.exec(body)?.[1];
+      if (bg) background = normalizeColor(bg) ?? undefined;
+    }
+    if (!foreground) {
+      const fg = /(?:^|;)\s*color\s*:\s*(#[0-9a-f]{3,8}|rgba?\([^)]*\))/i.exec(body)?.[1];
+      if (fg) foreground = normalizeColor(fg) ?? undefined;
+    }
+  }
+  return { background, foreground };
+}
+
+/** Pull a handful of visual tokens out of raw HTML + CSS — heuristic, best-effort. */
 function extractTokens(html: string): {
   colors: string[];
   fonts: string[];
+  background?: string;
+  foreground?: string;
   themeColor?: string;
   favicon?: string;
   ogImage?: string;
 } {
   const lower = html;
-  const hexes = (lower.match(/#[0-9a-fA-F]{6}\b/g) ?? []).map((h) => h.toLowerCase());
+  // Capture 8-digit, 6-digit and 3-digit hex plus rgb()/rgba() — covers CSS custom
+  // properties and the rgb/short-hex Webflow/Framer ship in external bundles, where
+  // a 6-hex-only scan previously found nothing and fell back to the default purple.
+  const raw = [
+    ...(lower.match(/#[0-9a-fA-F]{8}\b/g) ?? []),
+    ...(lower.match(/#[0-9a-fA-F]{6}\b/g) ?? []),
+    ...(lower.match(/#[0-9a-fA-F]{3}\b/g) ?? []),
+    ...(lower.match(/rgba?\([^)]*\)/gi) ?? []),
+  ];
   const colorCounts = new Map<string, number>();
-  for (const h of hexes) colorCounts.set(h, (colorCounts.get(h) ?? 0) + 1);
+  for (const r of raw) {
+    const n = normalizeColor(r);
+    if (n) colorCounts.set(n, (colorCounts.get(n) ?? 0) + 1);
+  }
   const colors = [...colorCounts.entries()].sort((a, b) => b[1] - a[1]).map(([c]) => c);
 
   const fonts = [...lower.matchAll(/font-family\s*:\s*([^;"'}]+)/gi)]
     .map((m) => m[1].split(",")[0].replace(/['"]/g, "").trim())
     .filter((f) => f && !/^(inherit|initial|unset|var\()/i.test(f));
 
+  const { background, foreground } = findSurface(lower);
   const themeColor = lower.match(/<meta[^>]+name=["']theme-color["'][^>]+content=["']([^"']+)["']/i)?.[1];
   const favicon = lower.match(/<link[^>]+rel=["'][^"']*icon[^"']*["'][^>]+href=["']([^"']+)["']/i)?.[1];
   const ogImage = lower.match(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i)?.[1];
-  return { colors, fonts: [...new Set(fonts)], themeColor, favicon, ogImage };
+  return { colors, fonts: [...new Set(fonts)], background, foreground, themeColor, favicon, ogImage };
 }
 
 /** HSL of a #rrggbb hex (null if unparseable) — used to pick sensible brand roles. */
@@ -119,14 +168,39 @@ function pickColors(t: ReturnType<typeof extractTokens>): SiteThemeProfile["colo
     (t.themeColor && isVivid(t.themeColor) ? t.themeColor : undefined) ?? vivid[0] ?? t.themeColor ?? "#6c4cf1";
   // Accent = the next vivid color whose hue is clearly different from primary (never a near-white).
   const accent = vivid.find((c) => c !== primary && hueGap(c, primary) > 40);
+  // Use the site's real background/foreground when we could read them (unlocks dark
+  // themes — the renderer derives surfaces along the bg↔fg axis); else safe defaults.
+  const dark = !!t.background && (hslOf(t.background)?.l ?? 1) < 0.5;
   return {
-    background: "#ffffff",
-    foreground: "#0a0a0a",
+    background: t.background ?? "#ffffff",
+    foreground: t.foreground ?? (dark ? "#f5f5f5" : "#0a0a0a"),
     primary,
     accent, // optional — the Brand Kit only renders an accent ramp when one is found
-    muted: "#f1f5f9", // a neutral muted surface — never an arbitrary scanned brand color
-    border: "#e5e7eb",
+    muted: dark ? "#1c1f26" : "#f1f5f9", // neutral surface tuned to light/dark — never an arbitrary brand color
+    border: dark ? "#2a2e37" : "#e5e7eb",
   };
+}
+
+/** Fetch up to 3 linked stylesheets so a site's real palette/fonts — which
+ *  Webflow and Framer ship in external hashed CSS bundles, not inline — are
+ *  visible to the token scan. SSRF-guarded + byte-capped; failures are skipped. */
+async function fetchLinkedCss(pageUrl: string, html: string): Promise<string> {
+  const hrefs = [...html.matchAll(/<link\b[^>]*>/gi)]
+    .filter((m) => /rel=["'][^"']*stylesheet[^"']*["']/i.test(m[0]))
+    .map((m) => m[0].match(/href=["']([^"']+)["']/i)?.[1])
+    .filter((h): h is string => !!h)
+    .slice(0, 3);
+  let css = "";
+  for (const href of hrefs) {
+    try {
+      const abs = new URL(href, pageUrl).toString();
+      const { html: text } = await safeFetchText(abs, { maxBytes: 800_000, timeoutMs: 6000 });
+      css += "\n" + text;
+    } catch {
+      /* skip an unreachable/blocked stylesheet — best-effort */
+    }
+  }
+  return css;
 }
 
 /**
@@ -169,7 +243,8 @@ export class SiteThemeStore {
   /** SSRF-guarded scan → heuristic draft profile. */
   async scan(tenantId: string, rawUrl: string): Promise<SiteThemeProfile> {
     const { url, html } = await safeFetchText(rawUrl, { maxBytes: 1_200_000, timeoutMs: 8000 });
-    const tokens = extractTokens(html);
+    const css = await fetchLinkedCss(url, html);
+    const tokens = extractTokens(css ? `${html}\n${css}` : html);
     const found = [tokens.colors.length > 0, tokens.fonts.length > 0, !!tokens.themeColor, !!tokens.favicon].filter(Boolean).length;
     const confidence = Math.min(95, 35 + found * 15 + Math.min(tokens.colors.length, 6) * 2);
     const s = await this.state(tenantId);
