@@ -1,4 +1,4 @@
-import { BadRequestException, Body, Controller, Delete, Get, Inject, Param, Post, Put, Req } from "@nestjs/common";
+import { BadRequestException, Body, Controller, Delete, Get, Inject, NotFoundException, Param, Post, Put, Req } from "@nestjs/common";
 import { ApiTags } from "@nestjs/swagger";
 import { validateBody, v } from "../common/validation";
 import { BrandLibrarySchema } from "../common/schemas";
@@ -9,6 +9,19 @@ import { resolveTenantId, type TenantRequest } from "../common/tenant";
 
 const CorrectionSchema = { instruction: v.string({ min: 1, max: 600 }) };
 const ExtractSchema = { url: v.string({ min: 1, max: 2048 }) };
+
+/** Ephemeral background extract job — the LLM crawl (~30-80s) exceeds the hosted sync
+ *  request budget (Render ~30s), so the UI starts a job and polls. */
+interface ExtractJob {
+  id: string;
+  status: "running" | "completed" | "failed";
+  url: string;
+  result?: { draft: unknown; crawled: boolean; llm: boolean; source: string; text: string };
+  error?: string;
+  startedAt: string;
+}
+const extractJobs = new Map<string, ExtractJob>();
+let exseq = 0;
 
 @ApiTags("brand")
 @Controller("brand-library")
@@ -34,6 +47,39 @@ export class BrandLibraryController {
     const { draft, crawled, llm, source, text } = await crawlBrandDraft(body.url);
     // `text` lets the browser run a key-free Puter AI extraction when the server has no LLM key.
     return { draft, crawled, llm, source, text };
+  }
+
+  /** Async extract — the LLM crawl exceeds the hosted sync request budget (~30s), so start
+   *  a job and poll. Mirrors discover-async / regenerate-async. */
+  @Post("extract-from-site-async")
+  startExtract(@Body(validateBody(ExtractSchema)) body: { url: string }) {
+    const url = body?.url?.trim();
+    if (!url) throw new BadRequestException("url is required");
+    while (extractJobs.size >= 50) {
+      const oldest = extractJobs.keys().next().value;
+      if (oldest === undefined) break;
+      extractJobs.delete(oldest);
+    }
+    exseq += 1;
+    const job: ExtractJob = { id: `bex-${exseq}`, status: "running", url, startedAt: new Date().toISOString() };
+    extractJobs.set(job.id, job);
+    void (async () => {
+      try {
+        job.result = await crawlBrandDraft(url);
+        job.status = "completed";
+      } catch (e) {
+        job.status = "failed";
+        job.error = e instanceof Error ? e.message : "extraction failed";
+      }
+    })();
+    return { job: { id: job.id, status: job.status, url: job.url } };
+  }
+
+  @Get("extract-async/:jobId")
+  extractStatus(@Param("jobId") jobId: string) {
+    const job = extractJobs.get(jobId);
+    if (!job) throw new NotFoundException(`Extract job ${jobId} not found`);
+    return { job: { id: job.id, status: job.status, url: job.url, error: job.error }, ...(job.result ?? {}) };
   }
 
   /** Full-replace upsert of the structured brand library (products / personas / proof). */

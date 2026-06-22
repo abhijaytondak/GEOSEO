@@ -91,17 +91,31 @@ export function BrandLibrary() {
     if (!url) return;
     setExtracting(true);
     try {
-      const r = await fetch("/api/v1/brand-library/extract-from-site", {
+      // Start an async job + poll — the LLM crawl (~30-80s) exceeds hosted backends' sync
+      // request budget (Render ~30s) and would otherwise be cut.
+      const sr = await fetch("/api/v1/brand-library/extract-from-site-async", {
         method: "POST",
         headers: { accept: "application/json", "content-type": "application/json" },
         body: JSON.stringify({ url }),
       });
-      const jr = await readApiEnvelope<{ draft: Partial<Library>; crawled: boolean; llm: boolean; source: string; text?: string }>(
-        r,
-        "/brand-library/extract-from-site",
-      );
-      if (!r.ok || !jr.success) throw apiError(jr, r, "/brand-library/extract-from-site");
-      const d = jr.data;
+      const sjr = await readApiEnvelope<{ job: { id: string; status: string } }>(sr, "/brand-library/extract-from-site-async");
+      if (!sr.ok || !sjr.success) throw apiError(sjr, sr, "/brand-library/extract-from-site-async");
+      const jobId = sjr.data.job.id;
+      type ExtractData = { draft: Partial<Library>; crawled: boolean; llm: boolean; source: string; text?: string };
+      let d: ExtractData | null = null;
+      for (let i = 0; i < 80; i++) {
+        await new Promise((res) => setTimeout(res, 1500));
+        const pr = await fetch(`/api/v1/brand-library/extract-async/${jobId}`, { headers: { accept: "application/json" }, cache: "no-store" });
+        const pjr = await readApiEnvelope<{ job: { status: string; error?: string } } & Partial<ExtractData>>(pr, "/brand-library/extract-async");
+        if (!pr.ok || !pjr.success) continue;
+        const st = pjr.data.job.status;
+        if (st === "failed") throw new Error(pjr.data.job.error ?? "Extraction failed");
+        if (st === "completed") {
+          d = { draft: pjr.data.draft ?? {}, crawled: !!pjr.data.crawled, llm: !!pjr.data.llm, source: pjr.data.source ?? "your site", text: pjr.data.text };
+          break;
+        }
+      }
+      if (!d) throw new Error("Extraction is still running — try again in a moment.");
       mutate(normalizeLib(d.draft)); // populates the form for review; nothing persists until Save
       // When the server has no LLM key, run a key-free deep extraction in the browser via Puter AI.
       const willPuter = d.crawled && !d.llm && !!d.text && puterReady();
