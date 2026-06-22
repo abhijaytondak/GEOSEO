@@ -29,7 +29,7 @@ const inputCls =
   "h-11 w-full rounded-xl border border-border bg-card px-3.5 text-[15px] text-foreground outline-none transition-colors focus:border-brand focus:ring-4 focus:ring-brand/15";
 const SCAN_STAGES = ["Reading homepage", "Finding metadata", "Extracting topics", "Drafting Brand Memory", "Preparing review"];
 
-type Brand = { company: string; valueProp: string; audience: string; topics: string };
+type Brand = { company: string; valueProp: string; audience: string; topics: string; industry: string; competitors: string };
 type Publishing = { requireApproval: boolean; autoSitemap: boolean; autoLlms: boolean };
 
 /** Orbital AI-visibility motif for the rail: the brand at center, answer engines
@@ -149,7 +149,7 @@ export function OnboardingWizard() {
   const [scanError, setScanError] = useState<string | null>(null);
   const [draft, setDraft] = useState<BrandDraft | null>(null);
 
-  const [brand, setBrand] = useState<Brand>({ company: "", valueProp: "", audience: "", topics: "" });
+  const [brand, setBrand] = useState<Brand>({ company: "", valueProp: "", audience: "", topics: "", industry: "", competitors: "" });
   const [saving, setSaving] = useState(false);
 
   const [publishing, setPublishing] = useState<Publishing>({ requireApproval: true, autoSitemap: true, autoLlms: true });
@@ -180,6 +180,8 @@ export function OnboardingWizard() {
       valueProp: d.draft.valueProp ?? "",
       audience: d.draft.audience ?? "",
       topics: (d.draft.topics ?? []).join(", "),
+      industry: d.draft.industry ?? "",
+      competitors: (d.draft.competitors ?? []).join(", "),
     });
   }
 
@@ -240,6 +242,8 @@ export function OnboardingWizard() {
         valueProp: brand.valueProp,
         audience: brand.audience,
         topics: brand.topics.split(",").map((t) => t.trim()).filter(Boolean),
+        industry: brand.industry,
+        competitors: brand.competitors.split(",").map((c) => c.trim()).filter(Boolean),
       } as BrandProfile;
       await pageEngineApi.saveBrand(profile);
       setStep(2);
@@ -313,7 +317,7 @@ export function OnboardingWizard() {
     setStep(0);
     setUrl("");
     setDraft(null);
-    setBrand({ company: "", valueProp: "", audience: "", topics: "" });
+    setBrand({ company: "", valueProp: "", audience: "", topics: "", industry: "", competitors: "" });
     setSeeds("");
     setDiscovered([]);
   }
@@ -503,6 +507,15 @@ export function OnboardingWizard() {
                   <label className="text-[12.5px] font-medium text-foreground">Core topics <span className="text-faint">· comma-separated</span></label>
                   <input className={cn(inputCls, "mt-1.5")} value={brand.topics} onChange={(e) => setBrand((b) => ({ ...b, topics: e.target.value }))} />
                 </div>
+                <div>
+                  <label className="text-[12.5px] font-medium text-foreground">Industry</label>
+                  <input className={cn(inputCls, "mt-1.5")} placeholder="e.g. SaaS, Fintech, Healthcare" value={brand.industry} onChange={(e) => setBrand((b) => ({ ...b, industry: e.target.value }))} />
+                </div>
+              </div>
+              <div>
+                <label className="text-[12.5px] font-medium text-foreground">Competitors <span className="text-faint">· optional, comma-separated</span></label>
+                <input className={cn(inputCls, "mt-1.5")} placeholder="rival.com, competitor.com" value={brand.competitors} onChange={(e) => setBrand((b) => ({ ...b, competitors: e.target.value }))} />
+                <p className="mt-1.5 text-[12px] text-faint">We&apos;ll benchmark your AI visibility against these — see where you&apos;re winning, missing, or invisible.</p>
               </div>
             </div>
             {(!brand.company.trim() || !brand.valueProp.trim() || !brand.topics.trim()) && (
