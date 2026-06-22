@@ -8,6 +8,7 @@
 // Demo-only fallback data. Isolated in lib/demo (the sole allowlisted mock importer);
 // only reached when FALLBACK_ALLOWED (demo/build) — production surfaces real errors.
 import { pageEngine } from "./demo/demo-data";
+import { apiError, readApiEnvelope } from "./api-envelope";
 import type {
   AuditEntry,
   BrandProfile,
@@ -104,7 +105,7 @@ async function get<T>(path: string, fallback: () => Promise<T> | T): Promise<T> 
     if (!FALLBACK_ALLOWED) throw new Error(`API ${res.status} for ${path}`);
     return fallback();
   }
-  const body = (await res.json()) as { success: boolean; data: T };
+  const body = await readApiEnvelope<T>(res, path);
   if (!body.success) {
     if (!FALLBACK_ALLOWED) throw new Error(`API returned success=false for ${path}`);
     return fallback();
@@ -118,8 +119,8 @@ async function send<T>(method: "POST" | "PUT" | "PATCH" | "DELETE", path: string
     headers: { "content-type": "application/json", accept: "application/json", ...authHeaders() },
     body: body === undefined ? undefined : JSON.stringify(body),
   });
-  const json = (await res.json()) as { success: boolean; data: T; errors?: { message: string }[] };
-  if (!res.ok || !json.success) throw new Error(json.errors?.[0]?.message ?? `API ${res.status}`);
+  const json = await readApiEnvelope<T>(res, path);
+  if (!res.ok || !json.success) throw apiError(json, res, path);
   return json.data;
 }
 
@@ -184,6 +185,15 @@ export const pageEngineApi = {
   duplicatePage: (id: string) => send<GeneratedPage>("POST", `/pages/${id}/duplicate`),
   // Auto-Updates (#8): re-draft via LLM preserving slug/URL + snapshot a version.
   regeneratePage: (id: string) => send<GeneratedPage>("POST", `/pages/${id}/regenerate`),
+  // Async regenerate — the LLM re-draft (~30-80s) exceeds the sync request budget on
+  // hosted backends (Render ~30s); start a job and poll.
+  startRegenerate: (id: string) =>
+    send<{ job: { id: string; status: string } }>("POST", `/pages/${id}/regenerate-async`).then((r) => r.job),
+  getRegenerateJob: (jobId: string) =>
+    get<{ job: { id: string; status: string; error?: string }; page?: GeneratedPage }>(
+      `/pages/regenerate-async/${jobId}`,
+      () => ({ job: { id: jobId, status: "failed", error: "offline" } }),
+    ),
   validatePage: (id: string) =>
     send<{ blockers: string[]; canPublish: boolean }>("POST", `/pages/${id}/validate`),
   crmSyncLead: (id: string) =>
