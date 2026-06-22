@@ -169,6 +169,14 @@ export const pageEngineApi = {
       "/opportunities/discover",
       { seeds },
     ),
+  // Async discovery — LLM tiers (~20-40s) exceed the hosted sync request budget; start + poll.
+  startDiscover: (seeds: string[]) =>
+    send<{ id: string; status: string; created: number; opportunityIds: string[]; error?: string }>("POST", "/opportunities/discover-async", { seeds }),
+  getDiscoverJob: (jobId: string) =>
+    get<{ id: string; status: string; created: number; opportunityIds: string[]; error?: string }>(
+      `/opportunities/discover-async/${jobId}`,
+      () => ({ id: jobId, status: "failed", created: 0, opportunityIds: [], error: "offline" }),
+    ),
   generatePage: (opportunityId: string, content?: import("./puter-ai").PuterDraft) =>
     send<GeneratedPage>("POST", "/pages/generate", { opportunityId, content }),
   /** Kick off background drafting of N opportunities; returns a poll-able job handle. */
@@ -308,6 +316,14 @@ export const pageEngineApi = {
 
   // onboarding (brand)
   extractBrand: (url: string) => send<BrandDraft>("POST", "/brand-profile/extract-from-site", { url }),
+  // Async crawl + LLM extract — the LLM (~30-80s) exceeds the hosted sync budget; start + poll.
+  startExtractBrand: (url: string) =>
+    send<{ job: { id: string; status: string } }>("POST", "/brand-profile/extract-from-site-async", { url }).then((r) => r.job),
+  getExtractBrandJob: (jobId: string) =>
+    get<{ job: { id: string; status: string; error?: string }; result: BrandDraft | null }>(
+      `/brand-profile/extract-async/${jobId}`,
+      () => ({ job: { id: jobId, status: "failed", error: "offline" }, result: null }),
+    ),
   saveBrand: (profile: BrandProfile) =>
     send<{ completeness: number }>("PUT", "/brand-profile", profile),
 };

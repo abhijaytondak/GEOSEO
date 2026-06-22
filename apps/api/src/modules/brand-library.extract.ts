@@ -37,7 +37,7 @@ function decodeEntities(s: string): string {
 }
 
 /** Strip a page to readable text for the LLM (drops script/style/markup). */
-function htmlToText(html: string): string {
+export function htmlToText(html: string): string {
   return decodeEntities(
     html
       .replace(/<script[\s\S]*?<\/script>/gi, " ")

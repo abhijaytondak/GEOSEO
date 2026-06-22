@@ -7,11 +7,27 @@ import {
   Post,
   Put,
   BadRequestException,
+  NotFoundException,
 } from "@nestjs/common";
 import { ApiTags } from "@nestjs/swagger";
 import type { BrandProfile } from "@geoseo/types";
 import { BrandMemoryStore } from "./brand.service";
 import { safeFetchText } from "../common/ssrf";
+import { htmlToText } from "./brand-library.extract";
+import { extractBrandLibrary } from "../llm/brand-extract";
+
+/** Ephemeral background job for the LLM-backed onboarding scan (crawl + LLM extract
+ *  is ~30-80s on a local model → exceeds the hosted sync request budget; poll instead). */
+interface BrandExtractJob {
+  id: string;
+  status: "running" | "completed" | "failed";
+  url: string;
+  result?: unknown;
+  error?: string;
+  startedAt: string;
+}
+const brandExtractJobs = new Map<string, BrandExtractJob>();
+let bxseq = 0;
 
 /** Weighted Brand-Memory completeness (0–100) — drives the UI meter. */
 export function completeness(p: BrandProfile): number {
@@ -116,9 +132,11 @@ export class BrandController {
    *  homepage and parses <title>, meta description/og tags, and H1/H2 headings.
    *  Falls back to a domain-derived stub if the fetch fails. Returns a draft for
    *  review; does not persist until the user saves via PUT. */
-  @Post("extract-from-site")
-  async extract(@Body() body: { url?: string }) {
-    const raw = (body?.url ?? "").trim();
+  /** Crawl the site, then enrich the Brand Memory draft with an LLM (value prop, industry,
+   *  audience, topics extracted from the real page text). Falls back to the regex draft when
+   *  no LLM key is set or the call fails — never throws (except SSRF/invalid URL → 400). */
+  private async buildDraft(raw0: string) {
+    const raw = (raw0 ?? "").trim();
     if (!raw) throw new BadRequestException("url is required");
     const normalized = /^https?:\/\//.test(raw) ? raw : `https://${raw}`;
     const domain = normalized.replace(/^https?:\/\//, "").replace(/\/.*$/, "");
@@ -127,14 +145,14 @@ export class BrandController {
     let title = "";
     let description = "";
     let siteName = "";
+    let pageHtml = "";
     const headings: string[] = [];
     let crawled = false;
 
     try {
-      // SSRF-guarded fetch (PRD §19): rejects localhost/private/metadata hosts (→ 400),
-      // manual redirect, size + time capped. Network failures fall back gracefully below.
       const { html } = await safeFetchText(raw, { maxBytes: 500_000, timeoutMs: 8000 });
       if (html) {
+        pageHtml = html;
         const grab = (re: RegExp) => (html.match(re)?.[1] ?? "").trim();
         title = grab(/<title[^>]*>([^<]+)<\/title>/i);
         description =
@@ -149,7 +167,6 @@ export class BrandController {
         crawled = true;
       }
     } catch (err) {
-      // SSRF / invalid-URL rejections must surface; network/timeout falls back to the stub.
       if (err instanceof BadRequestException) throw err;
     }
 
@@ -171,12 +188,66 @@ export class BrandController {
       competitors: [],
       keywords: [],
     };
-    return {
-      draft,
-      completeness: completeness(draft),
-      context: compiledContext(draft),
-      source: domain,
-      crawled,
-    };
+
+    // LLM enrichment — extract the real main points from the page text (value prop,
+    // industry, audience, topics). Uses the DEEPSEEK_* seam (Ollama); null → keep regex draft.
+    let llm = false;
+    if (crawled && pageHtml) {
+      try {
+        const lib = await extractBrandLibrary(htmlToText(pageHtml), { url: normalized, company });
+        if (lib) {
+          llm = true;
+          if (lib.valueProp?.trim()) draft.valueProp = lib.valueProp.trim();
+          if (lib.industry?.trim()) draft.industry = lib.industry.trim();
+          if (lib.audience?.trim()) draft.audience = lib.audience.trim();
+          const llmTopics = (lib.products ?? []).map((p) => p.category || p.name).filter(Boolean) as string[];
+          const merged = [...new Set([...llmTopics, ...headings].map((t) => t.trim()).filter(Boolean))].slice(0, 6);
+          if (merged.length) draft.topics = merged;
+        }
+      } catch {
+        /* keep the regex draft */
+      }
+    }
+
+    return { draft, completeness: completeness(draft), context: compiledContext(draft), source: domain, crawled, llm };
+  }
+
+  /** Sync crawl + LLM extract (kept for CLI/tests; the UI uses the async variant). */
+  @Post("extract-from-site")
+  async extract(@Body() body: { url?: string }) {
+    return this.buildDraft(body?.url ?? "");
+  }
+
+  /** Async crawl + LLM extract — the onboarding scan polls this so the slow LLM call
+   *  isn't cut by the hosted sync request budget (~30s). */
+  @Post("extract-from-site-async")
+  startExtract(@Body() body: { url?: string }) {
+    const url = (body?.url ?? "").trim();
+    if (!url) throw new BadRequestException("url is required");
+    while (brandExtractJobs.size >= 50) {
+      const oldest = brandExtractJobs.keys().next().value;
+      if (oldest === undefined) break;
+      brandExtractJobs.delete(oldest);
+    }
+    bxseq += 1;
+    const job: BrandExtractJob = { id: `bpe-${bxseq}`, status: "running", url, startedAt: new Date().toISOString() };
+    brandExtractJobs.set(job.id, job);
+    void (async () => {
+      try {
+        job.result = await this.buildDraft(url);
+        job.status = "completed";
+      } catch (e) {
+        job.status = "failed";
+        job.error = e instanceof Error ? e.message : "extraction failed";
+      }
+    })();
+    return { job: { id: job.id, status: job.status, url: job.url } };
+  }
+
+  @Get("extract-async/:jobId")
+  extractStatus(@Param("jobId") jobId: string) {
+    const job = brandExtractJobs.get(jobId);
+    if (!job) throw new NotFoundException(`Extract job ${jobId} not found`);
+    return { job: { id: job.id, status: job.status, url: job.url, error: job.error }, result: job.result ?? null };
   }
 }
