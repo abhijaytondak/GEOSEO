@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Loader2, RefreshCw, Sparkles, Swords, ArrowUpRight, Info } from "lucide-react";
-import type { CompetitorAnalysis, CompetitorSource } from "@geoseo/types";
+import { Loader2, RefreshCw, Sparkles, Swords, ArrowUpRight, Info, Search, ShieldAlert, Check } from "lucide-react";
+import type { CompetitorAnalysis, CompetitorSource, CompetitorPageAnalysis } from "@geoseo/types";
 import { Panel } from "@/components/dashboard/panel";
 import { api } from "@/lib/api-client";
 import { puterReady, discoverCompetitorsWithPuter, type PuterCompetitor } from "@/lib/puter-ai";
@@ -51,12 +51,52 @@ const INTENT_TONE: Record<string, string> = {
   navigational: "bg-muted text-muted-foreground",
 };
 
+type PageJob = { id: string; status: "running" | "completed" | "failed"; result?: CompetitorPageAnalysis; error?: string };
+
+/** Self-contained call through the Next BFF (avoids the shared api-client). */
+async function apiJson<T>(method: string, path: string, body?: unknown): Promise<T> {
+  const res = await fetch(path, {
+    method,
+    headers: body ? { "content-type": "application/json" } : undefined,
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  const json = await res.json().catch(() => null);
+  if (!res.ok) throw new Error(json?.errors?.[0] ?? `Request failed (${res.status})`);
+  return (json?.data ?? json) as T;
+}
+
 /** Competitor intelligence workspace — self-fetching (the server route stays static). */
 export function CompetitorAnalysisView() {
   const { notify } = useAppFeedback();
   const [data, setData] = useState<CompetitorAnalysis | null>(null);
   const [loading, setLoading] = useState(true);
   const [running, setRunning] = useState(false);
+  const [pageUrl, setPageUrl] = useState("");
+  const [analyzing, setAnalyzing] = useState(false);
+  const [pageResult, setPageResult] = useState<CompetitorPageAnalysis | null>(null);
+
+  async function analyzePage() {
+    const url = pageUrl.trim();
+    if (!url) return;
+    setAnalyzing(true);
+    setPageResult(null);
+    try {
+      // LLM-backed crawl (~25s) exceeds the BFF budget → start a job and poll.
+      let job = await apiJson<PageJob>("POST", "/api/v1/brand-analysis/competitor-page-async", { url });
+      for (let i = 0; i < 40 && job.status === "running"; i++) {
+        await new Promise((r) => setTimeout(r, 1500));
+        job = await apiJson<PageJob>("GET", `/api/v1/brand-analysis/competitor-page-async/${job.id}`);
+      }
+      if (job.status === "failed") throw new Error(job.error ?? "Analysis failed");
+      if (job.status === "running" || !job.result) throw new Error("Analysis is still running — try again in a moment.");
+      setPageResult(job.result);
+      if (!job.result.crawled) notify({ kind: "info", title: "Could not crawl", message: job.result.summary });
+    } catch (err) {
+      notify({ kind: "error", title: "Analysis failed", message: err instanceof Error ? err.message : "Try again." });
+    } finally {
+      setAnalyzing(false);
+    }
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -310,6 +350,73 @@ export function CompetitorAnalysisView() {
                 ))}
               </tbody>
             </table>
+          </div>
+        )}
+      </Panel>
+
+      {/* page-level competitor analysis */}
+      <Panel title="Analyze a competitor page" description="Crawl a competitor URL to see how it's built and where it's vulnerable">
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="relative min-w-0 flex-1">
+            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+            <input
+              value={pageUrl}
+              onChange={(e) => setPageUrl(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && !analyzing && analyzePage()}
+              placeholder="https://competitor.com/their-winning-page"
+              className="h-10 w-full rounded-lg border border-border bg-card pl-9 pr-3 text-[13px] text-foreground outline-none focus:border-brand"
+            />
+          </div>
+          <button
+            onClick={analyzePage}
+            disabled={analyzing || !pageUrl.trim()}
+            className="inline-flex h-10 shrink-0 items-center gap-1.5 rounded-lg bg-brand px-4 text-[13px] font-semibold text-brand-foreground transition-transform hover:scale-[1.02] disabled:opacity-60"
+          >
+            {analyzing ? <Loader2 className="size-4 animate-spin" /> : <Swords className="size-4" />}
+            {analyzing ? "Analyzing…" : "Analyze page"}
+          </button>
+        </div>
+
+        {pageResult?.crawled && (
+          <div className="mt-4 space-y-4">
+            <div>
+              <div className="text-[13.5px] font-semibold text-foreground">{pageResult.title || pageResult.url}</div>
+              <p className="mt-1 text-[12.5px] text-muted-foreground">{pageResult.summary}</p>
+            </div>
+            <div className="flex flex-wrap gap-1.5 text-[11px]">
+              <span className="rounded-full bg-muted px-2 py-0.5 text-muted-foreground">{pageResult.structure.wordCount.toLocaleString()} words</span>
+              <span className="rounded-full bg-muted px-2 py-0.5 text-muted-foreground">{pageResult.structure.headings} headings</span>
+              <span className="rounded-full bg-muted px-2 py-0.5 text-muted-foreground">{pageResult.structure.images} images</span>
+              <span className={cn("rounded-full px-2 py-0.5", pageResult.structure.hasSchema ? "bg-positive/12 text-positive" : "bg-warning/12 text-warning")}>{pageResult.structure.hasSchema ? "has schema" : "no schema"}</span>
+              <span className={cn("rounded-full px-2 py-0.5", pageResult.structure.hasFaq ? "bg-positive/12 text-positive" : "bg-warning/12 text-warning")}>{pageResult.structure.hasFaq ? "has FAQ" : "no FAQ"}</span>
+              <span className="rounded-full bg-muted px-2 py-0.5 text-muted-foreground">{pageResult.source === "llm" ? "AI-analyzed" : "heuristic"}</span>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              {pageResult.strengths.length > 0 && (
+                <div>
+                  <div className="mb-1.5 text-[11.5px] font-semibold uppercase tracking-wide text-muted-foreground">Their strengths</div>
+                  <ul className="space-y-1.5">
+                    {pageResult.strengths.map((s, i) => (
+                      <li key={i} className="flex gap-2 text-[12.5px] text-foreground"><Check className="mt-0.5 size-3.5 shrink-0 text-positive" />{s}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              <div>
+                <div className="mb-1.5 text-[11.5px] font-semibold uppercase tracking-wide text-muted-foreground">Vulnerabilities to exploit</div>
+                <ul className="space-y-1.5">
+                  {pageResult.vulnerabilities.map((v, i) => (
+                    <li key={i} className="flex gap-2 text-[12.5px] text-foreground"><ShieldAlert className="mt-0.5 size-3.5 shrink-0 text-warning" />{v}</li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+            {pageResult.recommendation && (
+              <div className="rounded-lg border border-brand/30 bg-brand/5 p-3 text-[12.5px] text-foreground">
+                <span className="font-semibold">How to outrank it: </span>
+                {pageResult.recommendation}
+              </div>
+            )}
           </div>
         )}
       </Panel>

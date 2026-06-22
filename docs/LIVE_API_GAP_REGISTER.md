@@ -14,10 +14,10 @@ So cross-lane fixes below are **documented, not executed**, and assigned to the 
 
 ## 1. Executive summary
 
-GEOSEO is ~70% of the way to live-user readiness. Phases 1–4 of the Production-Readiness
-PRD are largely **already built** (no-mock policy gating, fail-closed boot, honest `/health`,
-onboarding, core workflows, env-gated provider seams, real BullMQ queue). The remaining work
-is concentrated in five areas:
+GEOSEO has closed the original P0 no-dummy-data and tenant-resolution blockers. The production
+runtime mock audit is green, Clerk/dev-token tenant resolution is fail-closed, and Page Engine
+state is tenant-scoped. The remaining launch-hardening work is concentrated in secondary
+tenant-store migration, provider/live-data coverage, and operational verification.
 
 | Area | State | Owner lane |
 |---|---|---|
@@ -25,49 +25,38 @@ is concentrated in five areas:
 | Provider health surface | **Shipped this session** (`GET /integrations/health`) | greenfield ✅ |
 | Observability (Sentry/PostHog/structured logs) | **Shipped this session** (dependency-free seams) | greenfield ✅ |
 | Admin/support console | **Shipped this session** (`/admin` + diagnostics API) | greenfield ✅ |
-| No-mock production enforcement | **Audit script shipped**; client refactor pending | cross-lane |
-| Clerk JWT verify + tenant resolution | Pending | **other account** |
-| Per-store tenant migration | Groundwork done (2 stores); blocked on the two above | shared |
-| Web mock-fallback removal | Pending (api-client / page-engine-client) | **Codex** |
-| API mock DI (`seo.module.ts`) | Pending | **Codex** |
+| No-mock production enforcement | **Green** (`audit-no-mock-production.mjs` passes; mock imports isolated to demo modules) | done ✅ |
+| Clerk JWT verify + tenant resolution | **Green** (`BearerGuard` verifies Clerk/dev token; `TenantGuard` resolves verified tenant) | done ✅ |
+| Page Engine tenant migration | **Green** (opportunities/pages/leads scoped by tenant; public ingestion uses owning page tenant) | done ✅ |
+| Site Theme + Images tenant migration | **Green** (`cx_site_theme` + `cx_images` now use tenant rows) | done ✅ |
+| Remaining side-store tenant migration | Pending for Brand Memory/Library, settings, jobs, audit, lead side stores, AI-search, CMS/CRM | shared |
 | Fail-closed DB/queue in prod | Pending | core |
 
-**P0 launch blockers remaining:** Clerk JWT verify, web mock-fallback removal, API mock DI
-replacement, per-store tenant isolation, fail-closed persistence. None are in the greenfield
-lane; all are documented in §6/§7 below with the exact fix + acceptance test.
+**P0 launch blockers remaining:** fail-closed persistence/queue behavior and completion of the
+remaining global side stores. Brand Memory + Brand Library should be the next tenant-migration
+slice because multiple downstream workflows still read global brand context.
 
 ---
 
 ## 2. No-dummy-data violations (Gate A)
 
-Detected by `node apps/api/scripts/audit-no-mock-production.mjs` (exit 1 today):
+Current gate: `node apps/api/scripts/audit-no-mock-production.mjs` exits 0.
 
 | # | File | Violation | Severity | Owner |
 |---|---|---|---|---|
-| D1 | `apps/web/src/lib/api-client.ts:11` | imports `seoProvider, brandSource, outreachDrafter` from `@geoseo/mock`; `fallbackSettings` hardcodes "Northwind Labs", fake team, **fake billing**, fake integrations | **P0** | Codex |
-| D2 | `apps/web/src/lib/page-engine-client.ts:8` | imports `pageEngine` from `@geoseo/mock`; returns mock opportunities/blueprints/pages/leads on fallback | **P0** | Codex |
-| D3 | `apps/api/src/modules/page-engine.service.ts:21` | seeds production stores from `@geoseo/mock`, deep-cloned | **P0** | contested |
-| D4 | `apps/api/src/seo/seo.module.ts:2` | binds production DI tokens to `@geoseo/mock` providers | **P0** | Codex |
+| D1 | `apps/web/src/lib/demo/demo-data.ts` | Demo-only allowlisted mock importer; used only when build/demo fallback is allowed | OK | done |
+| D2 | `apps/api/src/seo/providers/demo.providers.ts` | Demo-only provider loaded dynamically only when `resolveMode()==="demo"` | OK | done |
+| D3 | `apps/api/src/modules/demo-seed.ts` | Demo-only Page Engine fixtures; production fresh tenants are not seeded from mock | OK | done |
 
-**Partial mitigation shipped:** the **fake billing** half of D1 is now obsoleted by the live
-`GET /billing/status` (honest `configured:false` / `setupRequired:true`, never a fake "Grow
-trial"). When the web Settings/Billing surface reads `/billing/status` (or the new `/billing`
-route) instead of `fallbackSettings.billing`, that specific dummy-data violation is closed.
-
-**Note:** the no-mock audit (`api-client`/`page-engine-client`) keys on a *demo-mode* env gate
-(`FALLBACK_ALLOWED = IS_BUILD || MODE==="demo"`), so in `production` mode the fallback never
-runs — but the **import still bundles** mock into production. The PRD requires the import to be
-impossible in a production build (move to `lib/demo-*.ts` isolated modules). Tracked as D1/D2.
+**Note:** demo fallback still exists for local/demo resilience, but production/staging modes surface
+real API errors and the only direct `@geoseo/mock` imports are allowlisted demo modules.
 
 ---
 
 ## 3. Mock imports
 
-Run: `rg -n "@geoseo/mock" apps/web/src apps/api/src`. Production runtime importers: the four
-files in §2. Legitimate (keep): `packages/mock/*` itself, and test/seed usage. Required fix
-(§6.1 of the PRD): split demo-only fallback into `lib/demo-api-client.ts` /
-`lib/demo-page-engine-client.ts` that cannot be reached in production, then make the production
-build fail on any runtime `@geoseo/mock` import (the audit script is the CI guard).
+Run: `rg -n "@geoseo/mock" apps/web/src apps/api/src`. Direct importers should remain limited
+to allowlisted demo modules and comments. The CI guard is `apps/api/scripts/audit-no-mock-production.mjs`.
 
 ---
 
@@ -110,23 +99,21 @@ subscription). Gaps vs PRD §10 / §18 data contract:
 
 ---
 
-## 6. Auth / tenant / RBAC gaps (P0, other-account lane)
+## 6. Auth / tenant / RBAC gaps
 
 | # | Gap | Required fix | Acceptance |
 |---|---|---|---|
-| A1 | API auth uses static `DEV_API_TOKEN`, no Clerk JWT verify | Wire Clerk JWT verification in `bearer.guard.ts`; set `req.auth.{userId,orgId,role}` | unauth → 401; valid Clerk token → tenant-scoped 200 |
-| A2 | Tenant resolves to `ws-default` (Clerk `orgId` not populated) | Once A1 lands, `resolveTenantId` already consumes `req.auth.orgId` | `x-workspace-id` ignored in prod; org claim used |
-| A3 | 24/26 stores still single-global-doc | Migrate per-tenant via the `conversion-audit` pattern (`DocStore.loadForTenant/saveForTenant`) | workspace A cannot read B's data |
+| A1 | Clerk/dev-token auth and verified tenant resolution | **Done** in `bearer.guard.ts`, `tenant.guard.ts`, and `common/tenant.ts` | unauth → 401; valid Clerk/dev-token path → tenant-scoped 200 |
+| A2 | Production-safe tenant source | **Done**: verified Clerk org/user first; `x-workspace-id` trusted only in demo or trusted BFF path | client header spoof ignored in production |
+| A3 | Remaining secondary stores still single-global-doc | Migrate per-tenant via the `conversion-audit` pattern (`DocStore.loadForTenant/saveForTenant`) | workspace A cannot read B's data |
 | A4 | No RBAC | Owner/Admin/Marketer/Analyst/Viewer checks in API + UI | viewer cannot publish/delete/bill |
-| A5 | Public ingestion trusts `x-workspace-id` | Derive tenant from page/domain ownership in `/public/*` | A's public lead can't land in B |
+| A5 | Public ingestion tenant derivation | **Done for Page Engine**: derive tenant from page ownership, not caller header | A's public lead can't land in B |
 
-**Tenant-migration dependency note (why §8 isn't executed this session):** the lead-* side-stores
-and onboarding are *mine* to migrate, but they interrelate with `PageEngineStore` (leads/pages
-live there, global `ws-default`) and with public ingestion (A5). Migrating one store in isolation
-while its data source stays global produces an inconsistent tenant/global split. Correct order:
-**A1 (Clerk) → page-engine.service tenant migration (contested) → its consumer side-stores → A5.**
-Until A1 + page-engine migrate, isolated migration is unsafe. Reference pattern is proven on
-`conversion-audit.service.ts` + `brand-analysis.service.ts`; checklist in `docs/MULTI-TENANCY.md`.
+**Tenant-migration dependency note:** the big Page Engine dependency is now migrated. Continue with
+consumer side-stores in small slices, starting with Brand Memory + Brand Library because they feed
+brand-analysis, image generation, follow-up drafts, and Page Engine brand context. Reference patterns:
+`conversion-audit.service.ts`, `brand-analysis.service.ts`, `site-theme.service.ts`, `image-gen.service.ts`;
+checklist in `docs/MULTI-TENANCY.md`.
 
 ---
 
@@ -158,8 +145,9 @@ Prior audits (see `CLAUDE.md` "Done recently") closed the literal dead-click bac
 ## 9. Public surface gaps
 
 `/feeds/[slug]`, `sitemap.xml`, `llms.txt`, `/public/leads`, `/public/events`, `/public/ai-bot-hit`
-are live, spam/honeypot/disposable-guarded, rate-limited, de-branded. **P0 gap A5** (tenant from
-page/domain ownership) is the open item — public lead ingestion must not trust caller headers.
+are live, spam/honeypot/disposable-guarded, rate-limited, de-branded. Tenant derivation from
+page/domain ownership is closed for the migrated Page Engine path; keep this invariant in future
+public ingestion changes.
 
 ---
 
@@ -171,7 +159,7 @@ pnpm -r typecheck                                   # ✅ clean (incl. new modul
 cd apps/web && pnpm lint                            # ✅ 0 errors/warnings
 node apps/api/scripts/smoke-live.mjs                # existing API smoke
 node apps/api/scripts/audit-get.mjs                 # every-GET liveness sweep
-node apps/api/scripts/audit-no-mock-production.mjs  # ⛔ exit 1 today (4 known P0s)
+node apps/api/scripts/audit-no-mock-production.mjs  # ✅ exits 0; demo mock imports are allowlisted only
 # New endpoints verified live this session (demo mode, :4100):
 curl -s localhost:4000/api/v1/billing/status
 curl -s localhost:4000/api/v1/integrations/health
@@ -184,13 +172,12 @@ Still to add (PRD §15): `audit-ui-api-coverage.mjs`, `audit-tenant-isolation.mj
 
 ## 11. Implementation order (remaining)
 
-1. **[other account]** Clerk JWT verify in `bearer.guard.ts` (A1) — unblocks everything tenant.
-2. **[Codex]** Split demo fallback out of `api-client.ts` / `page-engine-client.ts` (D1/D2); wire
-   Settings/Billing UI to `/billing/status` to kill the fake-billing dummy data.
-3. **[Codex]** Replace `seo.module.ts` mock DI with live/provider-gated bindings (D4).
-4. **[core]** Fail-closed DB/queue in production (§5, §6.4).
-5. **[shared]** Page-engine tenant migration → side-store migration → public tenant derivation (A3/A5).
-6. **[greenfield, next]** Provider connect/test endpoints (§4); plan-entitlement enforcement (§8);
+1. **[core]** Fail-closed DB/queue in production (§5, §6.4).
+2. **[shared]** Brand Memory + Brand Library tenant migration, then consumers (`brand-analysis`,
+   `image-gen`, `lead-followup`, Page Engine brand context).
+3. **[shared]** Remaining side-store tenant migration (settings, jobs, audit, lead side stores,
+   AI-search, onboarding, CMS/CRM).
+4. **[greenfield, next]** Provider connect/test endpoints (§4); plan-entitlement enforcement (§8);
    mount `initAnalytics()` + Sentry in web layout; wire `RequestLogInterceptor` errors dashboards.
 
 ---

@@ -49,9 +49,13 @@ export default async function AuthorityHQ() {
   ]);
   const { health, backlinkQuality, momentum } = overview;
 
-  const acquiredPct = Math.round(
-    (health.backlinksAcquired / health.backlinksOpportunities) * 100,
-  );
+  const acquiredPct =
+    health.backlinksOpportunities > 0
+      ? Math.round((health.backlinksAcquired / health.backlinksOpportunities) * 100)
+      : 0;
+
+  // Nothing connected yet → don't phrase zeros as a failing/"holding" score.
+  const notMeasured = health.score <= 0;
 
   // Insight Summary Band (§7): interpret the dashboard in one sentence.
   const openCritical = alerts.filter((a) => a.severity === "critical" && !a.resolved).length;
@@ -60,8 +64,9 @@ export default async function AuthorityHQ() {
   const pct = Math.abs(health.delta.pct);
   const insightStatus: InsightStatus =
     openCritical > 0 ? "needs-attention" : dir === "down" ? "needs-attention" : dir === "up" ? "improving" : "stable";
-  const movement =
-    dir === "flat"
+  const movement = notMeasured
+    ? "Domain health isn't measured yet — connect backlink data to start tracking authority"
+    : dir === "flat"
       ? `Domain health is holding at ${health.score}/100 (grade ${health.grade})`
       : `Domain health is ${dir === "up" ? "up" : "down"} ${pct}% to ${health.score}/100 (grade ${health.grade})`;
   const attention =
@@ -69,7 +74,9 @@ export default async function AuthorityHQ() {
       ? `${openCritical} critical alert${openCritical > 1 ? "s" : ""} need${openCritical > 1 ? "" : "s"} attention`
       : openWarnings > 0
         ? `${openWarnings} warning${openWarnings > 1 ? "s" : ""} to review`
-        : `${acquiredPct}% of backlink opportunities captured`;
+        : notMeasured
+          ? "Finish setup to populate your dashboard"
+          : `${acquiredPct}% of backlink opportunities captured`;
   const insightHeadline = `${movement}. ${attention}.`;
 
   // Action Center (§10) — prioritized next-actions derived from current state.

@@ -8,6 +8,8 @@
  * page-engine-client.ts.
  */
 
+import { apiError, readApiEnvelope } from "./api-envelope";
+
 export type PlanId = "launch" | "grow" | "scale";
 export type SubscriptionStatus = "none" | "trialing" | "active" | "past_due" | "canceled";
 
@@ -94,7 +96,7 @@ async function get<T>(path: string): Promise<T> {
     headers: { accept: "application/json", ...authHeaders() },
   });
   if (!res.ok) throw new Error(`API ${res.status} for ${path}`);
-  const body = (await res.json()) as { success: boolean; data: T };
+  const body = await readApiEnvelope<T>(res, path);
   if (!body.success) throw new Error(`API returned success=false for ${path}`);
   return body.data;
 }
@@ -105,8 +107,8 @@ async function send<T>(method: "POST" | "PUT" | "PATCH" | "DELETE", path: string
     headers: { "content-type": "application/json", accept: "application/json", ...authHeaders() },
     body: body === undefined ? undefined : JSON.stringify(body),
   });
-  const json = (await res.json()) as { success: boolean; data: T; errors?: { message: string }[] };
-  if (!res.ok || !json.success) throw new Error(json.errors?.[0]?.message ?? `API ${res.status}`);
+  const json = await readApiEnvelope<T>(res, path);
+  if (!res.ok || !json.success) throw apiError(json, res, path);
   return json.data;
 }
 

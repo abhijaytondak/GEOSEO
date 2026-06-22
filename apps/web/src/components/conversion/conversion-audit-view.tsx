@@ -5,6 +5,7 @@ import { Search, Loader2, Check, AlertTriangle, X, Gauge } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useAppFeedback } from "@/components/system/app-feedback";
+import { apiError, readApiEnvelope } from "@/lib/api-envelope";
 
 type AuditStatus = "pass" | "warn" | "fail";
 interface Finding {
@@ -31,8 +32,8 @@ async function call<T>(path: string, init?: RequestInit): Promise<T> {
     cache: "no-store",
     ...init,
   });
-  const json = (await res.json()) as { success: boolean; data: T; errors?: { message: string }[] };
-  if (!res.ok || !json.success) throw new Error(json.errors?.[0]?.message ?? `Request failed (${res.status})`);
+  const json = await readApiEnvelope<T>(res, path);
+  if (!res.ok || !json.success) throw apiError(json, res, path);
   return json.data;
 }
 

@@ -13,6 +13,8 @@ import { auth } from "@clerk/nextjs/server";
  * API. RSC calls go straight to the API (not here).
  */
 export const dynamic = "force-dynamic";
+// Allow the handler to wait out a Render free-tier cold-start (~15-60s) instead of erroring.
+export const maxDuration = 30;
 
 const API = (process.env.API_INTERNAL_URL ?? "http://localhost:4000").replace(/\/+$/, "");
 const TOKEN = process.env.DEV_API_TOKEN;
@@ -40,23 +42,48 @@ async function forward(req: NextRequest, path: string): Promise<Response> {
 
   const target = `${API}/api/v1/${path}${req.nextUrl.search}`;
   const headers: Record<string, string> = { accept: "application/json" };
-  const contentType = req.headers.get("content-type");
-  if (contentType) headers["content-type"] = contentType;
+  const requestContentType = req.headers.get("content-type");
+  if (requestContentType) headers["content-type"] = requestContentType;
   if (TOKEN) headers.authorization = `Bearer ${TOKEN}`; // service auth to the API
   if (workspace) headers["x-workspace-id"] = workspace; // verified tenant (trusted s2s)
 
   const body = req.method === "GET" || req.method === "HEAD" ? undefined : await req.text();
 
-  let res: Response;
-  try {
-    res = await fetch(target, { method: req.method, headers, body, cache: "no-store" });
-  } catch {
-    return envelope("Upstream API unreachable", 502);
+  // Render's free tier returns a gateway 502/503/504 (or refuses the connection) while it
+  // cold-starts after idle (~15-60s) or during a redeploy. Retry within a time budget so a waking
+  // API is absorbed transparently instead of erroring. Read-only calls wait longer (page loads);
+  // mutations retry briefly — a gateway 5xx means the request never reached the app, so retry is safe.
+  const RETRYABLE = new Set([502, 503, 504]);
+  const readOnly = req.method === "GET" || req.method === "HEAD";
+  const budgetMs = readOnly ? 22_000 : 6_000;
+  const startedAt = Date.now();
+  let res: Response | null = null;
+  for (let attempt = 0; ; attempt += 1) {
+    try {
+      res = await fetch(target, { method: req.method, headers, body, cache: "no-store", signal: AbortSignal.timeout(25000) });
+      if (!RETRYABLE.has(res.status)) break;
+    } catch {
+      res = null; // connection failure / timeout (API down or waking) → retry
+    }
+    if (Date.now() - startedAt >= budgetMs) break;
+    await new Promise((r) => setTimeout(r, Math.min(2500, 600 * (attempt + 1))));
   }
+  if (!res) return envelope("The API is temporarily unavailable (it may be waking up). Please retry in a moment.", 503);
+
   const text = await res.text();
+  const responseContentType = res.headers.get("content-type") ?? "application/json";
+  if (!responseContentType.toLowerCase().includes("application/json")) {
+    // A non-JSON body is a gateway/HTML error page (e.g. Render's cold-start/redeploy page).
+    // NEVER echo it — it can be a huge styled page with embedded base64 fonts. Return a clean,
+    // retryable envelope instead.
+    if (!res.ok || res.status >= 500) {
+      return envelope("The API is temporarily unavailable (it may be waking up). Please retry in a moment.", res.ok ? 502 : res.status);
+    }
+    return envelope(`Upstream API returned a non-JSON response (${res.status})`, 502);
+  }
   return new Response(text, {
     status: res.status,
-    headers: { "content-type": res.headers.get("content-type") ?? "application/json" },
+    headers: { "content-type": responseContentType },
   });
 }
 

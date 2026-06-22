@@ -28,6 +28,7 @@ import type {
   AuthorityOverview,
 } from "@geoseo/types";
 import { Panel } from "@/components/dashboard/panel";
+import { ConnectDataPrompt } from "@/components/dashboard/connect-data-prompt";
 import { InsightBand, type InsightStatus } from "@/components/dashboard/insight-band";
 import { InfoHint } from "@/components/ui/info-hint";
 import { RankChartLazy, TrafficChartLazy, AiVisibilityLazy } from "@/components/performance/lazy-charts";
@@ -93,13 +94,31 @@ export function AnalyticsWorkspace({
     { label: "Content health", value: `${m.contentHealth}%`, def: "Share of tracked pages holding or gaining rank.", icon: FileText },
   ];
 
+  // Is any metric backed by real data yet? Drives the intentional empty-state so
+  // bare zeros read as "not connected" instead of "failing". The provider seams
+  // are wired server-side — connecting one flips the metric to live (CLAUDE.md).
+  const hasSearchData = ranks.length > 0 || impressions.some((p) => p.impressions > 0 || p.clicks > 0);
+  const hasAiData = aiSignals.some((s) => s.mentions > 0);
+  const hasLeadsData = leads.length > 0;
+  const hasAuthorityData =
+    authority.health.score > 0 || authority.backlinkQuality.score > 0 || authority.health.backlinksAcquired > 0;
+  const hasAnyData = hasSearchData || hasAiData || hasLeadsData || hasAuthorityData;
+
   // Unified insight (§13).
-  const status: InsightStatus = m.slipping > 2 ? "needs-attention" : m.slipping > 0 ? "stable" : "improving";
-  const headline = `${m.aiMentions} AI mentions and ${compact(m.totalClicks)} clicks this period across ${pages.length} tracked pages. ${
-    m.slipping > 0
-      ? `${m.slipping} page${m.slipping > 1 ? "s" : ""} slipping — refresh to protect rank and leads.`
-      : "Momentum is holding across the funnel."
-  }`;
+  const status: InsightStatus = !hasAnyData
+    ? "stable"
+    : m.slipping > 2
+      ? "needs-attention"
+      : m.slipping > 0
+        ? "stable"
+        : "improving";
+  const headline = !hasAnyData
+    ? "No analytics yet — connect a data source to start measuring rankings, search traffic, AI visibility, and leads."
+    : `${m.aiMentions} AI mentions and ${compact(m.totalClicks)} clicks this period across ${pages.length} tracked pages. ${
+        m.slipping > 0
+          ? `${m.slipping} page${m.slipping > 1 ? "s" : ""} slipping — refresh to protect rank and leads.`
+          : "Momentum is holding across the funnel."
+      }`;
 
   const needsAction = [...pages]
     .filter((p) => p.currentRank > p.prevRank)
@@ -165,6 +184,19 @@ export function AnalyticsWorkspace({
       {tab === "overview" && (
         <div className="space-y-5">
           <InsightBand status={status} headline={headline} />
+
+          {!hasAnyData && (
+            <ConnectDataPrompt
+              title="Connect a data source to see real analytics"
+              description="Every metric below is empty because no provider is connected yet. Connect one and these fill with live data automatically — nothing here is fabricated."
+              sources={[
+                { metric: "Rankings, impressions & clicks", source: "Google Search Console" },
+                { metric: "Keyword volume & difficulty", source: "DataForSEO" },
+                { metric: "AI mentions & share of voice", source: "AI-citation tracker" },
+                { metric: "Leads", source: "published pages" },
+              ]}
+            />
+          )}
 
           {/* KPI strip — metrics backed by real data only */}
           <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
@@ -329,6 +361,16 @@ export function AnalyticsWorkspace({
 
       {tab === "authority" && (
         <div className="space-y-5">
+          {!hasAuthorityData && (
+            <ConnectDataPrompt
+              title="Connect backlink data to measure authority"
+              description="Domain health, backlink quality, and live DA are computed from your backlink profile. They stay at zero until a backlink/SERP provider is connected."
+              sources={[
+                { metric: "Backlink profile & live DA", source: "DataForSEO / Brave" },
+                { metric: "Competitor authority", source: "competitor SERP" },
+              ]}
+            />
+          )}
           <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
             <div className="rounded-2xl border border-border bg-card p-4 shadow-card">
               <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Domain health</div>

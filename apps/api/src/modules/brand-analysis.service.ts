@@ -5,6 +5,7 @@ import type {
   BrandScorecard,
   BrandScorecardItem,
   CompetitorAnalysis,
+  CompetitorPageAnalysis,
   SearchIntent,
 } from "@geoseo/types";
 import { DocStore } from "../db/db";
@@ -12,8 +13,19 @@ import { BrandMemoryStore } from "./brand.service";
 import { KeywordResearchService } from "./keyword-research.service";
 import { ConversionAuditStore, type ConversionAudit } from "./conversion-audit.service";
 import { CompetitorAnalysisService, type KeywordSeed } from "./competitor-analysis.service";
+import { analyzeCompetitorPage } from "../llm/competitor-page";
 
 type AnalysisState = { analysis: BrandAnalysis | null };
+
+/** Background job for a (slow, LLM-backed) page-level competitor analysis. */
+export interface CompetitorPageJob {
+  id: string;
+  status: "running" | "completed" | "failed";
+  url: string;
+  result?: CompetitorPageAnalysis;
+  error?: string;
+  startedAt: string;
+}
 
 const clamp = (n: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, Math.round(n)));
 
@@ -181,6 +193,9 @@ export function computeScorecard(
 export class BrandAnalysisStore {
   private cache = new Map<string, AnalysisState>();
   private db = new DocStore<AnalysisState>("cx_brand_analysis");
+  /** Ephemeral page-analysis jobs (global, bounded — like the page-engine batch jobs). */
+  private pageJobs = new Map<string, CompetitorPageJob>();
+  private pjseq = 0;
 
   constructor(
     @Inject(BrandMemoryStore) private readonly brand: BrandMemoryStore,
@@ -195,6 +210,33 @@ export class BrandAnalysisStore {
     const loaded = (await this.db.loadForTenant(tenantId)) ?? { analysis: null };
     this.cache.set(tenantId, loaded);
     return loaded;
+  }
+
+  /** Start a background page-level competitor analysis (LLM crawl is slow → poll). */
+  startCompetitorPage(url: string): CompetitorPageJob {
+    while (this.pageJobs.size >= 50) {
+      const oldest = this.pageJobs.keys().next().value;
+      if (oldest === undefined) break;
+      this.pageJobs.delete(oldest);
+    }
+    this.pjseq += 1;
+    const job: CompetitorPageJob = { id: `cpj-${this.pjseq}`, status: "running", url, startedAt: new Date().toISOString() };
+    this.pageJobs.set(job.id, job);
+    void (async () => {
+      try {
+        job.result = await analyzeCompetitorPage(url);
+        job.status = "completed";
+      } catch (e) {
+        job.status = "failed";
+        job.error = e instanceof Error ? e.message : "analysis failed";
+      }
+    })();
+    return { ...job };
+  }
+
+  getCompetitorPageJob(id: string): CompetitorPageJob | undefined {
+    const j = this.pageJobs.get(id);
+    return j ? { ...j } : undefined;
   }
 
   private commit(tenantId: string, analysis: BrandAnalysis): BrandAnalysis {
