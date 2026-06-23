@@ -642,7 +642,7 @@ function DigestButton({ notify }: { notify: ReturnType<typeof useAppFeedback>["n
         setTimeout(() => setState("idle"), 4000);
       } else {
         setState("idle");
-        notify({ kind: "warning", title: "Digest not sent", message: result.message });
+        notify({ kind: "info", title: "Digest not sent", message: result.message });
       }
     } catch (err) {
       setState("failed");

@@ -90,9 +90,9 @@ export function OutreachDrawer({ prospect, brand, open, onOpenChange, onSent }: 
         // No RESEND_API_KEY — fall back to mailto
         setSendState("idle");
         notify({
-          kind: "warning",
+          kind: "info",
           title: "Email not configured",
-          message: "Set RESEND_API_KEY to send via GEOSEO, or use "Open in email" to send manually.",
+          message: 'Set RESEND_API_KEY to send via GEOSEO, or use "Open in email" to send manually.',
         });
       }
     } catch (err) {

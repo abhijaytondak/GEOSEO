@@ -78,7 +78,7 @@ export function AnalyticsWorkspace({
   const initialTab = (TABS.find((t) => t.id === params.get("view"))?.id ?? "overview") as Tab;
   const [tab, setTab] = useState<Tab>(initialTab);
 
-  type RoiRow = { id: string; title: string; currentRank: number; impressions: number; clicks: number; leadCount: number; wonCount: number; avgLeadScore: number; conversionRate: number };
+  type RoiRow = { id: string; title: string; slug: string; currentRank: number; impressions: number; clicks: number; leadCount: number; wonCount: number; avgLeadScore: number; conversionRate: number };
   type RoiTotals = { totalLeads: number; totalWon: number; totalImpressions: number; totalClicks: number; pagesWithLeads: number };
   const [roiRows, setRoiRows] = useState<RoiRow[]>([]);
   const [roiTotals, setRoiTotals] = useState<RoiTotals | null>(null);

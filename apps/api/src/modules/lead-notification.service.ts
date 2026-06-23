@@ -96,7 +96,7 @@ export class LeadNotificationStore {
       const msg = `${lead.name || lead.email} (score ${total}) from ${lead.pageTitle ?? "a page"} — via "${r.name}".`;
 
       // Attempt real delivery for each channel that has a destination configured.
-      let actualStatus: "sent" | "failed" = "sent";
+      let actualStatus: "sent" | "suppressed" = "sent";
       for (const channel of r.channels) {
         if (channel === "email") {
           // NOTIFY_EMAIL env var — the workspace owner's email (or comma-separated list).
@@ -113,7 +113,7 @@ export class LeadNotificationStore {
             });
             const ok = await sendEmail({ to: recipients, subject: `New lead: ${lead.name || lead.email} (score ${total})`, html });
             if (!ok) {
-              actualStatus = "failed";
+              actualStatus = "suppressed";
               this.log.warn(`Email delivery failed for lead ${lead.id}, rule ${r.id}`);
             }
           }
@@ -130,9 +130,9 @@ export class LeadNotificationStore {
                   text: `*New lead (score ${total})*\n${lead.name || lead.email}${lead.company ? ` · ${lead.company}` : ""}\nPage: ${lead.pageTitle ?? "unknown"} · Rule: _${r.name}_`,
                 }),
               }, 8_000);
-              if (!res.ok) actualStatus = "failed";
+              if (!res.ok) actualStatus = "suppressed";
             } catch {
-              actualStatus = "failed";
+              actualStatus = "suppressed";
             }
           }
         }

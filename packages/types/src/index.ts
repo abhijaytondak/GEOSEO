@@ -797,6 +797,8 @@ export interface WorkspaceSettings {
     timezone: string;
     /** Hosts allowed to submit public leads/events in production (anti-abuse). Empty ⇒ permissive. */
     allowedDomains?: string[];
+    /** Destination email for lead alerts and digests (mirrors NOTIFY_EMAIL env var). */
+    notifyEmail?: string;
   };
   notifications: {
     weeklyDigest: boolean;

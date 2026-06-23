@@ -351,8 +351,9 @@ export class SearchService {
       });
     }
 
-    // Content recommendations (§7.5) — internal-link suggestions
-    for (const c of this.content.suggestions(trackedPages) as InternalLinkSuggestion[]) {
+    // Content recommendations (§7.5) — internal-link suggestions from real published pages
+    const publishedPages = this.pageEngine.listPages(tenantId).filter((p) => p.status === "published");
+    for (const c of this.content.suggestions(publishedPages) as InternalLinkSuggestion[]) {
       items.push({
         title: c.fromTitle,
         haystack: norm([c.fromTitle, c.toPath, c.status].join(" ")),
