@@ -17,7 +17,17 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   let onboarded = true;
   if (MODE === "demo") {
     const jar = await cookies();
-    onboarded = jar.get(ONBOARDED_COOKIE)?.value === "true";
+    const cookieDone = jar.get(ONBOARDED_COOKIE)?.value === "true";
+    if (cookieDone) {
+      onboarded = true;
+    } else {
+      // Cookie absent: fall back to API (handles cleared cookies / different browsers).
+      // Fail-open so a transient API error doesn't trap users who already completed setup.
+      onboarded = await api
+        .getOnboardingStatus()
+        .then((s) => s.completed !== false)
+        .catch(() => true);
+    }
   } else {
     onboarded = await api
       .getOnboardingStatus()

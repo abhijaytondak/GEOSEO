@@ -424,7 +424,9 @@ export function PagesView({
     }
   }
 
-  const newOpps = opps.filter((o) => o.status === "new");
+  const newOpps = opps
+    .filter((o) => o.status === "new")
+    .filter((o, i, arr) => arr.findIndex((x) => x.id === o.id) === i);
 
   return (
     <div className="space-y-5">
@@ -981,10 +983,21 @@ export function PagesView({
                   ) : (
                     <div
                       className={
-                        "mt-2 rounded-xl border border-border p-4 transition-all " +
+                        "mt-2 rounded-xl border border-border overflow-hidden transition-all " +
                         (previewDevice === "mobile" ? "mx-auto max-w-[360px]" : "")
                       }
                     >
+                      {current.heroImageUrl && (
+                        <div className="relative h-40 w-full overflow-hidden bg-gradient-to-br from-brand/20 to-card">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={current.heroImageUrl}
+                            alt=""
+                            className="size-full object-cover"
+                          />
+                        </div>
+                      )}
+                      <div className="p-4">
                       <p className="text-h-card font-semibold text-foreground">{current.heroCopy}</p>
                       {(current.sections ?? []).map((sec) => (
                         <div key={sec.heading} className="mt-3">
@@ -1004,6 +1017,7 @@ export function PagesView({
                           ))}
                         </div>
                       )}
+                      </div>
                     </div>
                   )}
                 </section>

@@ -23,9 +23,9 @@ export async function classifyIntents(keywords: string[]): Promise<Record<string
   const baseUrl = process.env.DEEPSEEK_BASE_URL ?? "https://api.deepseek.com";
   const model = process.env.DEEPSEEK_MODEL ?? "deepseek-chat";
 
-  const user = `Classify each search keyword by intent and buyer funnel stage.
-intent ∈ ${JSON.stringify(INTENTS)}
-stage ∈ ${JSON.stringify(STAGES)} ("research" = early/learning, "consideration" = comparing options, "ready-to-buy" = high purchase intent)
+  const user = `Classify each keyword by search intent and buyer stage.
+intent ∈ ${JSON.stringify(INTENTS)} (local = geo-qualified queries like "near me" or city names)
+stage ∈ ${JSON.stringify(STAGES)}
 Keywords:
 ${terms.map((t) => `- ${t}`).join("\n")}
 Return JSON exactly: {"results":[{"keyword":string,"intent":string,"stage":string}]}`;
@@ -41,7 +41,7 @@ Return JSON exactly: {"results":[{"keyword":string,"intent":string,"stage":strin
           messages: [{ role: "user", content: user }],
           response_format: { type: "json_object" },
           temperature: 0,
-          max_tokens: 1400,
+          max_tokens: 600,
         }),
       },
       Number(process.env.LLM_TIMEOUT_MS) || 25_000,

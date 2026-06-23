@@ -21,10 +21,10 @@ export interface GeneratedImage {
 type ImageState = { items: GeneratedImage[]; seq: number };
 
 const KIND_HINT: Record<ImageKind, string> = {
-  hero: "a clean, modern hero banner image",
-  infographic: "a minimal infographic (process flow / comparison / checklist style), clear visual hierarchy, no dense text",
-  illustration: "a simple abstract brand illustration",
-  og: "a social share (Open Graph) card image",
+  hero: "a striking, high-quality hero banner image — wide-format composition, clear focal point, evocative of the service or product category, suitable as a full-bleed page header",
+  infographic: "a clean visual diagram (process flow, comparison chart, or step-by-step checklist) — clear visual hierarchy, bold labels, minimal background, no dense paragraph text",
+  illustration: "a polished abstract brand illustration — geometric shapes, flowing lines, or conceptual iconography that represents the brand's work or value",
+  og: "a bold social share card — clear subject in the centre, brand colours dominant, legible at small sizes on social feeds",
 };
 
 /** Darken a #rrggbb hex toward black by `f` (0–1). Passes through non-hex unchanged. */
@@ -126,8 +126,10 @@ export class ImageGenStore {
     const b = this.brand.current();
     const company = b?.company?.trim() || "the brand";
     const bits = [
-      `${KIND_HINT[kind]} for ${company}${b?.valueProp ? ` (${b.valueProp})` : ""}.`,
-      `Subject: ${subject}.`,
+      `${KIND_HINT[kind]}.`,
+      `Brand: ${company}${b?.valueProp ? ` — ${b.valueProp}` : ""}.`,
+      `Visual subject: ${subject}.`,
+      b?.industry ? `Industry: ${b.industry}.` : "",
       b?.tone ? `Brand tone: ${b.tone}.` : "",
       await this.styleSignature(tenantId, primary, accent, dark),
     ];

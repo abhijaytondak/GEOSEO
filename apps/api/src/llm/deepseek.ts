@@ -33,28 +33,30 @@ export async function draftPageContent(
   const spec = specFor(pageType);
   const bodyLen =
     spec.depth === "long"
-      ? "4-6 substantive paragraphs of specific, concrete body copy"
+      ? "3-4 focused paragraphs with concrete specifics, real mechanisms, and numbers"
       : spec.depth === "short"
-        ? "2-3 tight but specific sentences"
-        : "2-4 substantive paragraphs";
+        ? "2 direct paragraphs — dense with specifics, no filler"
+        : "2-3 substantive paragraphs";
   const system =
-    "You are a world-class B2B SaaS SEO + GEO (generative engine optimization) content writer. You produce deeply researched, comprehensive content that ranks #1 on Google AND gets cited by AI answer engines (ChatGPT, Perplexity, Google AI Overviews). Respond ONLY with JSON.";
+    "You are a world-class SEO + GEO (generative engine optimization) content writer. You produce accurate, specific content that ranks on Google AND gets cited by AI answer engines (ChatGPT, Perplexity, Google AI Overviews). Respond ONLY with JSON.";
   const user = `Brand: ${brand}
 Write a ${spec.label} (page type: ${pageType}) targeting the search query "${query}".
 This page is ${spec.role}.
 
-Content quality rules:
-- Depth: write ${bodyLen} per section. Be specific and concrete — real mechanisms, concrete examples, numbers/benchmarks, step-by-step detail, trade-offs. No vague filler, no repetition, no marketing fluff.
-- Answer-first: open each section with a direct, self-contained, quotable answer to its implied question (AI engines extract and cite these), then expand with evidence and detail.
-- Structure for extraction: define key terms plainly; where it aids comprehension, embed lists or numbered steps INSIDE the body (use "- " bullets or "1. " steps on their own lines).
-- Topical completeness: cover the closely-related sub-topics and entities a reader and search engine expect for this query.
-- FAQs: each answer is a complete, standalone 2-4 sentence response (these power FAQPage rich results + AI answers).
-- Accuracy: never invent statistics, customers, prices, or claims not grounded in the brand context.
+SEO + quality rules:
+- Keyword placement: use "${query}" naturally within the first 100 words and in at least one section heading.
+- Depth: write ${bodyLen} per section. Real mechanisms, concrete examples, specific numbers — no vague filler, no repetition.
+- Semantic coverage: naturally include related terms and entities a search engine expects for this topic (LSI keywords, subtopics, named concepts).
+- Answer-first: open each section with a direct, self-contained, quotable answer to its implied question. AI engines extract and cite these — make them standalone.
+- E-E-A-T signals: demonstrate experience and expertise through specific processes, real outcomes, and authoritative details. Cite plausible benchmarks where appropriate.
+- Structure: where it aids comprehension, embed lists or numbered steps inside the body (use "- " bullets or "1. " steps on their own lines).
+- FAQs: each answer is a complete, standalone 2-3 sentence response that directly answers the question.
+- Accuracy: never invent statistics, customers, or claims not grounded in the brand context.
 
-Follow this section arc — adapt the exact wording to the brand and query, but keep the arc and order:
+Section arc (adapt wording to brand + query; keep arc and order):
 ${spec.sectionPlan.map((s, i) => `${i + 1}. ${s}`).join("\n")}
 Return JSON exactly matching:
-{"metaTitle": string (compelling, <=60 chars), "metaDescription": string (benefit-led, <=155 chars), "heroCopy": string (2-3 sentences that hook the reader and state the core value), "sections": [{"heading": string, "body": string}] (${spec.sectionPlan.length} items, following the arc above; each body rich/multi-paragraph), "faqs": [{"q": string, "a": string}] (${spec.faqCount} items)}`;
+{"metaTitle": string (include "${query}", <=60 chars), "metaDescription": string (benefit-led, includes the keyword, <=155 chars), "heroCopy": string (2-3 sentences hooking the reader with the core value), "sections": [{"heading": string, "body": string}] (${spec.sectionPlan.length} items; each heading uses the keyword or a close variant when natural), "faqs": [{"q": string, "a": string}] (${spec.faqCount} items — questions people actually search)}`;
 
   try {
     const res = await fetchWithTimeout(
@@ -69,12 +71,12 @@ Return JSON exactly matching:
             { role: "user", content: user },
           ],
           response_format: { type: "json_object" },
-          temperature: 0.7,
+          temperature: 0.5,
           // Per-type budget, but cap-able via LLM_MAX_TOKENS so a slow/host-limited
           // backend (e.g. Ollama behind Render's ~30s outbound window) can keep each
           // generation under the limit. Unset = full per-type budget (hosted/local-rich).
           max_tokens: Math.min(
-            spec.depth === "long" ? 4096 : spec.depth === "short" ? 1400 : 2800,
+            spec.depth === "long" ? 2400 : spec.depth === "short" ? 900 : 1600,
             Number(process.env.LLM_MAX_TOKENS) || Infinity,
           ),
         }),

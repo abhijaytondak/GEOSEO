@@ -1,21 +1,28 @@
 import { fetchWithTimeout } from "../common/http";
 
 /**
- * AI-search keyword sourcing (PRD Phase 5 — Keyword Research #1). Asks the LLM,
- * acting as an AI answer engine, for the real buyer-intent queries people put to
- * AI assistants about the seed topics — a tier Google/DataForSEO miss. Uses the
- * shared OpenAI-compatible seam (Puter/DeepSeek via the DEEPSEEK_* env). Returns
- * null on no-key/failure so the caller falls back to the keyless tiers — never throws.
+ * AI-search keyword sourcing (PRD Phase 5 — Keyword Research #1). Generates real
+ * buyer-intent queries people ask AI assistants about the seed topics — a tier
+ * Google/DataForSEO miss. Optional brand context (industry + audience) focuses
+ * output toward the actual business type. Returns null on no-key/failure so the
+ * caller falls back to the keyless tiers — never throws.
  */
-export async function aiSearchKeywords(seeds: string[], limit: number): Promise<string[] | null> {
+export async function aiSearchKeywords(
+  seeds: string[],
+  limit: number,
+  context?: { industry?: string; audience?: string },
+): Promise<string[] | null> {
   const key = process.env.DEEPSEEK_API_KEY;
   if (!key) return null;
   const baseUrl = process.env.DEEPSEEK_BASE_URL ?? "https://api.deepseek.com";
   const model = process.env.DEEPSEEK_MODEL ?? "deepseek-chat";
 
-  const user = `You are an AI search engine (like ChatGPT, Perplexity, or Gemini).
-For these topics: ${seeds.join(", ")}
-List up to ${limit} REAL buyer-intent search queries people actually ask AI assistants — a mix of research-stage ("how/what/best") and ready-to-buy ("pricing/vs/for [use-case]") phrasing. No numbering, no fluff.
+  const businessCtx = [context?.industry, context?.audience].filter(Boolean).join(", ");
+  const ctxLine = businessCtx ? `Business context: ${businessCtx}.` : "";
+
+  const user = `Generate up to ${limit} buyer-intent search queries for these topics: ${seeds.join(", ")}.
+${ctxLine}
+Mix question-form queries (how to, what is, best, guide) with commercial queries (vs, pricing, near me, services, hire, cost). Prioritise longer-tail phrases (3-6 words) that show clear purchase or research intent. Real phrases people actually search — no generic titles.
 Return JSON exactly: {"keywords": string[]}`;
 
   try {
@@ -28,8 +35,8 @@ Return JSON exactly: {"keywords": string[]}`;
           model,
           messages: [{ role: "user", content: user }],
           response_format: { type: "json_object" },
-          temperature: 0.5,
-          max_tokens: 700,
+          temperature: 0.4,
+          max_tokens: 500,
         }),
       },
       Number(process.env.LLM_TIMEOUT_MS) || 20_000,

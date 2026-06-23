@@ -74,10 +74,10 @@ export class KeywordResearchService {
   /** Expand seed terms into keyword ideas. Returns [] when no provider yields results. */
   async researchKeywords(
     seeds: string[],
-    opts: { locationName?: string; languageCode?: string; limit?: number } = {},
+    opts: { locationName?: string; languageCode?: string; limit?: number; industry?: string; audience?: string } = {},
   ): Promise<KeywordIdea[]> {
     const terms = seeds.map((s) => s.trim()).filter(Boolean).slice(0, 20);
-    const limit = clamp(opts.limit ?? 24, 1, 100);
+    const limit = clamp(opts.limit ?? 30, 1, 100);
     if (terms.length === 0) {
       this.last = "mock";
       return [];
@@ -94,7 +94,7 @@ export class KeywordResearchService {
     // AI-search tier — real buyer queries from an LLM acting as an answer engine
     // (Gushwork parity: "keywords from Google AND AI search engines"). Metrics estimated.
     if (this.aiSearchEnabled) {
-      const phrases = await aiSearchKeywords(terms, limit);
+      const phrases = await aiSearchKeywords(terms, limit, { industry: opts.industry, audience: opts.audience });
       if (phrases && phrases.length) {
         this.last = "ai-search";
         return phrases.map((kw) => ({ keyword: kw, ...this.estimateMetrics(kw) }));

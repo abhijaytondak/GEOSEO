@@ -108,6 +108,13 @@ export function OnboardingWizard() {
     trackOnboarding({ event: "onboarding_step_viewed", step: step + 1, device });
   }, [step]);
 
+  // Auto-populate seed topics from brand topics when entering step 3.
+  useEffect(() => {
+    if (step === 3 && !seeds.trim() && brand.topics.trim()) {
+      setSeeds(brand.topics);
+    }
+  }, [step]);
+
   const normalized = normalizeUrl(url);
   const domain = (normalized ? new URL(normalized).hostname : "") || "yourcompany.com";
 
@@ -289,13 +296,13 @@ export function OnboardingWizard() {
       });
       setAnalyzing(true);
       await api.runBrandAnalysis().catch(() => undefined);
-      markOnboarded();
       notify({ kind: "success", title: "Workspace ready", message: `${brand.company || domain} is live on GEOSEO.` });
     } catch (err) {
       notify({ kind: "error", title: "Couldn't finalize setup", message: err instanceof Error ? err.message : "Try again." });
     } finally {
       setAnalyzing(false);
       setLaunching(false);
+      markOnboarded();
       setStep(5);
     }
   }
@@ -708,7 +715,7 @@ export function OnboardingWizard() {
               <Sparkles className="size-[17px] shrink-0 text-muted-foreground" />
               <input
                 className="h-11 w-full border-0 bg-transparent text-[15px] text-foreground outline-none"
-                placeholder="product analytics, cohort retention, onboarding"
+                placeholder="local SEO services, Google Business Profile, citation building"
                 value={seeds}
                 onChange={(e) => setSeeds(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && discover()}

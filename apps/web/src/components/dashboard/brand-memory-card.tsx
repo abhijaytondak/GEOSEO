@@ -131,6 +131,7 @@ export function BrandMemoryCard() {
             variant="outline"
             size="lg"
             render={<Link href="/brand" />}
+            nativeButton={false}
             className="w-full"
           >
             <BrainCircuit className="size-4" aria-hidden="true" /> Manage Brand Memory
