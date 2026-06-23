@@ -154,8 +154,8 @@ async function send<T>(
 
 const fallbackSettings: WorkspaceSettings = {
   profile: {
-    workspaceName: "Northwind Labs",
-    domain: "northwindlabs.io",
+    workspaceName: "Your Workspace",
+    domain: "",
     defaultPublishPath: "/feeds",
     timezone: "Asia/Kolkata",
   },
@@ -339,8 +339,19 @@ export const api = {
   // brand auto-analysis (scorecard + competitor intelligence)
   getBrandAnalysis: () =>
     get<{ analysis: BrandAnalysis }>("/brand-analysis", async () => ({ analysis: await brandAnalysisDemo() })).then((d) => d.analysis),
-  runBrandAnalysis: () =>
-    send<{ analysis: BrandAnalysis }>("POST", "/brand-analysis/run").then((d) => d.analysis),
+  runBrandAnalysis: async () => {
+    type AnalysisJob = { id: string; status: "running" | "completed" | "failed"; result?: BrandAnalysis; error?: string };
+    let { job } = await send<{ job: AnalysisJob }>("POST", "/brand-analysis/run-async");
+    for (let i = 0; i < 80 && job.status === "running"; i += 1) {
+      await new Promise((resolve) => setTimeout(resolve, 1_500));
+      ({ job } = await get<{ job: AnalysisJob }>(`/brand-analysis/run-async/${encodeURIComponent(job.id)}`, () => {
+        throw new Error(`Brand analysis job ${job.id} unavailable`);
+      }));
+    }
+    if (job.status === "failed") throw new Error(job.error ?? "Brand analysis failed");
+    if (job.status !== "completed" || !job.result) throw new Error("Brand analysis timed out");
+    return job.result;
+  },
   getCompetitorAnalysis: () =>
     get<{ competitor: CompetitorAnalysis }>("/brand-analysis/competitors", async () => ({ competitor: await competitorAnalysisDemo() })).then((d) => d.competitor),
 

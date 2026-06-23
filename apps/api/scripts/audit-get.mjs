@@ -1,11 +1,12 @@
 #!/usr/bin/env node
 // Deep liveness audit: hit EVERY GET route, resolving path params from live data.
-const BASE = "http://localhost:4000/api/v1";
+const BASE = process.env.API_BASE ?? "http://localhost:4000/api/v1";
+const TIMEOUT_MS = Number(process.env.API_TIMEOUT_MS) || 25_000;
 const H = { accept: "application/json", "content-type": "application/json" };
 
 async function get(path) {
   try {
-    const res = await fetch(`${BASE}${path}`, { headers: H });
+    const res = await fetch(`${BASE}${path}`, { headers: H, signal: AbortSignal.timeout(TIMEOUT_MS) });
     let json = null;
     try { json = await res.json(); } catch {}
     return { status: res.status, json };
@@ -33,6 +34,7 @@ for (const [name, path, keys] of [
   ["blueprint", "/page-blueprints", ["id"]],
   ["page", "/pages", ["id"]],
   ["pageSlug", "/pages", ["slug"]],
+  ["trackedPage", "/performance/pages", ["id"]],
   ["lead", "/leads", ["id"]],
   ["form", "/lead-forms", ["id"]],
   ["job", "/jobs", ["id"]],
@@ -66,8 +68,8 @@ const ROUTES = [
   "/page-blueprints", `/page-blueprints/${ids.blueprint}`,
   "/pages", `/pages/${ids.page}`, `/pages/${ids.page}/versions`, "/pages/cms/status",
   "/performance/ai-visibility", "/performance/domain-health", "/performance/impression-series",
-  "/performance/overview", "/performance/pages", `/performance/pages/${ids.page}`, "/performance/rank-series",
-  "/public/pages", `/public/pages/${ids.pubPage ?? ids.pageSlug}`, "/publishing/integrations",
+  "/performance/overview", "/performance/pages", `/performance/pages/${ids.trackedPage}`, "/performance/rank-series",
+  "/public/pages", `/public/pages/${String(ids.pubPage ?? ids.pageSlug ?? "").replace(/^\/+/, "")}`, "/publishing/integrations",
   "/recommendations/refresh", "/search?q=seo", "/settings",
   "/site-theme", `/site-theme/${ids.theme}`, `/site-theme/${ids.theme}/fidelity`, "/site-theme/fidelity",
   "/solutions/readiness", "/tenant/context", "/workspaces", `/workspaces/${ids.workspace}`,
@@ -92,3 +94,4 @@ console.log(`\n=== GET AUDIT: ${ok} ok, ${bad} failed, ${skipped} skipped (of ${
 if (problems.length) { console.log("\nPROBLEMS:"); problems.forEach(p => console.log("  ✗ " + p)); }
 console.log("\nDATA-SOURCE flags (live-vs-mock honesty):");
 for (const [p, s] of Object.entries(sources)) console.log(`  ${p}: ${s}`);
+if (bad > 0) process.exit(1);

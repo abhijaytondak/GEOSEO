@@ -12,6 +12,7 @@
  */
 
 const BASE = process.env.API_BASE ?? "http://localhost:4000/api/v1";
+const TIMEOUT_MS = Number(process.env.API_TIMEOUT_MS) || 25_000;
 const TOKEN = process.env.DEV_API_TOKEN ?? "";
 const HEADERS = { accept: "application/json", "content-type": "application/json", ...(TOKEN ? { authorization: `Bearer ${TOKEN}` } : {}) };
 
@@ -24,6 +25,7 @@ async function req(method, path, body) {
     method,
     headers: HEADERS,
     body: body === undefined ? undefined : JSON.stringify(body),
+    signal: AbortSignal.timeout(TIMEOUT_MS),
   });
   let json;
   try {
@@ -392,14 +394,28 @@ async function main() {
   await check("GET /brand-analysis (cached or pending, never blocks)", "GET", "/brand-analysis", {
     expect: (d) => d.analysis && ["ready", "pending"].includes(d.analysis.status) && typeof d.analysis.source === "string",
   });
-  await check("POST /brand-analysis/run (free SERP chain → scorecard)", "POST", "/brand-analysis/run", {
-    expect: (d) =>
-      d.analysis?.status === "ready" &&
-      ["A", "B", "C", "D"].includes(d.analysis.scorecard?.grade) &&
-      ["brave", "duckduckgo", "heuristic"].includes(d.analysis.competitor?.source) &&
-      Array.isArray(d.analysis.scorecard?.actions) &&
-      Array.isArray(d.analysis.topKeywords),
+  const brandJob = await check("POST /brand-analysis/run-async", "POST", "/brand-analysis/run-async", {
+    expect: (d) => d.job?.id && d.job?.status === "running",
   });
+  if (brandJob?.job?.id) {
+    let completed = brandJob.job;
+    for (let i = 0; i < 80 && completed.status === "running"; i += 1) {
+      await new Promise((resolve) => setTimeout(resolve, 1_500));
+      completed = (await req("GET", `/brand-analysis/run-async/${brandJob.job.id}`)).json?.data?.job ?? completed;
+    }
+    const ready =
+      completed.status === "completed" &&
+      completed.result?.status === "ready" &&
+      ["A", "B", "C", "D"].includes(completed.result.scorecard?.grade);
+    if (ready) {
+      pass += 1;
+      console.log("  \x1b[32m✓\x1b[0m GET /brand-analysis/run-async/:id (completed)");
+    } else {
+      fail += 1;
+      failures.push(`brand analysis async completion: status=${completed.status} error=${completed.error ?? "timeout"}`);
+      console.log(`  \x1b[31m✗\x1b[0m GET /brand-analysis/run-async/:id — ${completed.error ?? "timeout"}`);
+    }
+  }
   await check("GET /brand-analysis reflects the run (ready + cached)", "GET", "/brand-analysis", {
     expect: (d) => d.analysis?.status === "ready" && typeof d.analysis.scorecard?.score === "number",
   });

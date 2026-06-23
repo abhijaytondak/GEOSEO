@@ -27,6 +27,16 @@ export interface CompetitorPageJob {
   startedAt: string;
 }
 
+export interface BrandAnalysisJob {
+  id: string;
+  status: "running" | "completed" | "failed";
+  result?: BrandAnalysis;
+  error?: string;
+  startedAt: string;
+}
+
+type TenantBrandAnalysisJob = BrandAnalysisJob & { tenantId: string };
+
 const clamp = (n: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, Math.round(n)));
 
 function gradeFor(score: number): BrandScorecard["grade"] {
@@ -196,6 +206,8 @@ export class BrandAnalysisStore {
   /** Ephemeral page-analysis jobs (global, bounded — like the page-engine batch jobs). */
   private pageJobs = new Map<string, CompetitorPageJob>();
   private pjseq = 0;
+  private analysisJobs = new Map<string, TenantBrandAnalysisJob>();
+  private ajseq = 0;
 
   constructor(
     @Inject(BrandMemoryStore) private readonly brand: BrandMemoryStore,
@@ -237,6 +249,44 @@ export class BrandAnalysisStore {
   getCompetitorPageJob(id: string): CompetitorPageJob | undefined {
     const j = this.pageJobs.get(id);
     return j ? { ...j } : undefined;
+  }
+
+  /** Start the network-heavy full analysis in-process and return a pollable handle. */
+  startRun(tenantId: string, now: string): BrandAnalysisJob {
+    const running = [...this.analysisJobs.values()].find((job) => job.tenantId === tenantId && job.status === "running");
+    if (running) return this.publicAnalysisJob(running);
+    while (this.analysisJobs.size >= 50) {
+      const oldest = this.analysisJobs.keys().next().value;
+      if (oldest === undefined) break;
+      this.analysisJobs.delete(oldest);
+    }
+    this.ajseq += 1;
+    const job: TenantBrandAnalysisJob = {
+      id: `baj-${this.ajseq}`,
+      tenantId,
+      status: "running",
+      startedAt: now,
+    };
+    this.analysisJobs.set(job.id, job);
+    void this.run(tenantId, now)
+      .then((result) => {
+        job.result = result;
+        job.status = "completed";
+      })
+      .catch((error: unknown) => {
+        job.status = "failed";
+        job.error = error instanceof Error ? error.message : "analysis failed";
+      });
+    return this.publicAnalysisJob(job);
+  }
+
+  getRunJob(tenantId: string, id: string): BrandAnalysisJob | undefined {
+    const job = this.analysisJobs.get(id);
+    return job?.tenantId === tenantId ? this.publicAnalysisJob(job) : undefined;
+  }
+
+  private publicAnalysisJob({ tenantId: _tenantId, ...job }: TenantBrandAnalysisJob): BrandAnalysisJob {
+    return { ...job };
   }
 
   private commit(tenantId: string, analysis: BrandAnalysis): BrandAnalysis {

@@ -16,6 +16,7 @@
  */
 
 const BASE = process.env.API_BASE ?? "http://localhost:4000/api/v1";
+const TIMEOUT_MS = Number(process.env.API_TIMEOUT_MS) || 25_000;
 const A = "iso-alpha";
 const B = "iso-beta";
 
@@ -26,7 +27,12 @@ const failures = [];
 async function req(method, path, { tenant, body } = {}) {
   const headers = { accept: "application/json", "content-type": "application/json" };
   if (tenant) headers["x-workspace-id"] = tenant;
-  const res = await fetch(`${BASE}${path}`, { method, headers, body: body === undefined ? undefined : JSON.stringify(body) });
+  const res = await fetch(`${BASE}${path}`, {
+    method,
+    headers,
+    body: body === undefined ? undefined : JSON.stringify(body),
+    signal: AbortSignal.timeout(TIMEOUT_MS),
+  });
   let json = null;
   try {
     json = await res.json();

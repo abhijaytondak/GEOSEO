@@ -32,6 +32,18 @@ export class BrandAnalysisController {
     return { analysis };
   }
 
+  @Post("run-async")
+  startRun(@Req() req: TenantRequest) {
+    return { job: this.analysis.startRun(resolveTenantId(req), new Date().toISOString()) };
+  }
+
+  @Get("run-async/:jobId")
+  runStatus(@Req() req: TenantRequest, @Param("jobId") jobId: string) {
+    const job = this.analysis.getRunJob(resolveTenantId(req), jobId);
+    if (!job) throw new NotFoundException(`Analysis job ${jobId} not found`);
+    return { job };
+  }
+
   @Get("competitors")
   async competitors(@Req() req: TenantRequest) {
     return { competitor: await this.analysis.competitors(resolveTenantId(req), new Date().toISOString()) };

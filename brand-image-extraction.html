@@ -1,0 +1,149 @@
+<title>Brand Image-Asset Extraction Pipeline</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: #f6f8fb; color: #0f172a; line-height: 1.45;
+    padding: 32px 20px 60px;
+  }
+  .wrap { max-width: 1040px; margin: 0 auto; }
+  h1 { font-size: 26px; letter-spacing: -0.02em; color: #1e3a8a; }
+  .sub { color: #64748b; font-size: 14.5px; margin-top: 4px; }
+  .stats { display: flex; flex-wrap: wrap; gap: 10px; margin: 20px 0 8px; }
+  .stat { background: #ecfdf5; border: 1px solid #a7f3d0; color: #065f46;
+    border-radius: 10px; padding: 8px 13px; font-size: 13px; font-weight: 600; }
+  .stat b { color: #047857; }
+  .flow { margin-top: 22px; }
+  .node { background: #fff; border: 1px solid #e2e8f0; border-radius: 14px;
+    padding: 14px 18px; box-shadow: 0 1px 2px rgba(15,23,42,.04); }
+  .node .k { font-size: 12px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .05em; color: #2563eb; margin-bottom: 3px; }
+  .node .t { font-size: 14.5px; font-weight: 600; }
+  .node .d { font-size: 13px; color: #64748b; margin-top: 4px; }
+  .start { border-color: #fdba74; background: #fff7ed; }
+  .start .k { color: #c2410c; }
+  .guard { border-color: #fca5a5; background: #fef2f2; }
+  .guard .k { color: #dc2626; }
+  .hero { border-color: #3b82f6; background: #eff6ff; }
+  .hero .k { color: #1d4ed8; }
+  .save { border-color: #6ee7b7; background: #ecfdf5; }
+  .save .k { color: #047857; }
+  .arrow { text-align: center; color: #94a3b8; font-size: 20px; line-height: 1; margin: 7px 0; }
+  .lanes { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin: 7px 0; }
+  @media (max-width: 720px){ .lanes { grid-template-columns: 1fr; } }
+  .lane { border-radius: 16px; padding: 14px; }
+  .lane.imgs { background: #eff6ff; border: 1px solid #bfdbfe; }
+  .lane.rich { background: #f5f3ff; border: 1px solid #ddd6fe; }
+  .lane h3 { font-size: 13px; text-transform: uppercase; letter-spacing: .05em; margin-bottom: 10px; }
+  .lane.imgs h3 { color: #1d4ed8; }
+  .lane.rich h3 { color: #6d28d9; }
+  ul { list-style: none; display: flex; flex-direction: column; gap: 7px; }
+  li { font-size: 13px; color: #334155; padding-left: 18px; position: relative; }
+  li::before { content: "›"; position: absolute; left: 4px; color: #94a3b8; font-weight: 700; }
+  .chip { display: inline-block; font-size: 11.5px; font-weight: 600; border-radius: 6px;
+    padding: 1px 7px; margin: 1px 2px 1px 0; }
+  .keep { background: #dcfce7; color: #166534; }
+  .drop { background: #fee2e2; color: #b91c1c; }
+  .code { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 12px;
+    background: #1e293b; color: #4ade80; border-radius: 10px; padding: 12px 14px; margin-top: 10px;
+    white-space: pre; overflow-x: auto; }
+  .puter { background: #ede9fe; border: 1px solid #c4b5fd; border-radius: 10px; padding: 10px 12px; }
+  .puter .badge { font-size: 11px; font-weight: 700; color: #6d28d9; }
+  .converge { background: #fff; border: 1px solid #93c5fd; border-radius: 14px; padding: 14px 18px; }
+  .foot { color: #94a3b8; font-size: 12px; margin-top: 26px; }
+  .mono { font-family: ui-monospace, Menlo, monospace; font-size: 12.5px; color: #475569; }
+</style>
+
+<div class="wrap">
+  <h1>Brand Image-Asset Extraction Pipeline</h1>
+  <div class="sub">GEOSEO · Brand Memory → Library → “Extract from your site” · keyless (no API key required)</div>
+
+  <div class="stats">
+    <div class="stat">gushwork.ai <b>47 → 146</b> images</div>
+    <div class="stat">tartanhq.com <b>→ 169</b> images</div>
+    <div class="stat">cap <b>200</b></div>
+    <div class="stat">rich fields via <b>Puter browser AI</b> · no key</div>
+  </div>
+
+  <div class="flow">
+    <div class="node start">
+      <div class="k">Trigger</div>
+      <div class="t">User clicks “Extract from your site” + site URL</div>
+      <div class="d">Library tab · URL prefilled from the brand profile</div>
+    </div>
+    <div class="arrow">↓</div>
+
+    <div class="node">
+      <div class="k">Request</div>
+      <div class="t mono">POST /brand-library/extract-from-site &nbsp;{ url }</div>
+      <div class="d">Browser → BFF proxy (injects token, 25s budget) → API</div>
+    </div>
+    <div class="arrow">↓</div>
+
+    <div class="node guard">
+      <div class="k">Crawl · SSRF-guarded</div>
+      <div class="t">safeFetchText — homepage <b>+ up to 5 key internal pages</b></div>
+      <div class="d">Same-domain only · blocks private/localhost hosts · 1.8&nbsp;MB cap · fetched in parallel, fail-soft (products · about · customers · pricing …)</div>
+    </div>
+    <div class="arrow">↓ &nbsp;splits into two lanes&nbsp; ↓</div>
+
+    <div class="lanes">
+      <div class="lane imgs">
+        <h3>Lane 1 — every brand image</h3>
+        <div class="t" style="font-weight:700;color:#1d4ed8;margin-bottom:8px;">extractImages( ) — per page</div>
+        <ul>
+          <li><b>Sources scanned:</b> <code>&lt;img src/srcset&gt;</code>, lazy <code>data-src/srcset</code>, <code>&lt;picture&gt;&lt;source&gt;</code>, CSS <code>background-image:url()</code>, og:image, twitter:image</li>
+          <li>Prefer the <b>highest-res</b> srcset variant</li>
+          <li>Decode entities (<span class="mono">&amp;amp; → &amp;</span>) · resolve to absolute http(s)</li>
+          <li>Dedupe via Set across all pages</li>
+        </ul>
+        <div style="margin-top:9px;">
+          <span class="chip keep">keep logos + SVG graphics</span>
+          <span class="chip drop">drop tracking/sprite</span>
+          <span class="chip drop">drop &lt;40px icons</span>
+          <span class="chip drop">drop avatar/placeholder</span>
+        </div>
+        <div class="code">images[]  (deduped, ≤ MAX_IMAGES = 200)</div>
+      </div>
+
+      <div class="lane rich">
+        <h3>Lane 2 — rich fields (keyless)</h3>
+        <ul>
+          <li>Crawl returns <b>page text</b> (≤ 14k chars) to the browser</li>
+          <li>Decision: <span class="mono">DEEPSEEK_API_KEY</span> set on server?</li>
+        </ul>
+        <div class="puter" style="margin-top:9px;">
+          <div class="badge">NO (default) → Puter browser AI</div>
+          <div style="font-size:12.5px;color:#4c1d95;margin-top:3px;">
+            <span class="mono">extractBrandLibraryWithPuter()</span> runs in the browser — user-pays, 1-tap consent, <b>no key</b>
+          </div>
+        </div>
+        <div style="font-size:12.5px;color:#64748b;margin-top:8px;">YES → server LLM (DeepSeek)</div>
+        <div class="code">products · personas · proof
+terminology · tone of voice</div>
+      </div>
+    </div>
+
+    <div class="arrow">↓ &nbsp;converge&nbsp; ↓</div>
+    <div class="converge">
+      <div class="k" style="font-size:12px;font-weight:700;color:#2563eb;text-transform:uppercase;letter-spacing:.05em;">Draft (not persisted)</div>
+      <div class="t" style="font-size:14.5px;font-weight:600;margin-top:3px;">{ images, products, personas, proof, voice, text, llm, source } → returned to the browser for review</div>
+    </div>
+    <div class="arrow">↓</div>
+
+    <div class="node hero">
+      <div class="k">Render</div>
+      <div class="t">Gallery — every image at natural size</div>
+      <div class="d">object-contain · no crop, no upscale-blur · delete any you don’t want</div>
+    </div>
+    <div class="arrow">↓</div>
+
+    <div class="node save">
+      <div class="k">Persist (on Save)</div>
+      <div class="t mono">PUT /brand-library</div>
+      <div class="d">Sanitizer caps at ≤ 200 images · grounds every generated page &amp; outreach draft</div>
+    </div>
+  </div>
+
+  <div class="foot">Live on geoseo-tau.vercel.app · API auto-deploys from <span class="mono">main</span> (Render) · web via <span class="mono">vercel deploy</span></div>
+</div>
