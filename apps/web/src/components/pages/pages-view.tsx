@@ -23,6 +23,7 @@ import {
   GitCompare,
   Palette,
   Copy,
+  Zap,
 } from "lucide-react";
 import type {
   GeneratedPage,
@@ -113,6 +114,8 @@ export function PagesView({
   const [highlightKw, setHighlightKw] = useState(false);
   // Pages regenerated this session clear from "Needs Attention" (the staleness is resolved).
   const [refreshedIds, setRefreshedIds] = useState<Set<string>>(() => new Set());
+  // Autopilot toggling — tracks which page ids are mid-toggle to show a spinner.
+  const [autopilotBusy, setAutopilotBusy] = useState<string | null>(null);
   // "Create a page" composer (lifted so the backlog's "Use" can prefill it).
   const [topic, setTopic] = useState("");
   const [composerType, setComposerType] = useState<ComposerType>("auto");
@@ -436,6 +439,25 @@ export function PagesView({
     }
   }
 
+  async function toggleAutopilot(id: string, enabled: boolean) {
+    setAutopilotBusy(id);
+    try {
+      const updated = await pageEngineApi.toggleAutopilot(id, enabled);
+      setPages((arr) => arr.map((p) => (p.id === id ? updated : p)));
+      notify({
+        kind: "success",
+        title: enabled ? "Autopilot on" : "Autopilot off",
+        message: enabled
+          ? "This page will be automatically re-drafted when flagged stale."
+          : "Autopilot disabled — you'll be notified when a refresh is needed.",
+      });
+    } catch (err) {
+      notify({ kind: "error", title: "Autopilot toggle failed", message: err instanceof Error ? err.message : "Try again." });
+    } finally {
+      setAutopilotBusy(null);
+    }
+  }
+
   async function generateFromOpportunity(opp: KeywordOpportunity) {
     setBusy(opp.id);
     try {
@@ -672,6 +694,25 @@ export function PagesView({
                     >
                       {busy === p.id ? <Loader2 className="size-3.5 animate-spin" /> : <RefreshCw className="size-3.5" />}
                     </Button>
+                    <button
+                      title={p.autopilot ? "Autopilot on — click to disable" : "Autopilot off — click to enable"}
+                      aria-label={p.autopilot ? "Disable autopilot" : "Enable autopilot"}
+                      aria-pressed={!!p.autopilot}
+                      disabled={autopilotBusy === p.id}
+                      onClick={() => toggleAutopilot(p.id, !p.autopilot)}
+                      className={cn(
+                        "inline-flex size-8 shrink-0 items-center justify-center rounded-full border transition-colors focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+                        p.autopilot
+                          ? "border-brand/40 bg-brand/10 text-brand hover:bg-brand/20"
+                          : "border-border bg-transparent text-muted-foreground hover:text-foreground",
+                      )}
+                    >
+                      {autopilotBusy === p.id ? (
+                        <Loader2 className="size-3.5 animate-spin" />
+                      ) : (
+                        <Zap className={cn("size-3.5", p.autopilot && "fill-brand")} />
+                      )}
+                    </button>
                   </div>
                 </div>
               );

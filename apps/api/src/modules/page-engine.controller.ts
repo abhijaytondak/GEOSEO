@@ -8,6 +8,7 @@ import {
   Inject,
   NotFoundException,
   Param,
+  Patch,
   Post,
   Put,
   Query,
@@ -287,9 +288,19 @@ export class PagesController {
     return { format: "html", filename: `${slug}.html`, contentType: "text/html; charset=utf-8", content: renderStandaloneHtml(page) };
   }
 
+  /** Refresh: actually regenerate the page content via the LLM and restore published status.
+   *  The old stub only set status="needs-refresh" without re-drafting — this closes that gap. */
   @Post(":id/refresh")
-  refresh(@Req() req: TenantRequest, @Param("id") id: string) {
-    return this.must(this.store.transitionPage(resolveTenantId(req), id, "needs-refresh"), id);
+  async refresh(@Req() req: TenantRequest, @Param("id") id: string) {
+    return this.must(await this.store.refreshPage(resolveTenantId(req), id), id);
+  }
+
+  /** Toggle autopilot mode for a page. When enabled, stale-detection monitors will
+   *  automatically re-draft the page rather than just flagging it. */
+  @Patch(":id/autopilot")
+  autopilot(@Req() req: TenantRequest, @Param("id") id: string, @Body() body: { enabled?: boolean }) {
+    if (typeof body?.enabled !== "boolean") throw new BadRequestException("enabled (boolean) is required");
+    return this.must(this.store.toggleAutopilot(resolveTenantId(req), id, body.enabled), id);
   }
 
   /** Auto-Updates core: actually RE-DRAFT the page via the LLM, preserving its URL. */

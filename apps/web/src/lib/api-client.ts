@@ -38,6 +38,7 @@ import type {
   JobRun,
   JobType,
   KpiMetric,
+  LeadNotificationRule,
   OnboardingStatus,
   OutreachTemplate,
   PerformanceOverview,
@@ -591,6 +592,22 @@ export const api = {
     ),
   triggerDigest: () =>
     send<{ sent: boolean; to: string; message: string }>("POST", "/monitoring/digest", {}),
+
+  // lead notification rules
+  getNotificationRules: () =>
+    get<{ rules: LeadNotificationRule[] }>("/leads/notifications/rules", () => ({ rules: [] })).then(
+      (d) => d.rules,
+    ),
+  createNotificationRule: (data: Omit<LeadNotificationRule, "id" | "workspaceId">) =>
+    send<{ rule: LeadNotificationRule }>("POST", "/leads/notifications/rules", data).then(
+      (d) => d.rule,
+    ),
+  updateNotificationRule: (id: string, data: Partial<Omit<LeadNotificationRule, "id" | "workspaceId">>) =>
+    send<{ rule: LeadNotificationRule }>("PUT", `/leads/notifications/${encodeURIComponent(id)}`, data).then(
+      (d) => d.rule,
+    ),
+  deleteNotificationRule: (id: string) =>
+    send<{ id: string; deleted: boolean }>("DELETE", `/leads/notifications/${encodeURIComponent(id)}`),
 
   // settings
   getSettings: () =>

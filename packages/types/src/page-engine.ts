@@ -169,6 +169,8 @@ export interface GeneratedPage {
   publishedUrl?: string;
   publishedAt?: ISODate;
   lastRefreshedAt?: ISODate;
+  /** When true, the page is automatically re-drafted when flagged stale (autopilot). */
+  autopilot?: boolean;
   createdAt: ISODate;
   updatedAt: ISODate;
 }

@@ -36,6 +36,240 @@ import type {
   SpamStatus,
 } from "@geoseo/types";
 
+/**
+ * Build type-appropriate FAQ pairs for the template path.
+ * Questions are tailored to the page type so a comparison page asks "Which is better?"
+ * while a guide asks "How long does it take?" — not the same generic questions for all types.
+ */
+function buildFaqsForType(type: PageType, keyword: string, count: number): { q: string; a: string }[] {
+  const k = keyword;
+  const typeQuestions: Record<PageType, { q: string; a: string }[]> = {
+    guide: [
+      { q: `How long does it take to learn ${k}?`, a: `Most people get comfortable with ${k} within a few weeks of consistent practice. A structured guide like this one speeds up the process considerably.` },
+      { q: `Is ${k} suitable for beginners?`, a: `Yes. This guide is written for people at all experience levels. Start with the early sections and work through at your own pace.` },
+      { q: `What are the most common mistakes with ${k}?`, a: `The most common mistake is skipping the fundamentals and jumping straight to advanced techniques. Building a solid base first saves significant time later.` },
+      { q: `Do I need special tools to get started with ${k}?`, a: `No special tools are required to start. The basics of ${k} can be applied with what most teams already have — we cover any recommended tools in the later sections.` },
+      { q: `How do I measure progress with ${k}?`, a: `Set clear goals before you start, then track the specific metrics most relevant to your situation. We recommend reviewing progress every two weeks and adjusting your approach accordingly.` },
+      { q: `Where can I get help with ${k}?`, a: `This guide covers the most common questions, but every situation is unique. Reach out via the contact form if you'd like personalised advice.` },
+    ],
+    service: [
+      { q: `What does your ${k} service include?`, a: `Our ${k} service includes initial discovery, a structured delivery phase, and ongoing support. Full scope is confirmed during the discovery call.` },
+      { q: `How long does the ${k} engagement take?`, a: `Most ${k} projects run between four and twelve weeks depending on scope and complexity. We'll give you a detailed timeline during the discovery phase.` },
+      { q: `How much does ${k} cost?`, a: `Pricing depends on the scope of your requirements. We offer fixed-scope packages and custom engagements — contact us for a no-obligation quote.` },
+      { q: `Do you offer ongoing support after the ${k} project?`, a: `Yes. We offer a range of ongoing support options so you can continue to build on the work after the initial engagement.` },
+    ],
+    comparison: [
+      { q: `Which option is better for ${k}?`, a: `It depends on your requirements. If speed and simplicity are the priority, Option A is typically the better choice. For scale and flexibility, Option B has the edge.` },
+      { q: `Can I switch between options later?`, a: `Switching is possible but comes with a migration cost. It's worth choosing the right option for your current and near-future needs rather than planning a switch.` },
+      { q: `How do the prices compare for ${k}?`, a: `Pricing varies significantly by use case and team size. We recommend requesting quotes from both providers with your specific requirements before comparing.` },
+      { q: `Which option is better for small teams?`, a: `For small teams, the simpler option generally delivers faster results. Avoid over-engineering the solution before you have clear evidence of what you need.` },
+      { q: `Is there a free trial available?`, a: `Most providers in this space offer a trial period. Check the provider's site directly for current trial terms — these change frequently.` },
+    ],
+    landing: [
+      { q: `How do I get started with ${k}?`, a: `The fastest way to get started is to book a discovery call. We'll understand your situation, share relevant experience, and outline the right path forward.` },
+      { q: `What results can I expect from ${k}?`, a: `Results vary by starting point and effort, but clients typically see meaningful progress within the first 30 to 90 days when they engage fully with the process.` },
+      { q: `How is this different from other ${k} providers?`, a: `We focus on practical, measurable outcomes rather than activity or deliverable counts. You'll know exactly what's happening and why at every stage.` },
+      { q: `Is there a minimum commitment for ${k}?`, a: `No minimum commitment is required for an initial discovery conversation. Ongoing engagement terms are discussed and agreed upfront.` },
+    ],
+    faq: [
+      { q: `What is ${k}?`, a: `${k} refers to the practice or product described on this page. The sections above cover the key concepts in detail.` },
+      { q: `Who is ${k} for?`, a: `${k} is relevant to anyone facing the challenges or goals described on this page. Specific use cases are covered in the sections above.` },
+      { q: `How do I get started with ${k}?`, a: `Use the contact form on this page or browse the related resources to take your first step.` },
+      { q: `Is ${k} suitable for my industry?`, a: `In most cases, yes. The core principles apply across industries, though implementation details may vary.` },
+      { q: `What are the alternatives to ${k}?`, a: `Alternatives exist and are worth considering. The right choice depends on your specific situation, constraints, and goals.` },
+      { q: `How much does ${k} cost?`, a: `Costs vary depending on how you approach ${k}. Contact us for a personalised estimate based on your requirements.` },
+      { q: `How long does ${k} take?`, a: `Timelines depend on scope and starting point. Most engagements deliver initial results within weeks, not months.` },
+      { q: `Can I try ${k} before committing?`, a: `Yes. We offer a no-obligation discovery conversation so you can understand the fit before making any commitment.` },
+      { q: `What do I need to get started with ${k}?`, a: `Very little upfront. A clear goal and a willingness to engage with the process are the most important ingredients.` },
+      { q: `How do I know if ${k} is working?`, a: `We define success metrics at the start of every engagement so you always have a clear picture of progress.` },
+    ],
+    resource: [
+      { q: `Is this ${k} resource free?`, a: `Yes. The resource on this page is free to use. More advanced templates and toolkits are available for download — use the contact form to request them.` },
+      { q: `Can I adapt this ${k} resource for my own use?`, a: `Absolutely. The resource is designed to be adapted. Adjust headings, examples, and timelines to fit your specific context.` },
+      { q: `How often is this ${k} resource updated?`, a: `We review and update our resources regularly as best practices evolve. Check back for the latest version or subscribe for updates.` },
+    ],
+    local: [
+      { q: `Do you provide ${k} in my area?`, a: `We cover a wide area — contact us with your location and we'll confirm availability straight away.` },
+      { q: `How quickly can you respond for ${k} in my area?`, a: `Response times depend on your location and current demand. For most areas we can respond within 24–48 hours.` },
+      { q: `Are your ${k} services the same everywhere?`, a: `Our core service is consistent everywhere we operate. Local conditions may affect timelines and specific recommendations.` },
+      { q: `Can I meet the ${k} team in person?`, a: `Yes. For clients in our core service area, face-to-face meetings are available on request.` },
+    ],
+  };
+
+  const pool = typeQuestions[type] ?? typeQuestions.landing;
+  // Return up to `count` questions; cycle if there are fewer in the pool.
+  return Array.from({ length: count }, (_, i) => pool[i % pool.length]);
+}
+
+/**
+ * Build type-specific sections for the deterministic (non-LLM) template path.
+ * Each page type gets a distinct structure — different headings, section count, and
+ * brand/keyword-aware placeholder body copy — so the template fallback is never
+ * a generic "3-section + 2-FAQ" for every page type.
+ *
+ * When the LLM is available, `draftPageContent` returns `ai.sections` and this
+ * function is never called (the LLM path is already type-aware via page-type-spec.ts).
+ */
+function buildSectionsForType(
+  type: PageType,
+  keyword: string,
+  brandName: string,
+  _intent: string,
+): { heading: string; body: string }[] {
+  const k = keyword;
+  const b = brandName || "our team";
+
+  switch (type) {
+    case "guide":
+      return [
+        {
+          heading: `What is ${k}?`,
+          body: `Understanding ${k} is the first step to getting results. This guide explains the core concepts and why ${k} matters for your business or workflow. ${b} has worked with organisations at every stage of this journey.`,
+        },
+        {
+          heading: `Step 1 — Get started with ${k}`,
+          body: `The fastest way to start with ${k} is to focus on the fundamentals. Begin by identifying your goal, then map the simplest path from where you are now to where you want to be. Most teams see early wins within the first two weeks.`,
+        },
+        {
+          heading: `Step 2 — Build your approach`,
+          body: `Once you have the basics in place, it's time to create a repeatable process for ${k}. Document what's working, remove friction from your workflow, and loop in the right stakeholders early.`,
+        },
+        {
+          heading: `Step 3 — Optimise and scale`,
+          body: `The final step is turning a working approach into a scalable system. Measure what matters, iterate quickly on what isn't working, and keep ${k} front-of-mind as your team grows.`,
+        },
+        {
+          heading: `Common mistakes with ${k}`,
+          body: `Most teams run into the same set of problems early on. The good news: they're avoidable. ${b} has compiled the top pitfalls and exactly how to sidestep each one so you reach your goals faster.`,
+        },
+      ];
+
+    case "service":
+      return [
+        {
+          heading: `The challenge: why ${k} is hard to get right`,
+          body: `Most organisations struggle with ${k} because the problem is multi-layered — it's not just a tool or a tactic. Without the right approach, teams waste time, miss opportunities, and leave revenue on the table.`,
+        },
+        {
+          heading: `Our solution: ${b} and ${k}`,
+          body: `${b} delivers a proven, end-to-end approach to ${k}. From initial discovery through to ongoing optimisation, our process is designed to produce measurable outcomes — not just activity.`,
+        },
+        {
+          heading: `Key features`,
+          body: `Our ${k} service includes three core capabilities. First, a structured onboarding process that gets your team up to speed in days, not weeks. Second, continuous monitoring so issues are caught before they become problems. Third, dedicated support so you're never stuck waiting for answers.`,
+        },
+        {
+          heading: `Why clients choose ${b}`,
+          body: `Clients choose ${b} for ${k} because we combine deep expertise with a practical, no-jargon approach. Our track record speaks for itself: teams report faster time-to-value and stronger results compared to going it alone or switching providers.`,
+        },
+      ];
+
+    case "comparison":
+      return [
+        {
+          heading: `${k} — overview`,
+          body: `This comparison covers everything you need to make a confident decision about ${k}. We break down the key differences, trade-offs, and the buyer profiles each option is best suited for.`,
+        },
+        {
+          heading: `Option A — strengths`,
+          body: `The first approach to ${k} excels when you need speed, simplicity, and a lower upfront investment. Teams with limited resources or tight deadlines often find this path the clearest route to a working solution.`,
+        },
+        {
+          heading: `Option B — strengths`,
+          body: `The second approach is built for scale. If your requirements are complex, your team is large, or you need deep customisation, this option gives you the headroom to grow without hitting ceilings early on.`,
+        },
+        {
+          heading: `Head-to-head: ${k}`,
+          body: `Side by side, the two options differ most on three dimensions: setup complexity (Option A wins), long-term flexibility (Option B wins), and total cost of ownership over 12 months (depends on team size — see pricing notes below).`,
+        },
+        {
+          heading: `Verdict — which is right for you?`,
+          body: `For most teams new to ${k}, Option A is the faster path to value. If you're scaling beyond 50 users or need enterprise-grade controls, Option B is worth the additional investment. ${b} can help you evaluate both options against your specific requirements.`,
+        },
+      ];
+
+    case "landing":
+      return [
+        {
+          heading: `Why ${k} matters for your business`,
+          body: `${k} is no longer a nice-to-have — it's a key driver of growth, efficiency, and competitive advantage. Organisations that get it right outperform their peers on every metric that matters.`,
+        },
+        {
+          heading: `How ${b} delivers results`,
+          body: `${b} has built a proven approach to ${k} that combines the right tools, the right process, and the right team. From day one, we focus on the outcomes that matter most to your business.`,
+        },
+        {
+          heading: `What makes ${b} different`,
+          body: `Unlike generic solutions, ${b}'s approach to ${k} is tailored to your context. We don't believe in one-size-fits-all — every engagement starts with a deep understanding of your goals, your constraints, and your customers.`,
+        },
+        {
+          heading: `Real results from real clients`,
+          body: `Clients working with ${b} on ${k} report faster time-to-value, higher team confidence, and outcomes that persist long after the engagement ends. Ask us for case studies relevant to your industry.`,
+        },
+        {
+          heading: `Get started today`,
+          body: `Ready to tackle ${k} with a team that's done it before? ${b} offers a no-commitment discovery call to understand your situation and share what's worked for organisations like yours.`,
+        },
+      ];
+
+    case "local":
+      return [
+        {
+          heading: `${k} in your area`,
+          body: `${b} provides ${k} to clients across the region. Whether you're in the city centre or a surrounding area, our team is close by and ready to help — with the local knowledge that makes a real difference.`,
+        },
+        {
+          heading: `Why local matters for ${k}`,
+          body: `Working with a local provider for ${k} means faster response times, face-to-face meetings when you need them, and a team that understands the specific conditions and regulations in your area.`,
+        },
+        {
+          heading: `Our service area`,
+          body: `${b} covers the full region for ${k}. Contact us to confirm coverage for your specific location — we're expanding our service area regularly and may already be working near you.`,
+        },
+      ];
+
+    case "faq":
+      return [
+        {
+          heading: `Everything you need to know about ${k}`,
+          body: `This page answers the most common questions about ${k} — from the basics to the details that matter when you're making a decision. If you can't find what you need, ${b} is happy to help directly.`,
+        },
+      ];
+
+    case "resource":
+      return [
+        {
+          heading: `What's inside this ${k} resource`,
+          body: `This resource gives you a practical, ready-to-use toolkit for ${k}. Everything here has been field-tested by ${b} and refined based on real-world feedback — so you can start using it today, not next quarter.`,
+        },
+        {
+          heading: `How to use this resource`,
+          body: `Work through the resource step by step, or jump to the section most relevant to where you are right now. Each section is self-contained so you can adapt it to your context without needing to read everything first.`,
+        },
+        {
+          heading: `A worked example`,
+          body: `To make this concrete, here's how a typical team uses this ${k} resource in practice. Follow the example from start to finish to see how the pieces fit together — then adapt it for your own situation.`,
+        },
+      ];
+
+    default:
+      return [
+        {
+          heading: `About ${k}`,
+          body: `${b} covers everything you need to know about ${k} on this page. Explore the sections below to understand the topic, see how it applies to your situation, and find out how to get started.`,
+        },
+        {
+          heading: `Why ${k} matters`,
+          body: `${k} is an important area for any organisation focused on growth and efficiency. Getting it right early saves time, reduces risk, and puts you in a stronger position as your needs evolve.`,
+        },
+        {
+          heading: `Next steps`,
+          body: `Ready to learn more about ${k}? ${b} is here to help. Reach out using the form below or explore our other resources to build on what you've read here.`,
+        },
+      ];
+  }
+}
+
 function countWords(p: { heroCopy: string; sections: { body: string }[]; faqs: { q: string; a: string }[] }): number {
   const text = [p.heroCopy, ...p.sections.map((s) => s.body), ...p.faqs.map((f) => `${f.q} ${f.a}`)].join(" ");
   return text.trim() ? text.trim().split(/\s+/).length : 0;
@@ -477,18 +711,13 @@ export class PageEngineStore implements OnModuleInit {
     const spec = specFor(opp.recommendedPageType);
     const metaDescription =
       ai?.metaDescription ?? `A ${spec.label.toLowerCase()} targeting "${opp.query}", drafted from Brand Memory.`;
+    // Use type-specific section builder for the template path; LLM path uses ai.sections.
     const sections = ai?.sections?.length
       ? ai.sections
-      : spec.sectionPlan.map((heading) => ({
-          heading,
-          body: `Draft ${spec.label.toLowerCase()} section on "${heading.toLowerCase()}" for ${title} — pending review.`,
-        }));
+      : buildSectionsForType(opp.recommendedPageType, opp.query, company ?? title, opp.intent);
     const faqs = ai?.faqs?.length
       ? ai.faqs
-      : Array.from({ length: spec.faqCount }, (_, i) => ({
-          q: `What should I know about ${opp.query}? (${i + 1})`,
-          a: "Draft answer pending review.",
-        }));
+      : buildFaqsForType(opp.recommendedPageType, opp.query, spec.faqCount);
     const page: GeneratedPage = {
       id: `pg-gen-${this.seq}`,
       blueprintId: s.blueprints[0]?.id ?? "bp-1",
@@ -1078,6 +1307,56 @@ export class PageEngineStore implements OnModuleInit {
     this.logAudit(tenantId, "delete", "lead", id);
     return true;
   }
+  /**
+   * Synchronously refresh a page: set status to "generating", re-draft via the LLM,
+   * and restore to "published" (or "draft" if it was never published).
+   * Replaces the old stub that only set `needs-refresh` without doing any work.
+   */
+  async refreshPage(tenantId: string, pageId: string): Promise<GeneratedPage | undefined> {
+    const p = this.st(tenantId).pages.find((x) => x.id === pageId);
+    if (!p) return undefined;
+    const prevStatus = p.status;
+    p.status = "needs-refresh";
+    p.updatedAt = this.now;
+    this.save(tenantId, T.pages, p.id, p);
+    // Re-draft via LLM; falls back gracefully when the LLM is unavailable.
+    const query = p.targetKeywords[0] ?? p.title.toLowerCase();
+    const ai = await draftPageContent(query, p.pageType, await this.brandHint(tenantId));
+    if (ai) {
+      if (ai.metaTitle) p.metaTitle = ai.metaTitle;
+      if (ai.metaDescription) p.metaDescription = ai.metaDescription;
+      if (ai.heroCopy) p.heroCopy = ai.heroCopy;
+      if (ai.sections?.length) p.sections = ai.sections;
+      if (ai.faqs?.length) p.faqs = ai.faqs;
+      p.schemaJson = buildSchemaJson(p.pageType, { title: p.title, description: p.metaDescription, faqs: p.faqs });
+      p.infographic = buildInfographic(p.pageType, query, p.sections);
+      p.wordCount = countWords(p);
+    }
+    // Restore to published if it was published before; otherwise leave as approved/draft.
+    p.status = prevStatus === "published" || prevStatus === "needs-refresh" ? "published" : prevStatus;
+    p.lastRefreshedAt = this.now;
+    p.updatedAt = this.now;
+    if (p.status === "published") {
+      p.publishedUrl = p.publishedUrl ?? this.publishedUrlFor(p.slug);
+    }
+    this.snapshot(tenantId, p, ai ? "AI content refresh (manual)" : "Refresh (LLM unavailable — content unchanged)", "ai");
+    this.save(tenantId, T.pages, p.id, p);
+    this.logAudit(tenantId, "update", "page", p.id);
+    return p;
+  }
+
+  /** Toggle autopilot on/off for a page. When on, stale-page monitors will automatically
+   *  trigger a re-draft instead of just flagging the page. */
+  toggleAutopilot(tenantId: string, pageId: string, enabled: boolean): GeneratedPage | undefined {
+    const p = this.getPage(tenantId, pageId);
+    if (!p) return undefined;
+    p.autopilot = enabled;
+    p.updatedAt = this.now;
+    this.save(tenantId, T.pages, p.id, p);
+    this.logAudit(tenantId, "update", "page", p.id);
+    return p;
+  }
+
   /** Flag a page needs-refresh from an external signal (e.g. rank-drop monitor). No-ops if already flagged. */
   markNeedsRefresh(tenantId: string, pageId: string, reason?: string): boolean {
     const p = this.getPage(tenantId, pageId);

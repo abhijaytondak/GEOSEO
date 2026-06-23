@@ -23,6 +23,7 @@ import type { IntegrationStatus, TeamMember, WorkspaceSettings } from "@geoseo/t
 import { api } from "@/lib/api-client";
 import { Panel } from "@/components/dashboard/panel";
 import { BrandScorecard } from "@/components/dashboard/brand-scorecard";
+import { LeadNotificationConfig } from "@/components/leads/lead-notification-config";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
@@ -577,6 +578,13 @@ export function SettingsView({ initial }: { initial: WorkspaceSettings }) {
                 </div>
               </div>
             </div>
+          </Panel>
+
+          <Panel
+            title="Alert rules"
+            description="Fine-grained rules that control when and how you are notified about incoming leads."
+          >
+            <LeadNotificationConfig />
           </Panel>
         </div>
       )}

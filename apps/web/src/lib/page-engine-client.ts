@@ -298,6 +298,10 @@ export const pageEngineApi = {
   approveBlueprint: (id: string) =>
     send<PageBlueprint>("POST", `/page-blueprints/${id}/approve`),
 
+  /** Toggle autopilot on a page — PATCH /pages/:id/autopilot { enabled: boolean } */
+  toggleAutopilot: (id: string, enabled: boolean) =>
+    send<GeneratedPage>("PATCH", `/pages/${id}/autopilot`, { enabled }),
+
   // editing + versioning
   updatePage: (id: string, edit: PageEdit) => send<GeneratedPage>("PUT", `/pages/${id}`, edit),
   getPageVersions: (id: string) =>
