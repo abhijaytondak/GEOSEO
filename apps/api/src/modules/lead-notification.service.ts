@@ -1,6 +1,7 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
+import { Injectable, Logger, NotFoundException } from "@nestjs/common";
 import type { Lead, LeadNotification, LeadNotificationRule, LeadScore } from "@geoseo/types";
 import { DocStore } from "../db/db";
+import { sendEmail, leadAlertHtml } from "../common/email";
 
 type NotifyState = { rules: Record<string, LeadNotificationRule>; log: LeadNotification[]; seq: number };
 
@@ -15,6 +16,7 @@ function nowIso(): string {
  */
 @Injectable()
 export class LeadNotificationStore {
+  private readonly log = new Logger(LeadNotificationStore.name);
   private cache = new Map<string, NotifyState>();
   private db = new DocStore<NotifyState>("cx_lead_notify");
 
@@ -75,7 +77,7 @@ export class LeadNotificationStore {
     return (await this.state(tenantId)).log.filter((n) => n.leadId === leadId).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   }
 
-  /** Evaluate enabled rules against a lead; record a delivery per matched rule. */
+  /** Evaluate enabled rules against a lead; deliver per matched rule (email/Slack/in-app). */
   async notify(tenantId: string, lead: Lead, score?: LeadScore): Promise<{ delivered: LeadNotification[]; evaluated: number }> {
     const s = await this.state(tenantId);
     const total = score?.total ?? lead.score ?? 0;
@@ -87,19 +89,68 @@ export class LeadNotificationStore {
       if (r.pages?.length && lead.pageId && !r.pages.includes(lead.pageId)) return false;
       return true;
     });
-    const delivered: LeadNotification[] = matched.map((r) => {
+
+    const delivered: LeadNotification[] = [];
+    for (const r of matched) {
       s.seq += 1;
+      const msg = `${lead.name || lead.email} (score ${total}) from ${lead.pageTitle ?? "a page"} — via "${r.name}".`;
+
+      // Attempt real delivery for each channel that has a destination configured.
+      let actualStatus: "sent" | "failed" = "sent";
+      for (const channel of r.channels) {
+        if (channel === "email") {
+          // NOTIFY_EMAIL env var — the workspace owner's email (or comma-separated list).
+          const recipients = (process.env.NOTIFY_EMAIL ?? "").split(",").map((e) => e.trim()).filter(Boolean);
+          if (recipients.length) {
+            const html = leadAlertHtml({
+              leadName: lead.name || "Unknown",
+              leadEmail: lead.email,
+              leadCompany: lead.company ?? "",
+              pageTitle: lead.pageTitle ?? "a page",
+              score: total,
+              status: lead.status,
+              ruleName: r.name,
+            });
+            const ok = await sendEmail({ to: recipients, subject: `New lead: ${lead.name || lead.email} (score ${total})`, html });
+            if (!ok) {
+              actualStatus = "failed";
+              this.log.warn(`Email delivery failed for lead ${lead.id}, rule ${r.id}`);
+            }
+          }
+        } else if (channel === "slack") {
+          // NOTIFY_SLACK_WEBHOOK env var — Incoming Webhook URL.
+          const webhook = process.env.NOTIFY_SLACK_WEBHOOK;
+          if (webhook) {
+            try {
+              const { fetchWithTimeout } = await import("../common/http");
+              const res = await fetchWithTimeout(webhook, {
+                method: "POST",
+                headers: { "content-type": "application/json" },
+                body: JSON.stringify({
+                  text: `*New lead (score ${total})*\n${lead.name || lead.email}${lead.company ? ` · ${lead.company}` : ""}\nPage: ${lead.pageTitle ?? "unknown"} · Rule: _${r.name}_`,
+                }),
+              }, 8_000);
+              if (!res.ok) actualStatus = "failed";
+            } catch {
+              actualStatus = "failed";
+            }
+          }
+        }
+        // "in_app" and "webhook" channels: recorded as-is (in-app shown in UI; webhook requires custom endpoint)
+      }
+
       const entry: LeadNotification = {
         id: `ln-${s.seq}`,
         leadId: lead.id,
         ruleId: r.id,
         channels: r.channels,
-        message: `${lead.name || lead.email} (score ${total}) from ${lead.pageTitle ?? "a page"} — via "${r.name}".`,
-        status: "sent",
+        message: msg,
+        status: actualStatus,
         createdAt: nowIso(),
       };
-      return entry;
-    });
+      delivered.push(entry);
+    }
+
     s.log = [...delivered, ...s.log].slice(0, 500);
     this.persist(tenantId, s);
     return { delivered, evaluated: rules.filter((r) => r.enabled).length };

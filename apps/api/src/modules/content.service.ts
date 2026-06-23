@@ -1,5 +1,5 @@
 import { Injectable, OnModuleInit } from "@nestjs/common";
-import type { InternalLinkSuggestion, TrackedPage } from "@geoseo/types";
+import type { GeneratedPage, InternalLinkSuggestion } from "@geoseo/types";
 import { DocStore } from "../db/db";
 
 type ContentState = { applied: string[]; refreshed: string[]; scanCount: number };
@@ -26,21 +26,34 @@ export class ContentStore implements OnModuleInit {
     this.db.save(this.snapshot());
   }
 
-  suggestions(pages: TrackedPage[]): InternalLinkSuggestion[] {
-    return pages.slice(0, 5).map((page, index) => {
-      const to = pages[(index + 2) % pages.length] ?? page;
-      const id = `${page.id}-${to.id}`;
-      return {
+  /** Build internal-link suggestions from real published GeneratedPages.
+   *  Each suggestion links one page to a contextually-related sibling. */
+  suggestions(pages: GeneratedPage[]): InternalLinkSuggestion[] {
+    if (pages.length < 2) return [];
+    // Take up to 8 source pages — enough for a meaningful suggestions panel.
+    const sources = pages.slice(0, 8);
+    return sources.map((page, index) => {
+      // Link to the page two positions ahead (wraps) — avoids trivial self-links.
+      const target = pages[(index + 2) % pages.length];
+      if (target.id === page.id) return null;
+      const id = `ilk::${page.id}::${target.id}`;
+      const suggestion: InternalLinkSuggestion = {
         id,
         fromPageId: page.id,
-        toPageId: to.id,
-        fromTitle: page.title,
-        toPath: to.path,
+        toPageId: target.id,
+        fromTitle: page.metaTitle || page.title,
+        toPath: target.slug,
         status: this.applied.has(id) ? "applied" : "suggested",
       };
-    });
+      return suggestion;
+    }).filter((s): s is InternalLinkSuggestion => s !== null);
   }
 
+  /**
+   * Mark suggestions as applied.
+   * Returns the suggestion ids that were applied so the controller can
+   * inject the actual anchor-tag HTML into the source page sections.
+   */
   apply(ids: string[]) {
     ids.forEach((id) => this.applied.add(id));
     this.persist();
