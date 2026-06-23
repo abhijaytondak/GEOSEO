@@ -1078,6 +1078,16 @@ export class PageEngineStore implements OnModuleInit {
     this.logAudit(tenantId, "delete", "lead", id);
     return true;
   }
+  /** Flag a page needs-refresh from an external signal (e.g. rank-drop monitor). No-ops if already flagged. */
+  markNeedsRefresh(tenantId: string, pageId: string, reason?: string): boolean {
+    const p = this.getPage(tenantId, pageId);
+    if (!p || p.status !== "published") return false;
+    p.status = "needs-refresh";
+    if (reason) p.seoChecks = [{ label: `Rank drop detected: ${reason}`, pass: false }, ...p.seoChecks.filter(c => !c.label.startsWith("Rank drop detected"))];
+    this.save(tenantId, T.pages, p.id, p);
+    return true;
+  }
+
   /* monitoring: refresh recommendations (PRD §7.8) */
   refreshRecommendations(tenantId: string) {
     return this.st(tenantId).pages

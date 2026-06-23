@@ -85,6 +85,7 @@ import { ProviderHealthController } from "./modules/provider-health.controller";
 import { AdminController } from "./modules/admin.controller";
 import { RequestLogInterceptor } from "./common/request-log.interceptor";
 import { RolesGuard } from "./common/roles.guard";
+import { ContentMonitorService } from "./modules/content-monitor.service";
 
 @Module({
   imports: [SeoModule],
@@ -170,6 +171,7 @@ import { RolesGuard } from "./common/roles.guard";
     CrmSyncStore,
     GscService,
     BillingStore,
+    ContentMonitorService,
     // Order matters: BearerGuard verifies the Clerk JWT and sets req.auth FIRST, so
     // TenantGuard can derive the tenant from the verified org (not a spoofable header),
     // and RolesGuard can read the verified role. (P0-5.)

@@ -19,6 +19,7 @@ import { ApiTags } from "@nestjs/swagger";
 import { PageEngineStore } from "./page-engine.service";
 import { SettingsStore } from "./settings.service";
 import { BrandMemoryStore } from "./brand.service";
+import { ContentMonitorService } from "./content-monitor.service";
 import { CmsPublishStore, renderHtml, renderMarkdown, renderStandaloneHtml } from "./cms-publish.service";
 import { Public } from "../common/public.decorator";
 import { resolveTenantId, type TenantRequest } from "../common/tenant";
@@ -388,11 +389,22 @@ export class LeadsController {
 @ApiTags("monitoring")
 @Controller()
 export class MonitoringController {
-  constructor(@Inject(PageEngineStore) private readonly store: PageEngineStore) {}
+  constructor(
+    @Inject(PageEngineStore) private readonly store: PageEngineStore,
+    @Inject(ContentMonitorService) private readonly monitor: ContentMonitorService,
+  ) {}
 
   @Get("recommendations/refresh")
   refreshRecs(@Req() req: TenantRequest) {
     return { recommendations: this.store.refreshRecommendations(resolveTenantId(req)) };
+  }
+
+  /** Manually trigger a content-health scan (rank-drop detection). Runs the same
+   *  logic as the background 6-hour poll and returns how many pages were flagged. */
+  @Post("monitoring/scan")
+  async triggerScan() {
+    const result = await this.monitor.scan("manual");
+    return { ...result, message: result.flagged > 0 ? `${result.flagged} page(s) flagged for refresh` : "No new pages flagged" };
   }
 
   @Get("audit")

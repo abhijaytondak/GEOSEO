@@ -64,8 +64,8 @@ export class BacklinkController {
   }
 
   @Post("discover")
-  discover() {
-    const opportunity = this.opportunities.discover();
+  async discover() {
+    const opportunity = await this.opportunities.discover();
     this.audit.record("discover", "prospect", opportunity.id);
     return { opportunity, job: this.jobs.create("discover") };
   }
