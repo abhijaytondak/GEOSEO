@@ -71,6 +71,18 @@ export class SettingsStore implements OnModuleInit {
         description: "Generate brand- and theme-aware hero/infographic images for pages.",
         status: "needs-attention",
       },
+      {
+        id: "salesforce",
+        label: "Salesforce",
+        description: "Sync captured leads to Salesforce as Leads. Configure via SALESFORCE_INSTANCE_URL and SALESFORCE_ACCESS_TOKEN.",
+        status: "needs-attention",
+      },
+      {
+        id: "pipedrive",
+        label: "Pipedrive",
+        description: "Sync captured leads to Pipedrive as persons and deals. Configure via PIPEDRIVE_API_TOKEN and PIPEDRIVE_DOMAIN.",
+        status: "needs-attention",
+      },
     ],
     team: [
       { id: "tm-1", name: "Workspace Owner", email: "owner@example.com", role: "owner" },

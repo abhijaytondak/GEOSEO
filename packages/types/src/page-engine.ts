@@ -113,23 +113,79 @@ export interface SeoCheck {
 }
 
 /**
- * In-page infographic spec (PRD Phase 6 — Infographics). Rendered as branded,
- * THEME-AWARE HTML/SVG on the published page — not a raster image — so AI
- * crawlers can read the data (a deliberate edge over image-only infographics).
+ * In-page infographic specs (PRD Phase 3 — Infographics Engine). Rendered as
+ * semantic HTML on the published page — not raster images — so AI crawlers can
+ * read every label and value (a deliberate edge over image-only infographics).
+ *
+ * Each variant is a distinct interface in a discriminated union keyed on `kind`.
+ * The legacy `InfographicSpec` interface (single optional-field shape) is kept
+ * for backward-compat with existing `buildInfographic` callers; the new
+ * discriminated-union types coexist alongside it.
  */
-export type InfographicKind = "process-flow" | "comparison-table" | "stat-grid" | "pros-cons";
+export type InfographicKind =
+  | "comparison-table"
+  | "process-flow"
+  | "stat-grid"
+  | "pros-cons"
+  | "timeline";
 
+/* -- discriminated-union variants (Phase 3) -------------------------------- */
+
+export interface ComparisonTableSpec {
+  kind: "comparison-table";
+  title: string;
+  /** Column headers, e.g. ["Feature", "Us", "Competitor A"] */
+  columns: string[];
+  rows: Array<{ label: string; values: string[] }>;
+}
+
+export interface ProcessFlowSpec {
+  kind: "process-flow";
+  title: string;
+  steps: Array<{ number: number; heading: string; detail: string }>;
+}
+
+export interface StatGridSpec {
+  kind: "stat-grid";
+  title: string;
+  stats: Array<{ value: string; label: string; note?: string }>;
+}
+
+export interface ProsConsSpec {
+  kind: "pros-cons";
+  title: string;
+  pros: string[];
+  cons: string[];
+}
+
+export interface TimelineSpec {
+  kind: "timeline";
+  title: string;
+  events: Array<{ date: string; heading: string; detail: string }>;
+}
+
+/** Discriminated union of all infographic variants (Phase 3). */
+export type InfographicSpecV2 =
+  | ComparisonTableSpec
+  | ProcessFlowSpec
+  | StatGridSpec
+  | ProsConsSpec
+  | TimelineSpec;
+
+/* -- legacy flat interface (Phase 6 / backward-compat) --------------------- */
+
+/** @deprecated Use `InfographicSpecV2` for new code. Kept for backward-compat. */
 export interface InfographicSpec {
   kind: InfographicKind;
   title: string;
-  /** process-flow */
+  /** process-flow (legacy) */
   steps?: { label: string; detail?: string }[];
-  /** comparison-table */
+  /** comparison-table (legacy) */
   columns?: string[];
   rows?: { label: string; cells: string[] }[];
-  /** stat-grid */
+  /** stat-grid (legacy) */
   stats?: { value: string; label: string }[];
-  /** pros-cons */
+  /** pros-cons (legacy) */
   pros?: string[];
   cons?: string[];
 }
@@ -160,8 +216,10 @@ export interface GeneratedPage {
   heroImageAlt?: string;
   /** Open Graph image URL for social sharing. Defaults to heroImageUrl when not set separately. */
   ogImageUrl?: string;
-  /** Optional in-page infographic (crawlable HTML/SVG) — PRD Phase 6. */
+  /** Optional in-page infographic (crawlable HTML/SVG) — PRD Phase 6 (legacy). */
   infographic?: InfographicSpec;
+  /** AI-crawlable structured infographics embedded in the published page — PRD Phase 3. */
+  infographics?: InfographicSpecV2[];
   targetKeywords: string[];
   wordCount: number;
   brandMemoryVersion: number;

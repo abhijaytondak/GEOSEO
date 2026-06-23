@@ -8,7 +8,7 @@ import { SettingsStore } from "./settings.service";
 /** Record of a page pushed to an external CMS (additive side-store cx_cms_publish). */
 export interface CmsPublishResult {
   pageId: string;
-  provider: "wordpress" | "webflow" | "shopify";
+  provider: "wordpress" | "webflow" | "shopify" | "hubspot";
   externalId: string;
   externalUrl: string;
   status: string;
@@ -190,19 +190,22 @@ export class CmsPublishStore {
   }
 
   /** Active CMS provider — explicit `CMS_PROVIDER` override, else auto-detected from creds. */
-  get provider(): "wordpress" | "webflow" | "shopify" | "none" {
+  get provider(): "wordpress" | "webflow" | "shopify" | "hubspot" | "none" {
     const forced = process.env.CMS_PROVIDER?.toLowerCase();
     const wp = Boolean(this.wpConfig());
     const wf = Boolean(
       process.env.WEBFLOW_API_TOKEN && process.env.WEBFLOW_COLLECTION_ID && process.env.WEBFLOW_SITE_HOST,
     );
     const sh = Boolean(process.env.SHOPIFY_STORE_DOMAIN && process.env.SHOPIFY_ACCESS_TOKEN);
+    const hs = Boolean(process.env.HUBSPOT_CMS_ACCESS_TOKEN && process.env.HUBSPOT_CMS_DOMAIN);
     if (forced === "wordpress") return wp ? "wordpress" : "none";
     if (forced === "webflow") return wf ? "webflow" : "none";
     if (forced === "shopify") return sh ? "shopify" : "none";
+    if (forced === "hubspot") return hs ? "hubspot" : "none";
     if (wp) return "wordpress";
     if (wf) return "webflow";
     if (sh) return "shopify";
+    if (hs) return "hubspot";
     return "none";
   }
 
@@ -256,6 +259,8 @@ export class CmsPublishStore {
         return this.publishWebflow(tenantId, page, now);
       case "shopify":
         return this.publishShopify(tenantId, page, now);
+      case "hubspot":
+        return this.publishHubspot(tenantId, page, now);
       default:
         return null;
     }
@@ -396,6 +401,76 @@ export class CmsPublishStore {
       return result;
     } catch (err) {
       this.log.warn(`Shopify publish failed (${err instanceof Error ? err.message : "unknown"}) — managed fallback`);
+      return null;
+    }
+  }
+
+  private async publishHubspot(tenantId: string, page: GeneratedPage, now: string): Promise<CmsPublishResult | null> {
+    const token = process.env.HUBSPOT_CMS_ACCESS_TOKEN;
+    const domain = process.env.HUBSPOT_CMS_DOMAIN;
+    if (!token || !domain) return null;
+
+    const base = "https://api.hubapi.com";
+    const slug = page.slug.replace(/^\//, "");
+    const existing = (await this.state(tenantId)).byPage[page.id];
+
+    // Build the layoutSections body from rendered HTML.
+    const bodyHtml = renderHtml(page);
+    const payload = {
+      name: page.title,
+      htmlTitle: page.metaTitle || page.title,
+      metaDescription: page.metaDescription ?? "",
+      slug,
+      layoutSections: {
+        main_section: {
+          cells: {},
+          css: "",
+          cssText: "",
+          label: "Main section",
+          params: {},
+          rowMetaData: [],
+          rows: [],
+          type: "cell",
+          w: 12,
+          x: 0,
+          y: 0,
+          zIndex: null,
+          body: bodyHtml,
+        },
+      },
+    };
+
+    try {
+      const url = existing
+        ? `${base}/cms/v3/pages/site-pages/${encodeURIComponent(existing.externalId)}`
+        : `${base}/cms/v3/pages/site-pages`;
+      const method = existing ? "PATCH" : "POST";
+      const res = await fetchWithTimeout(url, {
+        method,
+        headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) {
+        this.log.warn(`HubSpot CMS ${res.status} — keeping managed /feeds destination`);
+        return null;
+      }
+      const json = (await res.json()) as { id?: string | number; url?: string; state?: string };
+      if (!json.id) return null;
+      const externalUrl = json.url ?? `https://${domain.replace(/^https?:\/\//, "").replace(/\/+$/, "")}/${slug}`;
+      const result: CmsPublishResult = {
+        pageId: page.id,
+        provider: "hubspot",
+        externalId: String(json.id),
+        externalUrl,
+        status: json.state ?? "published",
+        publishedAt: now,
+      };
+      const s = await this.state(tenantId);
+      s.byPage[page.id] = result;
+      this.persist(tenantId, s);
+      return result;
+    } catch (err) {
+      this.log.warn(`HubSpot CMS publish failed (${err instanceof Error ? err.message : "unknown"}) — managed fallback`);
       return null;
     }
   }

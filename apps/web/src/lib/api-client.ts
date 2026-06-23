@@ -187,6 +187,18 @@ const fallbackSettings: WorkspaceSettings = {
       description: "Sync qualified leads and source-page attribution.",
       status: "disabled",
     },
+    {
+      id: "salesforce",
+      label: "Salesforce",
+      description: "Sync captured leads to Salesforce as Leads. Configure via SALESFORCE_INSTANCE_URL and SALESFORCE_ACCESS_TOKEN.",
+      status: "needs-attention",
+    },
+    {
+      id: "pipedrive",
+      label: "Pipedrive",
+      description: "Sync captured leads to Pipedrive as persons and deals. Configure via PIPEDRIVE_API_TOKEN and PIPEDRIVE_DOMAIN.",
+      status: "needs-attention",
+    },
   ],
   team: [
     { id: "tm-1", name: "Maya Chen", email: "maya@northwindlabs.io", role: "owner" },

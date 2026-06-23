@@ -10,6 +10,7 @@ import { BrandMemoryStore } from "./brand.service";
 import { BrandLibraryStore, composeBrandContext } from "./brand-library.service";
 import { KeywordResearchService, type KeywordIdea, type ResearchSource } from "./keyword-research.service";
 import { ImageGenStore } from "./image-gen.service";
+import { InfographicService } from "./infographic.service";
 
 const T = {
   opps: "pe_opportunities",
@@ -432,6 +433,7 @@ export class PageEngineStore implements OnModuleInit {
     @Inject(BrandLibraryStore) private readonly library: BrandLibraryStore,
     @Inject(KeywordResearchService) private readonly research: KeywordResearchService,
     @Inject(ImageGenStore) private readonly images: ImageGenStore,
+    @Inject(InfographicService) private readonly infographicService: InfographicService,
   ) {}
 
   /** Instant theme-aware placeholder hero (no generation) so page creation never blocks. */
@@ -735,6 +737,7 @@ export class PageEngineStore implements OnModuleInit {
       cta: spec.cta,
       schemaJson: buildSchemaJson(opp.recommendedPageType, { title, description: metaDescription, faqs }),
       infographic: buildInfographic(opp.recommendedPageType, opp.query, sections),
+      infographics: this.infographicService.generate(opp.query, opp.recommendedPageType, company ?? title),
       targetKeywords: [opp.query],
       wordCount: 0,
       brandMemoryVersion: 1,
@@ -1209,6 +1212,7 @@ export class PageEngineStore implements OnModuleInit {
       if (ai.faqs?.length) p.faqs = ai.faqs;
       p.schemaJson = buildSchemaJson(p.pageType, { title: p.title, description: p.metaDescription, faqs: p.faqs });
       p.infographic = buildInfographic(p.pageType, query, p.sections);
+      p.infographics = this.infographicService.generate(query, p.pageType, this.brand.current()?.company?.trim() ?? p.title);
       p.wordCount = countWords(p);
     }
     if (p.status === "needs-refresh") p.status = "published";
@@ -1242,6 +1246,7 @@ export class PageEngineStore implements OnModuleInit {
       if (ai.faqs?.length) p.faqs = ai.faqs;
       p.schemaJson = buildSchemaJson(p.pageType, { title: p.title, description: p.metaDescription, faqs: p.faqs });
       p.infographic = buildInfographic(p.pageType, query, p.sections);
+      p.infographics = this.infographicService.generate(query, p.pageType, this.brand.current()?.company?.trim() ?? p.title);
       p.wordCount = countWords(p);
     }
     p.updatedAt = this.now;
@@ -1332,6 +1337,7 @@ export class PageEngineStore implements OnModuleInit {
       if (ai.faqs?.length) p.faqs = ai.faqs;
       p.schemaJson = buildSchemaJson(p.pageType, { title: p.title, description: p.metaDescription, faqs: p.faqs });
       p.infographic = buildInfographic(p.pageType, query, p.sections);
+      p.infographics = this.infographicService.generate(query, p.pageType, this.brand.current()?.company?.trim() ?? p.title);
       p.wordCount = countWords(p);
     }
     // Restore to published if it was published before; otherwise leave as approved/draft.

@@ -115,6 +115,257 @@ export default async function FeedPage({ params }: Params) {
             </div>
           ))}
 
+          {/* Phase 3 structured infographics — semantic HTML, AI-crawlable, no canvas */}
+          {(page.infographics?.length ?? 0) > 0 && (
+            <div style={{ marginTop: "2.5rem", display: "flex", flexDirection: "column", gap: "2rem" }}>
+              {page.infographics!.map((spec, idx) => (
+                <section
+                  key={idx}
+                  className="infographic"
+                  data-kind={spec.kind}
+                  style={{
+                    border: "1px solid var(--border, #e5e7eb)",
+                    borderRadius: "1rem",
+                    padding: "1.5rem",
+                    background: "var(--card, #fff)",
+                    pageBreakInside: "avoid",
+                  }}
+                >
+                  <h2
+                    style={{
+                      fontSize: "0.75rem",
+                      fontWeight: 700,
+                      textTransform: "uppercase",
+                      letterSpacing: "0.06em",
+                      color: "var(--muted-foreground, #6b7280)",
+                      marginBottom: "1rem",
+                    }}
+                  >
+                    {spec.title}
+                  </h2>
+
+                  {/* comparison-table */}
+                  {spec.kind === "comparison-table" && (
+                    <div style={{ overflowX: "auto" }}>
+                      <table
+                        style={{
+                          width: "100%",
+                          borderCollapse: "collapse",
+                          fontSize: "0.8125rem",
+                        }}
+                      >
+                        <thead>
+                          <tr>
+                            {spec.columns.map((col, ci) => (
+                              <th
+                                key={ci}
+                                style={{
+                                  borderBottom: "2px solid var(--border, #e5e7eb)",
+                                  padding: "0.5rem 0.75rem",
+                                  textAlign: "left",
+                                  fontWeight: 600,
+                                  color: ci === 0 ? "var(--muted-foreground, #6b7280)" : "var(--foreground, #111)",
+                                }}
+                              >
+                                {col}
+                              </th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {spec.rows.map((row, ri) => (
+                            <tr key={ri}>
+                              <td
+                                style={{
+                                  borderBottom: "1px solid var(--border, #e5e7eb)",
+                                  padding: "0.5rem 0.75rem",
+                                  fontWeight: 600,
+                                  color: "var(--foreground, #111)",
+                                  whiteSpace: "nowrap",
+                                }}
+                              >
+                                {row.label}
+                              </td>
+                              {row.values.map((val, vi) => (
+                                <td
+                                  key={vi}
+                                  style={{
+                                    borderBottom: "1px solid var(--border, #e5e7eb)",
+                                    padding: "0.5rem 0.75rem",
+                                    color: "var(--muted-foreground, #6b7280)",
+                                  }}
+                                >
+                                  {val}
+                                </td>
+                              ))}
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+
+                  {/* process-flow */}
+                  {spec.kind === "process-flow" && (
+                    <ol style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: "0.875rem" }}>
+                      {spec.steps.map((step) => (
+                        <li key={step.number} style={{ display: "flex", gap: "0.875rem", alignItems: "flex-start" }}>
+                          <span
+                            style={{
+                              flexShrink: 0,
+                              display: "inline-flex",
+                              width: "1.75rem",
+                              height: "1.75rem",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              borderRadius: "9999px",
+                              background: "var(--brand, #6366f1)",
+                              color: "var(--brand-foreground, #fff)",
+                              fontSize: "0.75rem",
+                              fontWeight: 700,
+                              lineHeight: 1,
+                            }}
+                            aria-hidden="true"
+                          >
+                            {step.number}
+                          </span>
+                          <div>
+                            <div style={{ fontWeight: 600, fontSize: "0.875rem", color: "var(--foreground, #111)", lineHeight: 1.4 }}>
+                              {step.heading}
+                            </div>
+                            <div style={{ marginTop: "0.25rem", fontSize: "0.8125rem", color: "var(--muted-foreground, #6b7280)", lineHeight: 1.5 }}>
+                              {step.detail}
+                            </div>
+                          </div>
+                        </li>
+                      ))}
+                    </ol>
+                  )}
+
+                  {/* stat-grid */}
+                  {spec.kind === "stat-grid" && (
+                    <div
+                      style={{
+                        display: "grid",
+                        gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
+                        gap: "0.75rem",
+                      }}
+                    >
+                      {spec.stats.map((stat, si) => (
+                        <figure
+                          key={si}
+                          style={{
+                            margin: 0,
+                            padding: "1rem",
+                            border: "1px solid var(--border, #e5e7eb)",
+                            borderRadius: "0.75rem",
+                            background: "var(--background, #f9fafb)",
+                            textAlign: "center",
+                          }}
+                        >
+                          <div
+                            style={{
+                              fontSize: "1.625rem",
+                              fontWeight: 700,
+                              color: "var(--brand, #6366f1)",
+                              lineHeight: 1.1,
+                            }}
+                          >
+                            {stat.value}
+                          </div>
+                          <figcaption
+                            style={{
+                              marginTop: "0.375rem",
+                              fontSize: "0.75rem",
+                              color: "var(--muted-foreground, #6b7280)",
+                              lineHeight: 1.4,
+                            }}
+                          >
+                            {stat.label}
+                          </figcaption>
+                          {stat.note && (
+                            <p
+                              style={{
+                                marginTop: "0.375rem",
+                                fontSize: "0.6875rem",
+                                color: "var(--muted-foreground, #6b7280)",
+                                opacity: 0.8,
+                                lineHeight: 1.4,
+                              }}
+                            >
+                              {stat.note}
+                            </p>
+                          )}
+                        </figure>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* pros-cons */}
+                  {spec.kind === "pros-cons" && (
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
+                      <div>
+                        <div style={{ marginBottom: "0.5rem", fontSize: "0.75rem", fontWeight: 700, color: "var(--foreground, #111)", textTransform: "uppercase", letterSpacing: "0.04em" }}>
+                          Pros
+                        </div>
+                        <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: "0.375rem" }}>
+                          {spec.pros.map((pro, pi) => (
+                            <li key={pi} style={{ display: "flex", gap: "0.5rem", fontSize: "0.8125rem", color: "var(--foreground, #111)", lineHeight: 1.45 }}>
+                              <span style={{ color: "var(--brand, #6366f1)", fontWeight: 700, flexShrink: 0 }}>+</span>
+                              {pro}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                      <div>
+                        <div style={{ marginBottom: "0.5rem", fontSize: "0.75rem", fontWeight: 700, color: "var(--foreground, #111)", textTransform: "uppercase", letterSpacing: "0.04em" }}>
+                          Considerations
+                        </div>
+                        <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: "0.375rem" }}>
+                          {spec.cons.map((con, ci) => (
+                            <li key={ci} style={{ display: "flex", gap: "0.5rem", fontSize: "0.8125rem", color: "var(--muted-foreground, #6b7280)", lineHeight: 1.45 }}>
+                              <span style={{ flexShrink: 0 }}>−</span>
+                              {con}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* timeline */}
+                  {spec.kind === "timeline" && (
+                    <dl style={{ margin: 0, display: "flex", flexDirection: "column", gap: "0.875rem" }}>
+                      {spec.events.map((ev, ei) => (
+                        <div key={ei} style={{ display: "grid", gridTemplateColumns: "5rem 1fr", gap: "0.75rem", alignItems: "flex-start" }}>
+                          <dt
+                            style={{
+                              fontWeight: 700,
+                              fontSize: "0.75rem",
+                              color: "var(--brand, #6366f1)",
+                              paddingTop: "0.125rem",
+                              lineHeight: 1.4,
+                            }}
+                          >
+                            {ev.date}
+                          </dt>
+                          <dd style={{ margin: 0 }}>
+                            <div style={{ fontWeight: 600, fontSize: "0.875rem", color: "var(--foreground, #111)", lineHeight: 1.4 }}>
+                              {ev.heading}
+                            </div>
+                            <div style={{ marginTop: "0.25rem", fontSize: "0.8125rem", color: "var(--muted-foreground, #6b7280)", lineHeight: 1.5 }}>
+                              {ev.detail}
+                            </div>
+                          </dd>
+                        </div>
+                      ))}
+                    </dl>
+                  )}
+                </section>
+              ))}
+            </div>
+          )}
+
           {page.faqs.length > 0 && (
             <section className="mt-10">
               <h2 className="text-[20px] font-semibold tracking-[-0.01em] text-foreground" style={{ fontFamily: "var(--font-heading, inherit)" }}>Frequently asked questions</h2>

@@ -87,6 +87,7 @@ import { RequestLogInterceptor } from "./common/request-log.interceptor";
 import { RolesGuard } from "./common/roles.guard";
 import { ContentMonitorService } from "./modules/content-monitor.service";
 import { DigestService } from "./modules/digest.service";
+import { InfographicService } from "./modules/infographic.service";
 
 @Module({
   imports: [SeoModule],
@@ -174,6 +175,7 @@ import { DigestService } from "./modules/digest.service";
     BillingStore,
     ContentMonitorService,
     DigestService,
+    InfographicService,
     // Order matters: BearerGuard verifies the Clerk JWT and sets req.auth FIRST, so
     // TenantGuard can derive the tenant from the verified org (not a spoofable header),
     // and RolesGuard can read the verified role. (P0-5.)

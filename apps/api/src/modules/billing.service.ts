@@ -1,6 +1,7 @@
-import { Injectable, Logger } from "@nestjs/common";
+import { Injectable, Logger, Inject } from "@nestjs/common";
 import { DocStore } from "../db/db";
 import { fetchWithTimeout } from "../common/http";
+import { SettingsStore } from "./settings.service";
 
 /**
  * Billing & plan entitlements (PRD §12 / No-Dummy-Data PRD §7.8).
@@ -53,6 +54,17 @@ export interface BillingStatus {
   message?: string;
 }
 
+/**
+ * Hard limits per billing tier. Keys match `WorkspaceSettings.billing.plan`
+ * (Title Case). -1 values in PLANS mean unlimited; here we map those to 999
+ * for uniform comparisons via `checkLimit`.
+ */
+export const PLAN_LIMITS = {
+  Launch: { pages: 10, keywords: 50, teamMembers: 1, cmsIntegrations: 1 },
+  Grow:   { pages: 50, keywords: 200, teamMembers: 5, cmsIntegrations: 3 },
+  Scale:  { pages: 999, keywords: 999, teamMembers: 999, cmsIntegrations: 999 },
+} as const;
+
 export const PLANS: PlanEntitlements[] = [
   {
     id: "launch",
@@ -98,6 +110,8 @@ export class BillingStore {
   private cache = new Map<string, BillingState>();
   private db = new DocStore<BillingState>("cx_billing");
 
+  constructor(@Inject(SettingsStore) private readonly settingsStore: SettingsStore) {}
+
   get configured(): boolean {
     return Boolean(process.env.STRIPE_SECRET_KEY);
   }
@@ -138,6 +152,23 @@ export class BillingStore {
       plans: PLANS,
       message: this.configured ? undefined : "Billing is not connected. Set STRIPE_SECRET_KEY to enable checkout.",
     };
+  }
+
+  /**
+   * Check whether a tenant is within their plan limit for the given resource.
+   * Reads the billing plan from WorkspaceSettings (Title-Case keys).
+   * Returns `{ allowed, limit, plan }` — never throws.
+   */
+  async checkLimit(
+    tenantId: string,
+    resource: keyof typeof PLAN_LIMITS.Launch,
+    current: number,
+  ): Promise<{ allowed: boolean; limit: number; plan: string }> {
+    const settings = this.settingsStore.get();
+    const plan = settings.billing.plan; // "Launch" | "Grow" | "Scale"
+    const limits = PLAN_LIMITS[plan] ?? PLAN_LIMITS.Launch;
+    const limit = limits[resource];
+    return { allowed: current < limit, limit, plan };
   }
 
   /** Stripe-form-encode a flat params object (Stripe uses application/x-www-form-urlencoded). */

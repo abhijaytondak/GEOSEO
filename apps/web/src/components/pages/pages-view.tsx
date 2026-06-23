@@ -24,6 +24,7 @@ import {
   Palette,
   Copy,
   Zap,
+  BarChart2,
 } from "lucide-react";
 import type {
   GeneratedPage,
@@ -910,6 +911,26 @@ export function PagesView({
                     </>
                   )}
                 </section>
+
+                {/* infographics badge (PRD Phase 3) */}
+                {(current.infographics?.length ?? 0) > 0 && (
+                  <section>
+                    <div className="flex items-center gap-2">
+                      <BarChart2 className="size-3.5 text-muted-foreground" />
+                      <h3 className="text-micro font-semibold uppercase text-muted-foreground">Infographics</h3>
+                    </div>
+                    <div className="mt-1.5 flex flex-wrap gap-1.5">
+                      {current.infographics!.map((spec, i) => (
+                        <span
+                          key={i}
+                          className="inline-flex items-center rounded-full bg-brand/10 px-2.5 py-0.5 text-micro font-semibold capitalize text-brand"
+                        >
+                          {spec.kind}
+                        </span>
+                      ))}
+                    </div>
+                  </section>
+                )}
 
                 {/* metadata — editable (PRD §9.4 page editor) */}
                 <section className="rounded-xl border border-border bg-surface-sunken p-3.5">

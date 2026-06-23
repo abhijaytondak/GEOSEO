@@ -3,6 +3,7 @@ import {
   Body,
   Controller,
   Delete,
+  ForbiddenException,
   Get,
   Header,
   Inject,
@@ -18,6 +19,7 @@ import {
 import type { LeadStatus, PageBlueprint, PageEdit } from "@geoseo/types";
 import { ApiTags } from "@nestjs/swagger";
 import { PageEngineStore } from "./page-engine.service";
+import { BillingStore } from "./billing.service";
 import { SettingsStore } from "./settings.service";
 import { BrandMemoryStore } from "./brand.service";
 import { ContentMonitorService } from "./content-monitor.service";
@@ -157,6 +159,7 @@ export class PagesController {
   constructor(
     @Inject(PageEngineStore) private readonly store: PageEngineStore,
     @Inject(CmsPublishStore) private readonly cms: CmsPublishStore,
+    @Inject(BillingStore) private readonly billing: BillingStore,
   ) {}
 
   @Get()
@@ -180,11 +183,17 @@ export class PagesController {
     },
   ) {
     if (!body?.opportunityId) throw new BadRequestException("opportunityId is required");
+    const tenantId = resolveTenantId(req);
+    const existingPageCount = this.store.listPages(tenantId).length;
+    const { allowed, limit, plan } = await this.billing.checkLimit(tenantId, "pages", existingPageCount);
+    if (!allowed) {
+      throw new ForbiddenException(`Page limit reached (${limit} pages on ${plan} plan). Upgrade to generate more pages.`);
+    }
     const valid =
       body.content &&
       typeof body.content.metaTitle === "string" &&
       Array.isArray(body.content.sections);
-    const page = await this.store.generatePage(resolveTenantId(req), body.opportunityId, valid ? body.content : undefined);
+    const page = await this.store.generatePage(tenantId, body.opportunityId, valid ? body.content : undefined);
     if (!page) throw new NotFoundException(`Opportunity ${body.opportunityId} not found`);
     return page;
   }

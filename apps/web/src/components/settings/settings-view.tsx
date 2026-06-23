@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useMemo, useState } from "react";
+import { useId, useEffect, useMemo, useState } from "react";
 import {
   Bell,
   BrainCircuit,
@@ -21,6 +21,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import type { IntegrationStatus, TeamMember, WorkspaceSettings } from "@geoseo/types";
 import { api } from "@/lib/api-client";
+import { pageEngineApi } from "@/lib/page-engine-client";
 import { Panel } from "@/components/dashboard/panel";
 import { BrandScorecard } from "@/components/dashboard/brand-scorecard";
 import { LeadNotificationConfig } from "@/components/leads/lead-notification-config";
@@ -31,6 +32,12 @@ import { cn } from "@/lib/utils";
 import { useAppFeedback } from "@/components/system/app-feedback";
 
 type Tab = "profile" | "brand" | "integrations" | "team" | "notifications" | "billing";
+
+const PLAN_LIMITS: Record<"Launch" | "Grow" | "Scale", { pages: number; keywords: number; teamMembers: number; cmsIntegrations: number }> = {
+  Launch: { pages: 10, keywords: 50, teamMembers: 1, cmsIntegrations: 1 },
+  Grow:   { pages: 50, keywords: 200, teamMembers: 5, cmsIntegrations: 3 },
+  Scale:  { pages: 999, keywords: 999, teamMembers: 999, cmsIntegrations: 999 },
+};
 
 const tabs: Array<{ id: Tab; label: string; icon: typeof Save }> = [
   { id: "profile", label: "Profile", icon: Save },
@@ -62,6 +69,13 @@ export function SettingsView({ initial }: { initial: WorkspaceSettings }) {
     email: "",
     role: "analyst",
   });
+  const [pageCount, setPageCount] = useState<number | null>(null);
+  const [keywordCount, setKeywordCount] = useState<number | null>(null);
+
+  useEffect(() => {
+    pageEngineApi.getPages().then((pages) => setPageCount(pages.length)).catch(() => setPageCount(0));
+    pageEngineApi.getOpportunities().then((opps) => setKeywordCount(opps.length)).catch(() => setKeywordCount(0));
+  }, []);
 
   const dirty = useMemo(
     () => JSON.stringify(settings.profile) !== JSON.stringify(initial.profile),
@@ -835,27 +849,91 @@ export function SettingsView({ initial }: { initial: WorkspaceSettings }) {
       )}
 
       {tab === "billing" && (
-        <Panel title="Billing" description="Mock billing state for the prototype.">
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-            <div className="rounded-xl border border-border bg-surface-sunken p-4">
-              <div className="text-micro font-semibold uppercase text-muted-foreground">Plan</div>
-              <div className="mt-1 text-kpi text-foreground">{settings.billing.plan}</div>
-            </div>
-            <div className="rounded-xl border border-border bg-surface-sunken p-4">
-              <div className="text-micro font-semibold uppercase text-muted-foreground">Status</div>
-              <Badge variant="positive" className="mt-2 capitalize">
-                <Check className="size-3.5" />
-                {settings.billing.status}
-              </Badge>
-            </div>
-            <div className="rounded-xl border border-border bg-surface-sunken p-4">
-              <div className="text-micro font-semibold uppercase text-muted-foreground">Seats</div>
-              <div className="mt-1 text-kpi text-foreground">
-                {settings.billing.seatsUsed}/{settings.billing.seatsLimit}
+        <div className="space-y-5">
+          <Panel title="Billing" description="Your current plan and usage limits.">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+              <div className="rounded-xl border border-border bg-surface-sunken p-4">
+                <div className="text-micro font-semibold uppercase text-muted-foreground">Plan</div>
+                <div className="mt-1 text-kpi text-foreground">{settings.billing.plan}</div>
+              </div>
+              <div className="rounded-xl border border-border bg-surface-sunken p-4">
+                <div className="text-micro font-semibold uppercase text-muted-foreground">Status</div>
+                <Badge variant="positive" className="mt-2 capitalize">
+                  <Check className="size-3.5" />
+                  {settings.billing.status}
+                </Badge>
+              </div>
+              <div className="rounded-xl border border-border bg-surface-sunken p-4">
+                <div className="text-micro font-semibold uppercase text-muted-foreground">Seats</div>
+                <div className="mt-1 text-kpi text-foreground">
+                  {settings.billing.seatsUsed}/{settings.billing.seatsLimit}
+                </div>
               </div>
             </div>
-          </div>
-        </Panel>
+          </Panel>
+
+          <Panel title="Plan usage" description="Resources consumed against your current plan limits.">
+            {(() => {
+              const plan = settings.billing.plan as "Launch" | "Grow" | "Scale";
+              const limits = PLAN_LIMITS[plan] ?? PLAN_LIMITS.Launch;
+              const usageRows: Array<{ label: string; used: number | null; limit: number }> = [
+                { label: "Pages generated", used: pageCount, limit: limits.pages },
+                { label: "Keywords tracked", used: keywordCount, limit: limits.keywords },
+                { label: "Team members", used: settings.team.length, limit: limits.teamMembers },
+                { label: "CMS integrations", used: settings.integrations.filter((i) => ["wordpress", "webflow", "shopify"].includes(i.id) && i.status === "connected").length, limit: limits.cmsIntegrations },
+              ];
+              return (
+                <div className="space-y-4">
+                  {usageRows.map(({ label, used, limit }) => {
+                    const isUnlimited = limit >= 999;
+                    const displayUsed = used ?? 0;
+                    const pct = isUnlimited ? 0 : Math.min(100, Math.round((displayUsed / limit) * 100));
+                    const atLimit = !isUnlimited && displayUsed >= limit;
+                    return (
+                      <div key={label}>
+                        <div className="mb-1.5 flex items-center justify-between gap-2">
+                          <span className="text-label font-semibold text-foreground">{label}</span>
+                          <span className={cn("text-label tabular-nums", atLimit ? "text-negative font-semibold" : "text-muted-foreground")}>
+                            {used === null ? "—" : used} / {isUnlimited ? "∞" : limit}
+                          </span>
+                        </div>
+                        {!isUnlimited && (
+                          <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+                            <div
+                              className={cn("h-full rounded-full transition-all", atLimit ? "bg-negative" : "bg-brand")}
+                              style={{ width: `${pct}%` }}
+                            />
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })()}
+
+            {(settings.billing.plan === "Launch" || settings.billing.plan === "Grow") && (
+              <div className="mt-6 flex items-center justify-between gap-4 rounded-xl border border-brand/20 bg-brand/6 px-4 py-3">
+                <div>
+                  <div className="text-label font-semibold text-foreground">
+                    {settings.billing.plan === "Launch" ? "Upgrade to Grow or Scale" : "Upgrade to Scale"}
+                  </div>
+                  <div className="mt-0.5 text-[12px] text-muted-foreground">
+                    {settings.billing.plan === "Launch"
+                      ? "Get 50 pages, 200 keywords, 5 team members, and CMS publishing."
+                      : "Unlimited pages, keywords, and team members with priority queues."}
+                  </div>
+                </div>
+                <a
+                  href="/billing/upgrade"
+                  className="shrink-0 rounded-xl bg-brand px-4 py-2 text-label font-semibold text-white transition-colors hover:bg-brand/90 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+                >
+                  Upgrade plan
+                </a>
+              </div>
+            )}
+          </Panel>
+        </div>
       )}
     </div>
   );
