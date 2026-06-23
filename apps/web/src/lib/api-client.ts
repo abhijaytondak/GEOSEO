@@ -612,6 +612,16 @@ export const api = {
   deleteNotificationRule: (id: string) =>
     send<{ id: string; deleted: boolean }>("DELETE", `/leads/notifications/${encodeURIComponent(id)}`),
 
+  // brand asset image management
+  deleteBrandAsset: (id: string) =>
+    send<{ id: string; deleted: boolean }>("DELETE", `/images/${encodeURIComponent(id)}`),
+  updateBrandAsset: (id: string, patch: { altText?: string; label?: string }) =>
+    send<{ image: { id: string; subject: string; kind: string; url: string; source: string; createdAt: string } }>(
+      "PATCH",
+      `/images/${encodeURIComponent(id)}`,
+      patch,
+    ).then((d) => d.image),
+
   // settings
   getSettings: () =>
     get<{ settings: WorkspaceSettings }>("/settings", () => ({ settings: fallbackSettings })).then((d) => d.settings),

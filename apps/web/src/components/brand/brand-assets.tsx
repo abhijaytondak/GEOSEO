@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Loader2, Sparkles, ImagePlus } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Loader2, Sparkles, ImagePlus, Trash2, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAppFeedback } from "@/components/system/app-feedback";
 import { apiError, readApiEnvelope } from "@/lib/api-envelope";
+import { api } from "@/lib/api-client";
 
 type ImageKind = "hero" | "infographic" | "illustration" | "og";
 interface GenImage {
@@ -18,13 +19,17 @@ interface GenImage {
 const KINDS: ImageKind[] = ["hero", "infographic", "illustration", "og"];
 
 export function BrandAssets() {
-  const { notify } = useAppFeedback();
+  const { notify, confirm } = useAppFeedback();
   const [images, setImages] = useState<GenImage[]>([]);
   const [siteImages, setSiteImages] = useState<string[]>([]);
   const [provider, setProvider] = useState<"openai" | "placeholder">("placeholder");
   const [subject, setSubject] = useState("");
   const [kind, setKind] = useState<ImageKind>("hero");
   const [gen, setGen] = useState(false);
+  // Track which image tile is in edit mode and the current draft label value.
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editDraft, setEditDraft] = useState("");
+  const editInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -74,6 +79,43 @@ export function BrandAssets() {
       notify({ kind: "error", title: "Generation failed", message: err instanceof Error ? err.message : "Try again." });
     } finally {
       setGen(false);
+    }
+  }
+
+  async function handleDelete(img: GenImage) {
+    const ok = await confirm({
+      title: "Delete image?",
+      message: `"${img.subject}" will be permanently removed.`,
+      confirmLabel: "Delete",
+      tone: "danger",
+    });
+    if (!ok) return;
+    try {
+      await api.deleteBrandAsset(img.id);
+      setImages((xs) => xs.filter((x) => x.id !== img.id));
+      notify({ kind: "success", title: "Image deleted" });
+    } catch (err) {
+      notify({ kind: "error", title: "Delete failed", message: err instanceof Error ? err.message : "Try again." });
+    }
+  }
+
+  function startEdit(img: GenImage) {
+    setEditingId(img.id);
+    setEditDraft(img.subject);
+    // Focus after React renders the input.
+    setTimeout(() => editInputRef.current?.focus(), 0);
+  }
+
+  async function commitEdit(img: GenImage) {
+    const label = editDraft.trim();
+    setEditingId(null);
+    if (!label || label === img.subject) return;
+    try {
+      const updated = await api.updateBrandAsset(img.id, { label });
+      setImages((xs) => xs.map((x) => (x.id === updated.id ? { ...x, subject: updated.subject } : x)));
+      notify({ kind: "success", title: "Label updated" });
+    } catch (err) {
+      notify({ kind: "error", title: "Update failed", message: err instanceof Error ? err.message : "Try again." });
     }
   }
 
@@ -138,11 +180,46 @@ export function BrandAssets() {
       ) : realImages.length > 0 ? (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {realImages.map((img) => (
-            <div key={img.id} className="overflow-hidden rounded-xl border border-border bg-card">
+            <div key={img.id} className="group relative overflow-hidden rounded-xl border border-border bg-card">
               {/* eslint-disable-next-line @next/next/no-img-element -- arbitrary data:/CDN URLs, not static assets */}
               <img src={img.url} alt={img.subject} className="aspect-[1200/630] w-full object-cover" />
+
+              {/* Hover action buttons — top-right corner */}
+              <div className="absolute right-2 top-2 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                <button
+                  type="button"
+                  onClick={() => startEdit(img)}
+                  title="Edit label"
+                  className="flex size-7 items-center justify-center rounded-md bg-background/90 text-foreground shadow-sm backdrop-blur-sm hover:bg-background"
+                >
+                  <Pencil className="size-3.5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleDelete(img)}
+                  title="Delete image"
+                  className="flex size-7 items-center justify-center rounded-md bg-background/90 text-destructive shadow-sm backdrop-blur-sm hover:bg-background"
+                >
+                  <Trash2 className="size-3.5" />
+                </button>
+              </div>
+
               <div className="p-3">
-                <div className="truncate text-[12.5px] font-medium text-foreground">{img.subject}</div>
+                {editingId === img.id ? (
+                  <input
+                    ref={editInputRef}
+                    value={editDraft}
+                    onChange={(e) => setEditDraft(e.target.value)}
+                    onBlur={() => commitEdit(img)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") { e.preventDefault(); void commitEdit(img); }
+                      if (e.key === "Escape") { setEditingId(null); }
+                    }}
+                    className="w-full rounded border border-ring bg-background px-2 py-0.5 text-[12.5px] font-medium text-foreground outline-none"
+                  />
+                ) : (
+                  <div className="truncate text-[12.5px] font-medium text-foreground">{img.subject}</div>
+                )}
                 <div className="mt-0.5 text-[11px] capitalize text-muted-foreground">
                   {img.kind} · {img.source}
                 </div>

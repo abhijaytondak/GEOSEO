@@ -455,6 +455,7 @@ export class PageEngineStore implements OnModuleInit {
         if (!page) return;
         page.heroImageUrl = img.url;
         page.heroImageAlt = `${title} — brand illustration`;
+        page.ogImageUrl = img.url;
         page.updatedAt = this.now;
         this.save(tenantId, T.pages, page.id, page);
       })
@@ -759,6 +760,7 @@ export class PageEngineStore implements OnModuleInit {
     if (placeholder) {
       page.heroImageUrl = placeholder.url;
       page.heroImageAlt = placeholder.alt;
+      page.ogImageUrl = placeholder.url;
     }
     s.pages.unshift(page);
     this.snapshot(tenantId, page, ai ? "AI-generated draft" : "Template draft", "ai");

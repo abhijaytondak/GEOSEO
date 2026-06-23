@@ -162,6 +162,27 @@ export class ImageGenStore {
     return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
   }
 
+  async deleteAsset(tenantId: string, assetId: string): Promise<void> {
+    const s = await this.state(tenantId);
+    const before = s.items.length;
+    s.items = s.items.filter((img) => img.id !== assetId);
+    if (s.items.length === before) return; // not found — no-op (idempotent)
+    this.persist(tenantId, s);
+  }
+
+  async updateAsset(tenantId: string, assetId: string, patch: { altText?: string; label?: string }): Promise<GeneratedImage | null> {
+    const s = await this.state(tenantId);
+    const idx = s.items.findIndex((img) => img.id === assetId);
+    if (idx === -1) return null;
+    const item = s.items[idx];
+    // `label` maps to `subject` (the user-visible description); `altText` is stored there too.
+    if (patch.label !== undefined) item.subject = patch.label.slice(0, 240).trim() || item.subject;
+    if (patch.altText !== undefined) item.subject = patch.altText.slice(0, 240).trim() || item.subject;
+    s.items[idx] = item;
+    this.persist(tenantId, s);
+    return item;
+  }
+
   async generate(tenantId: string, subject: string, kind: ImageKind, now: string): Promise<GeneratedImage> {
     const { primary, accent, dark } = await this.palette(tenantId);
     const prompt = await this.buildPrompt(tenantId, subject, kind, primary, accent, dark);

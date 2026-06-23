@@ -158,6 +158,8 @@ export interface GeneratedPage {
    */
   heroImageUrl?: string;
   heroImageAlt?: string;
+  /** Open Graph image URL for social sharing. Defaults to heroImageUrl when not set separately. */
+  ogImageUrl?: string;
   /** Optional in-page infographic (crawlable HTML/SVG) — PRD Phase 6. */
   infographic?: InfographicSpec;
   targetKeywords: string[];

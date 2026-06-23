@@ -34,6 +34,9 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
       description: page.metaDescription,
       url: canonical,
       type: "article",
+      ...(page.ogImageUrl ?? page.heroImageUrl
+        ? { images: [{ url: page.ogImageUrl ?? page.heroImageUrl ?? "" }] }
+        : {}),
     },
   };
 }
