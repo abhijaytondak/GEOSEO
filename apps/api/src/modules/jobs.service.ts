@@ -1,4 +1,4 @@
-import { Inject, Injectable, NotFoundException, OnModuleInit } from "@nestjs/common";
+import { Inject, Injectable, NotFoundException, OnModuleInit, ServiceUnavailableException } from "@nestjs/common";
 import type { JobRun, JobStatus, JobType } from "@geoseo/types";
 import { DocStore } from "../db/db";
 import { JobQueue } from "./queue.service";
@@ -78,7 +78,14 @@ export class JobsStore implements OnModuleInit {
     this.db.save({ jobs: this.jobs, seq: this.seq });
   }
 
+  private assertQueueAvailable(): void {
+    if (!this.queue.active && !this.queue.simulationAllowed) {
+      throw new ServiceUnavailableException("The durable job queue is unavailable. Try again after Redis recovers.");
+    }
+  }
+
   create(type: JobType, description?: string): JobRun {
+    this.assertQueueAvailable();
     this.seq += 1;
     const copy = COPY[type];
     const queued = this.queue.active;
@@ -129,6 +136,7 @@ export class JobsStore implements OnModuleInit {
   /** Re-run a terminal job. With the queue active it re-enqueues; otherwise it
    *  resets progress + clock so the in-memory hydrate replays it. */
   retry(id: string): JobRun {
+    this.assertQueueAvailable();
     const job = this.jobs.find((j) => j.id === id);
     if (!job) throw new NotFoundException(`Job ${id} not found`);
     const queued = this.queue.active;
@@ -163,7 +171,7 @@ export class JobsStore implements OnModuleInit {
     if (job.status === "failed" || job.status === "completed" || job.status === "cancelled")
       return job;
     // When BullMQ is active the worker drives real status — don't fake progress.
-    if (this.queue.active) return job;
+    if (this.queue.active || !this.queue.simulationAllowed) return job;
 
     const elapsed = Date.now() - new Date(job.createdAt).getTime();
     const duration = DURATIONS[job.type];

@@ -1,62 +1,29 @@
 "use client";
 
-import { useEffect } from "react";
-import { usePathname, useRouter } from "next/navigation";
-import { api } from "@/lib/api-client";
-
 /**
- * Routes a new user through onboarding BEFORE the dashboard — the signup →
- * onboarding → dashboard flow. Belt-and-suspenders behind Clerk's post-signup
- * redirect, which doesn't fire for pre-existing sessions or direct navigation to `/`.
+ * Onboarding completion marker for the first-run gate.
  *
- * - Production: the live API is the source of truth (no mock fallback), so a genuine
- *   `completed:false` redirects; an API error never traps the user.
- * - Demo (no live backend): gate on a first-run localStorage flag so the hosted demo
- *   still shows onboarding first for a new visitor, then never nags again once finished.
- *
- * Skips `/onboarding` itself to avoid a redirect loop.
+ * The redirect decision now happens SERVER-SIDE in `app/(app)/layout.tsx` (so an
+ * unonboarded user never sees a dashboard-shell flash — PRD R1). Demo mode reads the
+ * `geoseo_onboarded` cookie; production reads the live API. This module just records
+ * completion on BOTH a cookie (server-readable) and localStorage (back-compat), client-side.
  */
-const MODE = (process.env.NEXT_PUBLIC_GEOSEO_MODE ?? "demo").toLowerCase();
 const ONBOARDED_KEY = "geoseo_onboarded";
+const ONE_YEAR = 60 * 60 * 24 * 365;
 
-/** Mark onboarding complete for the demo first-run gate (no-op effect in production). */
+/** Cookie name the server layout reads to gate the demo onboarding flow. */
+export const ONBOARDED_COOKIE = ONBOARDED_KEY;
+
+/** Mark onboarding complete for the first-run gate (cookie + localStorage). */
 export function markOnboarded(): void {
+  try {
+    document.cookie = `${ONBOARDED_KEY}=true; path=/; max-age=${ONE_YEAR}; samesite=lax`;
+  } catch {
+    /* document unavailable */
+  }
   try {
     window.localStorage.setItem(ONBOARDED_KEY, "true");
   } catch {
     /* storage unavailable (private mode) — production still gates on the API */
   }
-}
-
-export function OnboardingGate() {
-  const pathname = usePathname();
-  const router = useRouter();
-
-  useEffect(() => {
-    if (pathname?.startsWith("/onboarding")) return;
-
-    if (MODE === "demo") {
-      let done = false;
-      try {
-        done = window.localStorage.getItem(ONBOARDED_KEY) === "true";
-      } catch {
-        done = true; // can't read storage → don't trap the visitor
-      }
-      if (!done) router.replace("/onboarding");
-      return;
-    }
-
-    let live = true;
-    api
-      .getOnboardingStatus()
-      .then((status) => {
-        if (live && status && status.completed === false) router.replace("/onboarding");
-      })
-      .catch(() => undefined);
-    return () => {
-      live = false;
-    };
-  }, [pathname, router]);
-
-  return null;
 }

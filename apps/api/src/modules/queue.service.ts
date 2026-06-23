@@ -1,6 +1,8 @@
 import { Injectable, Logger, OnModuleDestroy } from "@nestjs/common";
 import { Queue, Worker } from "bullmq";
 import { Redis } from "ioredis";
+import { resolveMode } from "../common/mode";
+import { queuePolicy } from "./queue-policy";
 
 const QUEUE_NAME = "geoseo-jobs";
 
@@ -20,6 +22,21 @@ export class JobQueue implements OnModuleDestroy {
   private workerErrors = 0;
   private tripped = false;
   active = false;
+
+  private get policy() {
+    return queuePolicy({
+      mode: resolveMode(),
+      allowInMemory: process.env.ALLOW_INMEMORY_QUEUE === "true",
+    });
+  }
+
+  get durableRequired(): boolean {
+    return this.policy.durableRequired;
+  }
+
+  get simulationAllowed(): boolean {
+    return this.policy.simulationAllowed;
+  }
 
   /** Circuit-breaker: a persistently-broken Redis (e.g. Upstash over its request quota)
    *  makes the worker re-emit "error" on every poll. Trip after a few errors → tear the
@@ -57,6 +74,8 @@ export class JobQueue implements OnModuleDestroy {
     try {
       // BullMQ requires maxRetriesPerRequest: null; rediss:// auto-enables TLS.
       this.connection = new Redis(url, { maxRetriesPerRequest: null });
+      // ioredis connects lazily; do not advertise durability until a real command succeeds.
+      await this.connection.ping();
       this.queue = new Queue(QUEUE_NAME, { connection: this.connection });
       this.worker = new Worker(
         QUEUE_NAME,
@@ -95,8 +114,16 @@ export class JobQueue implements OnModuleDestroy {
       this.active = true;
       this.logger.log("BullMQ active on Redis — jobs are durable");
     } catch (e) {
-      this.logger.error(`init failed, in-memory fallback: ${(e as Error).message}`);
+      this.logger.error(`init failed: ${(e as Error).message}`);
       this.active = false;
+      await this.connection?.quit().catch(() => {});
+      this.connection = null;
+      this.queue = null;
+      this.worker = null;
+      if (this.durableRequired) {
+        throw new Error(`Durable Redis queue unavailable: ${(e as Error).message}`);
+      }
+      this.logger.warn("Using the explicitly allowed in-memory job simulation.");
     }
   }
 

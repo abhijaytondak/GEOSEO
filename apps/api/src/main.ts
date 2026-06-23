@@ -24,7 +24,8 @@ async function bootstrap() {
     }
   }
 
-  const app = await NestFactory.create(AppModule, { cors: false });
+  // Stripe webhook verification requires the exact bytes Stripe signed.
+  const app = await NestFactory.create(AppModule, { cors: false, rawBody: true });
 
   app.setGlobalPrefix("api/v1");
   app.useGlobalInterceptors(new EnvelopeInterceptor());

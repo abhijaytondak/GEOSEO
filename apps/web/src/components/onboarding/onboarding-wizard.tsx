@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useReducedMotion } from "motion/react";
 import {
   Globe,
   Loader2,
@@ -15,19 +16,32 @@ import {
   Gauge,
   RotateCcw,
   PenLine,
+  AlertCircle,
+  Network,
+  Target,
+  FileText,
 } from "lucide-react";
 import type { BrandProfile, KeywordOpportunity } from "@geoseo/types";
 import { pageEngineApi, type BrandDraft } from "@/lib/page-engine-client";
 import { api } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { Label } from "@/components/ui/label";
+import { cn, validateWebsite, normalizeUrl } from "@/lib/utils";
+import { trackOnboarding } from "@/lib/analytics";
 import { useAppFeedback } from "@/components/system/app-feedback";
 import { markOnboarded } from "@/components/system/onboarding-gate";
 
 const STEPS = ["Website", "Brand Memory", "Publishing", "Seeds", "Review", "Launch"];
 const inputCls =
-  "h-11 w-full rounded-xl border border-border bg-card px-3.5 text-[15px] text-foreground outline-none transition-colors focus:border-brand focus:ring-4 focus:ring-brand/15";
-const SCAN_STAGES = ["Reading homepage", "Finding metadata", "Extracting topics", "Drafting Brand Memory", "Preparing review"];
+  "h-11 w-full rounded-xl border border-border bg-card px-3.5 text-body text-foreground outline-none transition-colors focus:border-brand focus:ring-4 focus:ring-brand/15";
+// Plain-language tasks shown while the scan runs (PRD R6).
+const SCAN_STAGES = ["Connecting to your site", "Reading public pages", "Mapping topics and entities", "Drafting Brand Memory", "Preparing review"];
+// "What you'll get" outputs surfaced before the user submits (PRD R2).
+const OUTPUTS = [
+  { icon: Network, label: "Brand & entity map", hint: "What you do, who it's for, and the entities you own" },
+  { icon: Target, label: "Visibility gaps & priority topics", hint: "Where you're missing from search and AI answers" },
+  { icon: FileText, label: "Draft publishing plan", hint: "Pages to review — nothing goes live without approval" },
+];
 
 type Brand = { company: string; valueProp: string; audience: string; topics: string; industry: string; competitors: string };
 type Publishing = { requireApproval: boolean; autoSitemap: boolean; autoLlms: boolean };
@@ -72,6 +86,14 @@ export function OnboardingWizard() {
   const [launching, setLaunching] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
 
+  const [urlError, setUrlError] = useState<string | null>(null);
+  const reduceMotion = useReducedMotion();
+  const websiteId = useId();
+  const websiteHelpId = `${websiteId}-help`;
+  const websiteErrId = `${websiteId}-err`;
+  const inputRef = useRef<HTMLInputElement>(null);
+  const errorRef = useRef<HTMLDivElement>(null);
+
   // Drive the scan checklist while a scan is running.
   useEffect(() => {
     if (!scanning) return;
@@ -79,7 +101,15 @@ export function OnboardingWizard() {
     return () => window.clearInterval(t);
   }, [scanning]);
 
-  const domain = url.trim().replace(/^https?:\/\//, "").replace(/\/.*$/, "") || "yourcompany.com";
+  // Funnel instrumentation — one event per step view (domain/origin only, never the full URL).
+  useEffect(() => {
+    const device =
+      typeof window !== "undefined" && window.matchMedia("(max-width: 1023px)").matches ? "mobile" : "desktop";
+    trackOnboarding({ event: "onboarding_step_viewed", step: step + 1, device });
+  }, [step]);
+
+  const normalized = normalizeUrl(url);
+  const domain = (normalized ? new URL(normalized).hostname : "") || "yourcompany.com";
 
   function applyDraft(d: BrandDraft) {
     setDraft(d);
@@ -94,30 +124,63 @@ export function OnboardingWizard() {
   }
 
   async function scan() {
-    if (!url.trim()) return;
+    // Client-side UX validation (the server's assertSafeUrl is the security boundary).
+    const v = validateWebsite(url);
+    if (!v.ok) {
+      setUrlError(
+        v.reason === "empty"
+          ? "Enter your website URL to continue."
+          : v.reason === "local_or_private"
+            ? "Use a publicly accessible website."
+            : "Enter a valid domain, such as example.com.",
+      );
+      trackOnboarding({ event: "website_url_validation_failed", reason: v.reason });
+      requestAnimationFrame(() => inputRef.current?.focus());
+      return;
+    }
+    setUrlError(null);
     setScanning(true);
     setScanStage(0);
     setScanError(null);
+    trackOnboarding({ event: "website_analysis_started", domain: v.domain });
     try {
       // Async crawl + LLM extract — the LLM reads the page and pulls the main points
       // (value prop, industry, audience, topics). Slow (~30-80s) → poll the job.
-      const job = await pageEngineApi.startExtractBrand(url.trim());
+      const job = await pageEngineApi.startExtractBrand(v.url);
       let res = await pageEngineApi.getExtractBrandJob(job.id);
       for (let i = 0; i < 70 && res.job.status === "running"; i++) {
         await new Promise((r) => setTimeout(r, 1500));
         res = await pageEngineApi.getExtractBrandJob(job.id);
       }
-      if (res.job.status === "failed" || !res.result) throw new Error(res.job.error ?? "We couldn't reach that site.");
+      if (res.job.status === "failed" || !res.result) throw new Error(res.job.error ?? "unreachable");
       const d = res.result;
       applyDraft(d);
       api
-        .scanSiteTheme(url.trim())
+        .scanSiteTheme(v.url)
         .then((r) => setTheme({ colors: r.profile.colors, confidence: r.profile.confidence }))
         .catch(() => {});
+      trackOnboarding({ event: "website_analysis_succeeded", domain: v.domain, source: d.source });
+      trackOnboarding({ event: "onboarding_step_completed", step: 1 });
       setStep(1);
       notify({ kind: "success", title: "Site scanned", message: `Drafted Brand Memory from ${d.source}.` });
     } catch (err) {
-      setScanError(err instanceof Error ? err.message : "We couldn't reach that site.");
+      const raw = err instanceof Error ? err.message : "";
+      const reason = /timeout|timed out|longer than/i.test(raw)
+        ? "timeout"
+        : /block|robot|forbidden|403|challenge/i.test(raw)
+          ? "blocked"
+          : /reach|unreachable|network|fetch|dns|not found|404|enotfound/i.test(raw)
+            ? "unreachable"
+            : "unknown";
+      setScanError(
+        reason === "timeout"
+          ? "The scan is taking longer than expected. Retry, or enter your details manually."
+          : reason === "blocked"
+            ? "This site is blocking automated access. Try another domain, or enter details manually."
+            : "We couldn’t reach this website. Check the address or try again.",
+      );
+      trackOnboarding({ event: "website_analysis_failed", reason });
+      requestAnimationFrame(() => errorRef.current?.focus());
     } finally {
       setScanning(false);
     }
@@ -262,49 +325,71 @@ export function OnboardingWizard() {
           </span>
           GEOSEO
         </div>
-        <div className="relative z-10 my-auto py-8">
-          <div className="mb-4 font-mono text-[11px] uppercase tracking-[0.14em] text-white/40">Visibility audit</div>
+        <nav aria-label="Onboarding progress" className="relative z-10 my-auto py-8">
+          <div className="mb-4 text-micro font-semibold uppercase text-white/55">Visibility audit</div>
           <ol className="space-y-0.5">
             {STEPS.map((label, i) => (
               <li
                 key={label}
+                aria-current={i === step ? "step" : undefined}
                 className={cn(
-                  "flex items-center gap-3 py-[7px] text-[14px]",
-                  i < step ? "text-white/85" : i === step ? "text-white" : "text-white/40",
+                  "flex items-center gap-3 py-[7px] text-body",
+                  i < step ? "text-white/85" : i === step ? "font-medium text-white" : "text-white/60",
                 )}
               >
                 <span
                   className={cn(
-                    "grid size-[22px] shrink-0 place-items-center rounded-full font-mono text-[10.5px]",
+                    "grid size-[22px] shrink-0 place-items-center rounded-full font-mono text-micro",
                     i < step
                       ? "bg-brand text-white"
                       : i === step
                         ? "border-[1.5px] border-white text-white ring-4 ring-brand/30"
-                        : "border-[1.5px] border-white/20 text-white/40",
+                        : "border-[1.5px] border-white/35 text-white/60",
                   )}
                 >
-                  {i < step ? <Check className="size-3" /> : String(i + 1).padStart(2, "0")}
+                  {i < step ? <Check className="size-3" aria-hidden /> : String(i + 1).padStart(2, "0")}
                 </span>
                 {label}
+                {i === step && <span className="sr-only"> (current step)</span>}
               </li>
             ))}
           </ol>
+        </nav>
+        <div className="relative z-10 space-y-3 border-t border-white/10 pt-5">
+          <div className="flex items-center gap-2 text-body font-medium text-white/90">
+            <ShieldCheck className="size-4 text-brand" aria-hidden /> Safe by design
+          </div>
+          <ul className="space-y-1.5 text-label text-white/60">
+            <li>Reads public pages only — never your CMS.</li>
+            <li>Nothing is published without your approval.</li>
+            <li>Brand Memory grounds every page we draft.</li>
+          </ul>
         </div>
-        <blockquote className="relative z-10 border-t border-white/10 pt-5 text-[13.5px] leading-relaxed text-white/70">
-          “We went from invisible to cited in ChatGPT for our core category in six weeks.”
-          <div className="mt-2.5 font-mono text-[12px] text-white/40">— Head of Growth, B2B SaaS</div>
-        </blockquote>
       </aside>
 
       {/* ---------- mobile top bar ---------- */}
-      <div className="flex items-center gap-3 bg-foreground px-5 py-4 text-background lg:hidden">
+      <div className="flex items-center gap-3 bg-foreground px-5 py-3.5 text-background lg:hidden">
         <span className="grid size-6 place-items-center rounded-md bg-background">
           <span className="size-2.5 rounded-full" style={{ background: "var(--foreground)" }} />
         </span>
-        <span className="text-[14px] font-semibold tracking-tight">GEOSEO</span>
-        <span className="ml-auto h-1 w-28 overflow-hidden rounded-full bg-white/15">
-          <span className="block h-full rounded-full bg-brand transition-all" style={{ width: pct + "%" }} />
-        </span>
+        <span className="text-h-card font-semibold tracking-tight">GEOSEO</span>
+        {step < 5 && (
+          <span
+            className="ml-auto flex items-center gap-2 text-micro font-medium text-white/75"
+            role="progressbar"
+            aria-valuenow={step + 1}
+            aria-valuemin={1}
+            aria-valuemax={STEPS.length}
+            aria-label={`${STEPS[step]} · step ${step + 1} of ${STEPS.length}`}
+          >
+            <span className="whitespace-nowrap">
+              {STEPS[step]} · {step + 1} of {STEPS.length}
+            </span>
+            <span aria-hidden className="h-1 w-14 overflow-hidden rounded-full bg-white/15">
+              <span className="block h-full rounded-full bg-brand transition-all" style={{ width: pct + "%" }} />
+            </span>
+          </span>
+        )}
       </div>
 
       {/* ---------- RIGHT CONTENT PANEL ---------- */}
@@ -325,73 +410,149 @@ export function OnboardingWizard() {
         {/* step 0 — website scan */}
         {step === 0 && (
           <div>
-            <h2 className="text-[28px] font-bold leading-tight tracking-[-0.02em] text-foreground">Connect your website</h2>
-            <p className="mt-2.5 max-w-[46ch] text-[15px] leading-relaxed text-muted-foreground">
-              We&apos;ll scan your site to draft Brand Memory — the source of truth for every generated page. Only public
-              pages are read; nothing is published without your approval.
+            <h1 className="text-display text-foreground">Connect your website</h1>
+            <p className="mt-2.5 max-w-[46ch] text-body leading-relaxed text-muted-foreground">
+              We&apos;ll scan your public website to build your Brand Memory and recommend the topics, entities, and pages
+              that can improve your visibility in search and AI answers.
             </p>
-            <label className="mt-7 block text-[12.5px] font-medium text-foreground">Website URL</label>
-            <div className="mt-2 flex items-center gap-2.5 rounded-xl border border-border bg-card px-3.5 transition-colors focus-within:border-brand focus-within:ring-4 focus-within:ring-brand/15">
-              <Globe className="size-[17px] shrink-0 text-muted-foreground" />
-              <span className="text-[15px] text-muted-foreground">https://</span>
-              <input
-                className="h-11 w-full border-0 bg-transparent text-[15px] text-foreground outline-none"
-                placeholder="yourcompany.com"
-                value={url.replace(/^https?:\/\//, "")}
-                onChange={(e) => setUrl(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && scan()}
-              />
-            </div>
 
-            {scanning && (
-              <ul className="mt-5 space-y-1">
-                {SCAN_STAGES.map((s, i) => (
-                  <li
-                    key={s}
-                    className={cn(
-                      "flex items-center gap-3 rounded-xl px-3.5 py-3 text-[14.5px] transition-colors",
-                      i === scanStage ? "bg-surface-sunken text-foreground shadow-card" : i < scanStage ? "text-foreground" : "text-muted-foreground",
-                    )}
-                  >
-                    {i < scanStage ? (
-                      <span className="grid size-6 place-items-center rounded-full bg-positive text-white"><Check className="size-3.5" /></span>
-                    ) : i === scanStage ? (
-                      <Loader2 className="size-[18px] animate-spin text-brand" />
-                    ) : (
-                      <span className="size-6 rounded-full border-2 border-border" />
-                    )}
-                    {s}
-                  </li>
-                ))}
-              </ul>
-            )}
+            {/* what you'll get */}
+            <ul className="mt-5 grid gap-2.5">
+              {OUTPUTS.map(({ icon: Icon, label, hint }) => (
+                <li key={label} className="flex items-start gap-3">
+                  <span className="mt-0.5 grid size-8 shrink-0 place-items-center rounded-lg bg-brand/10 text-brand">
+                    <Icon className="size-4" aria-hidden />
+                  </span>
+                  <span className="min-w-0">
+                    <span className="block text-label font-semibold text-foreground">{label}</span>
+                    <span className="block text-label text-muted-foreground">{hint}</span>
+                  </span>
+                </li>
+              ))}
+            </ul>
 
-            {scanError && !scanning && (
-              <div className="mt-5 rounded-xl border border-negative/30 bg-negative/5 p-3.5 text-[13px]">
-                <div className="font-medium text-negative">{scanError}</div>
-                <div className="mt-2.5 flex gap-2">
-                  <Button size="sm" variant="outline" className="h-8" onClick={scan}>
-                    <RotateCcw className="size-3.5" /> Retry
-                  </Button>
-                  <Button size="sm" variant="outline" className="h-8" onClick={enterManually}>
-                    <PenLine className="size-3.5" /> Enter manually
-                  </Button>
-                </div>
+            <form
+              className="mt-7"
+              noValidate
+              onSubmit={(e) => {
+                e.preventDefault();
+                scan();
+              }}
+            >
+              <Label htmlFor={websiteId} className="block text-label font-medium text-foreground">
+                Website URL
+              </Label>
+              <div
+                className={cn(
+                  "mt-2 flex items-center gap-2.5 rounded-xl border bg-card px-3.5 transition-colors focus-within:ring-4 focus-within:ring-brand/15",
+                  urlError ? "border-negative focus-within:border-negative" : "border-border focus-within:border-brand",
+                )}
+              >
+                <Globe className="size-[17px] shrink-0 text-muted-foreground" aria-hidden />
+                <input
+                  ref={inputRef}
+                  id={websiteId}
+                  name="website"
+                  type="url"
+                  inputMode="url"
+                  autoComplete="url"
+                  autoCapitalize="none"
+                  spellCheck={false}
+                  className="h-11 w-full border-0 bg-transparent text-body text-foreground outline-none"
+                  placeholder="example.com"
+                  value={url}
+                  aria-invalid={urlError ? true : undefined}
+                  aria-describedby={urlError ? websiteErrId : websiteHelpId}
+                  onFocus={() => trackOnboarding({ event: "website_url_focused" })}
+                  onChange={(e) => {
+                    setUrl(e.target.value);
+                    if (urlError) setUrlError(null);
+                  }}
+                  onBlur={() => {
+                    if (!url.trim()) return;
+                    const v = validateWebsite(url);
+                    if (!v.ok)
+                      setUrlError(
+                        v.reason === "local_or_private"
+                          ? "Use a publicly accessible website."
+                          : "Enter a valid domain, such as example.com.",
+                      );
+                  }}
+                />
               </div>
-            )}
 
-            <p className="mt-4 flex items-start gap-2 text-[13px] leading-relaxed text-faint">
-              <ShieldCheck className="mt-0.5 size-4 shrink-0 text-brand" />
-              <span>We only read public pages to map your brand&apos;s topics and entities — nothing is changed.</span>
-            </p>
+              {urlError ? (
+                <p id={websiteErrId} role="alert" className="mt-2 flex items-center gap-1.5 text-label text-negative">
+                  <AlertCircle className="size-4 shrink-0" aria-hidden /> {urlError}
+                </p>
+              ) : (
+                <p id={websiteHelpId} className="mt-2 text-label text-faint">
+                  Enter a domain like example.com — we&apos;ll handle the rest.
+                </p>
+              )}
 
-            <div className="mt-7">
-              <Button className="h-12 rounded-full px-6 text-[15px]" disabled={scanning || !url.trim()} onClick={scan}>
-                {scanning ? <Loader2 className="size-4 animate-spin" /> : <Sparkles className="size-4" />}
-                Analyse my brand
-                <ArrowRight className="size-4" />
-              </Button>
-            </div>
+              {scanning && (
+                <ul role="status" aria-live="polite" className="mt-5 space-y-1">
+                  {SCAN_STAGES.map((s, i) => (
+                    <li
+                      key={s}
+                      className={cn(
+                        "flex items-center gap-3 rounded-xl px-3.5 py-3 text-body transition-colors",
+                        i === scanStage ? "bg-surface-sunken text-foreground shadow-card" : i < scanStage ? "text-foreground" : "text-muted-foreground",
+                      )}
+                    >
+                      {i < scanStage ? (
+                        <span className="grid size-6 place-items-center rounded-full bg-positive text-white"><Check className="size-3.5" aria-hidden /></span>
+                      ) : i === scanStage ? (
+                        reduceMotion ? (
+                          <span className="grid size-6 place-items-center rounded-full border-2 border-brand"><span className="size-2 rounded-full bg-brand" /></span>
+                        ) : (
+                          <Loader2 className="size-[18px] animate-spin text-brand" aria-hidden />
+                        )
+                      ) : (
+                        <span className="size-6 rounded-full border-2 border-border" />
+                      )}
+                      {s}
+                      <span className="sr-only">{i < scanStage ? " — done" : i === scanStage ? " — in progress" : ""}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+
+              {scanError && !scanning && (
+                <div
+                  ref={errorRef}
+                  tabIndex={-1}
+                  role="alert"
+                  className="mt-5 rounded-xl border border-negative/30 bg-negative/5 p-3.5 text-label outline-none"
+                >
+                  <div className="flex items-center gap-1.5 font-medium text-negative">
+                    <AlertCircle className="size-4 shrink-0" aria-hidden /> {scanError}
+                  </div>
+                  <div className="mt-2.5 flex gap-2">
+                    <Button type="button" size="sm" variant="outline" className="h-8" onClick={scan}>
+                      <RotateCcw className="size-3.5" /> Retry
+                    </Button>
+                    <Button type="button" size="sm" variant="outline" className="h-8" onClick={enterManually}>
+                      <PenLine className="size-3.5" /> Enter manually
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              <p className="mt-4 flex items-start gap-2 text-label leading-relaxed text-muted-foreground">
+                <ShieldCheck className="mt-0.5 size-4 shrink-0 text-brand" aria-hidden />
+                <span>We read public pages only. We never access your CMS or publish without your approval.</span>
+              </p>
+
+              <div className="mt-7">
+                <Button type="submit" variant="brand" className="h-12 rounded-full px-6 text-body" loading={scanning} disabled={!url.trim()}>
+                  {!scanning && <Sparkles className="size-4" />}
+                  Analyse my website
+                  {!scanning && <ArrowRight className="size-4" />}
+                </Button>
+              </div>
+            </form>
           </div>
         )}
 

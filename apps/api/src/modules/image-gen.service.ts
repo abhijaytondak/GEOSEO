@@ -134,6 +134,16 @@ export class ImageGenStore {
     return bits.filter(Boolean).join(" ");
   }
 
+  /**
+   * Instant theme-aware placeholder data URI — no generation, no persistence. Used as a hero
+   * stand-in so page creation returns immediately while the real raster generates in the
+   * background (see PageEngineStore.upgradeHeroImage).
+   */
+  async placeholderUrl(tenantId: string, subject: string, kind: ImageKind): Promise<string> {
+    const { primary } = await this.palette(tenantId);
+    return this.placeholder(subject, kind, primary);
+  }
+
   /** Theme-aware SVG placeholder (data URI) — used when image gen is unconfigured. */
   private placeholder(subject: string, kind: ImageKind, primary: string): string {
     const dark = darken(primary);

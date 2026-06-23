@@ -42,3 +42,22 @@ export function identify(id: string, props?: Record<string, unknown>): void {
 }
 
 export const analyticsEnabled = (): boolean => Boolean(process.env.NEXT_PUBLIC_POSTHOG_KEY);
+
+/**
+ * Typed onboarding/activation funnel events (PRD §5). Never carries a full URL —
+ * pass the normalized domain/origin only, never paths or query strings.
+ */
+export type OnboardingEvent =
+  | { event: "onboarding_step_viewed"; step: number; device: "desktop" | "mobile" }
+  | { event: "website_url_focused" }
+  | { event: "website_url_validation_failed"; reason: string }
+  | { event: "website_analysis_started"; domain?: string }
+  | { event: "website_analysis_succeeded"; domain?: string; source?: string }
+  | { event: "website_analysis_failed"; reason: string }
+  | { event: "onboarding_step_completed"; step: number }
+  | { event: "onboarding_help_opened" };
+
+export function trackOnboarding(e: OnboardingEvent): void {
+  const { event, ...props } = e;
+  track(event, props);
+}

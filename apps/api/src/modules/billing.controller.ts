@@ -1,10 +1,21 @@
-import { Body, Controller, Get, Inject, Post, Req } from "@nestjs/common";
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  Get,
+  Inject,
+  Post,
+  type RawBodyRequest,
+  Req,
+  ServiceUnavailableException,
+} from "@nestjs/common";
 import { ApiTags } from "@nestjs/swagger";
 import { BillingStore, type PlanId } from "./billing.service";
 import { Public } from "../common/public.decorator";
 import { Roles } from "../common/roles.decorator";
 import { validateBody, v } from "../common/validation";
 import { resolveTenantId, type TenantRequest } from "../common/tenant";
+import { verifyStripeWebhookSignature } from "./billing-webhook";
 
 const PLAN_IDS = ["launch", "grow", "scale"] as const satisfies readonly PlanId[];
 
@@ -52,21 +63,22 @@ export class BillingController {
   }
 
   /**
-   * Stripe webhook. Public, but requires the `STRIPE_WEBHOOK_SECRET` shared secret in
-   * the `x-webhook-secret` header (when configured) so it can't be spoofed. Returns
+   * Stripe webhook. Public, but verifies Stripe's signature over the raw request body.
+   * Returns
    * `{ received: true }` regardless of relevance so Stripe doesn't retry valid events.
    */
   @Public()
   @Post("webhook")
   async webhook(
-    @Req() req: TenantRequest,
+    @Req() req: RawBodyRequest<TenantRequest>,
     @Body() event: { type?: string; data?: { object?: Record<string, unknown> } },
   ) {
     const secret = process.env.STRIPE_WEBHOOK_SECRET;
-    if (secret) {
-      const header = req.headers?.["x-webhook-secret"];
-      const got = Array.isArray(header) ? header[0] : header;
-      if (got !== secret) return { received: false, reason: "bad secret" };
+    if (!secret) throw new ServiceUnavailableException("Stripe webhook is not configured.");
+    const header = req.headers?.["stripe-signature"];
+    const signature = Array.isArray(header) ? header[0] : header;
+    if (!req.rawBody || !signature || !verifyStripeWebhookSignature(req.rawBody, signature, secret)) {
+      throw new BadRequestException("Invalid Stripe webhook signature.");
     }
     if (!event?.type) return { received: false };
     const updated = await this.billing.applyWebhook({ type: event.type, data: event.data });
