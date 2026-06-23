@@ -41,6 +41,7 @@ import type {
   LeadNotificationRule,
   OnboardingStatus,
   OutreachTemplate,
+  PageCompetitorInsight,
   PerformanceOverview,
   ProspectUpdate,
   RankPoint,
@@ -355,6 +356,8 @@ export const api = {
   },
   getCompetitorAnalysis: () =>
     get<{ competitor: CompetitorAnalysis }>("/brand-analysis/competitors", async () => ({ competitor: await competitorAnalysisDemo() })).then((d) => d.competitor),
+  getPageInsights: () =>
+    get<{ insights: PageCompetitorInsight[] }>("/brand-analysis/page-insights", () => ({ insights: [] })).then((d) => d.insights),
 
   // AI Search engine (mentions + bot crawl tracking)
   getAiSearchOverview: () =>

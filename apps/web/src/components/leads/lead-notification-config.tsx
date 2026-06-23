@@ -38,10 +38,11 @@ type RuleDraft = {
   channels: LeadNotificationChannel[];
   statuses: string[];
   minScore: string; // kept as string for the input; coerced on save
+  webhookUrl: string;
 };
 
 function blankDraft(): RuleDraft {
-  return { name: "", enabled: true, channels: ["in_app"], statuses: [], minScore: "" };
+  return { name: "", enabled: true, channels: ["in_app"], statuses: [], minScore: "", webhookUrl: "" };
 }
 
 /* ---------------------------------------------------------------- helpers */
@@ -57,6 +58,7 @@ function ruleToPayload(draft: RuleDraft): Omit<LeadNotificationRule, "id" | "wor
     channels: draft.channels,
     statuses: draft.statuses.length > 0 ? draft.statuses : undefined,
     minScore: draft.minScore !== "" ? Number(draft.minScore) : undefined,
+    webhookUrl: draft.webhookUrl.trim() !== "" ? draft.webhookUrl.trim() : undefined,
   };
 }
 
@@ -67,6 +69,7 @@ function ruleToRuleDraft(rule: LeadNotificationRule): RuleDraft {
     channels: [...rule.channels],
     statuses: rule.statuses ? [...rule.statuses] : [],
     minScore: rule.minScore !== undefined ? String(rule.minScore) : "",
+    webhookUrl: rule.webhookUrl ?? "",
   };
 }
 
@@ -263,6 +266,23 @@ function RuleRow({
             onChange={(channels) => setDraft((d) => ({ ...d, channels }))}
           />
 
+          {draft.channels.includes("webhook") && (
+            <div>
+              <label
+                className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-foreground"
+              >
+                Webhook URL
+              </label>
+              <input
+                type="url"
+                className={inputCls}
+                value={draft.webhookUrl}
+                placeholder="https://hooks.example.com/geoseo"
+                onChange={(e) => setDraft((d) => ({ ...d, webhookUrl: e.target.value }))}
+              />
+            </div>
+          )}
+
           <CheckboxGroup
             label="Statuses (leave blank for all)"
             items={ALL_STATUSES}
@@ -382,6 +402,23 @@ function AddRuleForm({
         selected={draft.channels}
         onChange={(channels) => setDraft((d) => ({ ...d, channels }))}
       />
+
+      {draft.channels.includes("webhook") && (
+        <div>
+          <label
+            className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-foreground"
+          >
+            Webhook URL
+          </label>
+          <input
+            type="url"
+            className={inputCls}
+            value={draft.webhookUrl}
+            placeholder="https://hooks.example.com/geoseo"
+            onChange={(e) => setDraft((d) => ({ ...d, webhookUrl: e.target.value }))}
+          />
+        </div>
+      )}
 
       <CheckboxGroup
         label="Statuses (leave blank for all)"

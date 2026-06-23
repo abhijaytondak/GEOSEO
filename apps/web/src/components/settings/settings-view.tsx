@@ -78,6 +78,20 @@ export function SettingsView({ initial }: { initial: WorkspaceSettings }) {
   const [wpSaving, setWpSaving] = useState(false);
   const [wpTestResult, setWpTestResult] = useState<{ ok: boolean; user?: string; error?: string } | null>(null);
 
+  const wfIntegration = settings.integrations.find((i) => i.id === "webflow");
+  const [wfForm, setWfForm] = useState({
+    siteId: wfIntegration?.credentials?.siteId ?? "",
+    accessToken: wfIntegration?.credentials?.accessToken ?? "",
+  });
+  const [wfSaving, setWfSaving] = useState(false);
+
+  const shopIntegration = settings.integrations.find((i) => i.id === "shopify");
+  const [shopForm, setShopForm] = useState({
+    shop: shopIntegration?.credentials?.shop ?? "",
+    accessToken: shopIntegration?.credentials?.accessToken ?? "",
+  });
+  const [shopSaving, setShopSaving] = useState(false);
+
   async function saveProfile() {
     setSaving(true);
     try {
@@ -165,6 +179,98 @@ export function SettingsView({ initial }: { initial: WorkspaceSettings }) {
       setWpForm({ siteUrl: "", username: "", appPassword: "" });
       setWpTestResult(null);
       notify({ kind: "success", title: "WordPress disconnected" });
+    } catch (err) {
+      notify({ kind: "error", title: "Could not disconnect", message: err instanceof Error ? err.message : "Try again." });
+    }
+  }
+
+  async function saveWebflow() {
+    if (!wfForm.siteId || !wfForm.accessToken) {
+      notify({ kind: "error", title: "Fill in both fields to connect Webflow" });
+      return;
+    }
+    setWfSaving(true);
+    try {
+      const result = await api.updateIntegration("webflow", {
+        credentials: wfForm,
+        status: "connected",
+      });
+      trackJob(result.job);
+      setSettings((current) => ({
+        ...current,
+        integrations: current.integrations.map((i) => (i.id === "webflow" ? result.integration : i)),
+      }));
+      notify({ kind: "success", title: "Webflow connected", message: `Site ID: ${wfForm.siteId}` });
+    } catch (err) {
+      notify({ kind: "error", title: "Save failed", message: err instanceof Error ? err.message : "Try again." });
+    } finally {
+      setWfSaving(false);
+    }
+  }
+
+  async function disconnectWebflow() {
+    const ok = await confirm({
+      title: "Disconnect Webflow?",
+      message: "Saved credentials will be removed. Pages already published will remain in your Webflow collection.",
+      confirmLabel: "Disconnect",
+      tone: "danger",
+    });
+    if (!ok) return;
+    try {
+      const result = await api.updateIntegration("webflow", { credentials: {}, status: "needs-attention" });
+      trackJob(result.job);
+      setSettings((current) => ({
+        ...current,
+        integrations: current.integrations.map((i) => (i.id === "webflow" ? result.integration : i)),
+      }));
+      setWfForm({ siteId: "", accessToken: "" });
+      notify({ kind: "success", title: "Webflow disconnected" });
+    } catch (err) {
+      notify({ kind: "error", title: "Could not disconnect", message: err instanceof Error ? err.message : "Try again." });
+    }
+  }
+
+  async function saveShopify() {
+    if (!shopForm.shop || !shopForm.accessToken) {
+      notify({ kind: "error", title: "Fill in both fields to connect Shopify" });
+      return;
+    }
+    setShopSaving(true);
+    try {
+      const result = await api.updateIntegration("shopify", {
+        credentials: shopForm,
+        status: "connected",
+      });
+      trackJob(result.job);
+      setSettings((current) => ({
+        ...current,
+        integrations: current.integrations.map((i) => (i.id === "shopify" ? result.integration : i)),
+      }));
+      notify({ kind: "success", title: "Shopify connected", message: `Store: ${shopForm.shop}.myshopify.com` });
+    } catch (err) {
+      notify({ kind: "error", title: "Save failed", message: err instanceof Error ? err.message : "Try again." });
+    } finally {
+      setShopSaving(false);
+    }
+  }
+
+  async function disconnectShopify() {
+    const ok = await confirm({
+      title: "Disconnect Shopify?",
+      message: "Saved credentials will be removed. Pages already published will remain in your Shopify store.",
+      confirmLabel: "Disconnect",
+      tone: "danger",
+    });
+    if (!ok) return;
+    try {
+      const result = await api.updateIntegration("shopify", { credentials: {}, status: "needs-attention" });
+      trackJob(result.job);
+      setSettings((current) => ({
+        ...current,
+        integrations: current.integrations.map((i) => (i.id === "shopify" ? result.integration : i)),
+      }));
+      setShopForm({ shop: "", accessToken: "" });
+      notify({ kind: "success", title: "Shopify disconnected" });
     } catch (err) {
       notify({ kind: "error", title: "Could not disconnect", message: err instanceof Error ? err.message : "Try again." });
     }
@@ -428,10 +534,149 @@ export function SettingsView({ initial }: { initial: WorkspaceSettings }) {
             </div>
           </Panel>
 
+          {/* Webflow — full credential form */}
+          <Panel
+            title="Webflow"
+            description="Publish generated pages directly to a Webflow CMS collection. Uses the Webflow Data API v2 with a site-scoped API token."
+          >
+            <div className="space-y-4">
+              {/* Connection status banner */}
+              {wfIntegration?.status === "connected" && (
+                <div className="flex items-center gap-2 rounded-xl border border-positive/30 bg-positive/8 px-4 py-3">
+                  <CheckCircle2 className="size-4 shrink-0 text-positive" />
+                  <span className="text-label font-semibold text-positive">
+                    Connected{wfIntegration.credentials?.siteId ? ` — Site ID: ${wfIntegration.credentials.siteId}` : ""}
+                  </span>
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                <label className="block">
+                  <span className="text-label font-semibold text-muted-foreground">Site ID</span>
+                  <input
+                    className={cn(inputCls, "mt-1.5")}
+                    placeholder="6458bb…"
+                    value={wfForm.siteId}
+                    onChange={(e) => setWfForm((f) => ({ ...f, siteId: e.target.value }))}
+                  />
+                </label>
+                <label className="block">
+                  <span className="text-label font-semibold text-muted-foreground">API Access Token</span>
+                  <input
+                    className={cn(inputCls, "mt-1.5")}
+                    type="password"
+                    placeholder="your-webflow-api-token"
+                    autoComplete="new-password"
+                    value={wfForm.accessToken}
+                    onChange={(e) => setWfForm((f) => ({ ...f, accessToken: e.target.value }))}
+                  />
+                </label>
+              </div>
+
+              <p className="text-label text-muted-foreground">
+                Generate a{" "}
+                <strong className="font-semibold text-foreground">site token</strong>
+                {" "}in Webflow{" "}
+                <span className="font-medium text-foreground">→ Site Settings → Integrations → API Access</span>.
+                The Site ID is in{" "}
+                <span className="font-medium text-foreground">Site Settings → General</span>.
+              </p>
+
+              <div className="flex flex-wrap gap-3">
+                <Button variant="brand" onClick={saveWebflow} disabled={wfSaving} loading={wfSaving}>
+                  {!wfSaving && <Save className="size-4" />}
+                  Save & enable
+                </Button>
+                {wfIntegration?.status === "connected" && (
+                  <Button variant="outline" className="text-negative hover:border-negative/40 hover:bg-negative/8" onClick={disconnectWebflow}>
+                    Disconnect
+                  </Button>
+                )}
+              </div>
+            </div>
+          </Panel>
+
+          {/* Shopify — full credential form */}
+          <Panel
+            title="Shopify"
+            description="Publish generated pages to your Shopify Online Store as Pages. Uses the Shopify Admin REST API with a custom app access token."
+          >
+            <div className="space-y-4">
+              {/* Connection status banner */}
+              {shopIntegration?.status === "connected" && (
+                <div className="flex items-center gap-2 rounded-xl border border-positive/30 bg-positive/8 px-4 py-3">
+                  <CheckCircle2 className="size-4 shrink-0 text-positive" />
+                  <span className="text-label font-semibold text-positive">
+                    Connected{shopIntegration.credentials?.shop ? ` — ${shopIntegration.credentials.shop}.myshopify.com` : ""}
+                  </span>
+                  {shopIntegration.credentials?.shop && (
+                    <a
+                      href={`https://${shopIntegration.credentials.shop}.myshopify.com`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="ml-auto text-label text-positive/80 hover:text-positive focus-visible:outline-none"
+                      aria-label="Open Shopify store"
+                    >
+                      <ExternalLink className="size-3.5" />
+                    </a>
+                  )}
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                <label className="block">
+                  <span className="text-label font-semibold text-muted-foreground">Shop subdomain</span>
+                  <div className="relative mt-1.5">
+                    <input
+                      className={cn(inputCls, "pr-[136px]")}
+                      placeholder="your-store"
+                      value={shopForm.shop}
+                      onChange={(e) => setShopForm((f) => ({ ...f, shop: e.target.value.replace(/\.myshopify\.com.*$/, "") }))}
+                    />
+                    <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-label text-muted-foreground">
+                      .myshopify.com
+                    </span>
+                  </div>
+                </label>
+                <label className="block">
+                  <span className="text-label font-semibold text-muted-foreground">Admin API Access Token</span>
+                  <input
+                    className={cn(inputCls, "mt-1.5")}
+                    type="password"
+                    placeholder="shpat_…"
+                    autoComplete="new-password"
+                    value={shopForm.accessToken}
+                    onChange={(e) => setShopForm((f) => ({ ...f, accessToken: e.target.value }))}
+                  />
+                </label>
+              </div>
+
+              <p className="text-label text-muted-foreground">
+                Create a{" "}
+                <strong className="font-semibold text-foreground">custom app</strong>
+                {" "}in Shopify{" "}
+                <span className="font-medium text-foreground">→ Settings → Apps and sales channels → Develop apps</span>.
+                Grant the <span className="font-medium text-foreground">write_content</span> Admin API scope, then install the app to get the access token.
+              </p>
+
+              <div className="flex flex-wrap gap-3">
+                <Button variant="brand" onClick={saveShopify} disabled={shopSaving} loading={shopSaving}>
+                  {!shopSaving && <Save className="size-4" />}
+                  Save & enable
+                </Button>
+                {shopIntegration?.status === "connected" && (
+                  <Button variant="outline" className="text-negative hover:border-negative/40 hover:bg-negative/8" onClick={disconnectShopify}>
+                    Disconnect
+                  </Button>
+                )}
+              </div>
+            </div>
+          </Panel>
+
           {/* Other integrations */}
           <Panel title="Other Integrations" description="Additional connectors — toggle to reflect your current setup.">
             <div className="grid grid-cols-1 gap-3 xl:grid-cols-3">
-              {settings.integrations.filter((i) => i.id !== "wordpress").map((integration) => (
+              {settings.integrations.filter((i) => i.id !== "wordpress" && i.id !== "webflow" && i.id !== "shopify").map((integration) => (
                 <div key={integration.id} className="rounded-xl border border-border bg-surface-sunken p-4">
                   <div className="flex items-start justify-between gap-3">
                     <div>

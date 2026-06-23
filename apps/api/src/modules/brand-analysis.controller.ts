@@ -2,6 +2,7 @@ import { BadRequestException, Body, Controller, Get, Inject, NotFoundException, 
 import { ApiTags } from "@nestjs/swagger";
 import { BrandAnalysisStore } from "./brand-analysis.service";
 import { AuditStore } from "./audit.service";
+import { CompetitorAnalysisService } from "./competitor-analysis.service";
 import { resolveTenantId, type TenantRequest } from "../common/tenant";
 import { analyzeCompetitorPage } from "../llm/competitor-page";
 import { assertSafeUrl } from "../common/ssrf";
@@ -18,6 +19,7 @@ export class BrandAnalysisController {
   constructor(
     @Inject(BrandAnalysisStore) private readonly analysis: BrandAnalysisStore,
     @Inject(AuditStore) private readonly audit: AuditStore,
+    @Inject(CompetitorAnalysisService) private readonly competitorSvc: CompetitorAnalysisService,
   ) {}
 
   @Get()
@@ -47,6 +49,18 @@ export class BrandAnalysisController {
   @Get("competitors")
   async competitors(@Req() req: TenantRequest) {
     return { competitor: await this.analysis.competitors(resolveTenantId(req), new Date().toISOString()) };
+  }
+
+  /**
+   * Per-page competitive breakdown: for every published page, how does it rank
+   * vs. the declared competitor for its target keyword? Returns wins, losses,
+   * and actionable suggestions. Always returns data (heuristic fallback when no
+   * real rank data is available).
+   */
+  @Get("page-insights")
+  pageInsights(@Req() req: TenantRequest) {
+    const insights = this.competitorSvc.pageInsights(resolveTenantId(req));
+    return { insights };
   }
 
   /**

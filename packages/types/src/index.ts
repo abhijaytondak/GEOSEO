@@ -261,6 +261,8 @@ export interface LeadNotificationRule {
   pages?: string[];
   ownerOnly?: boolean;
   quietHours?: { start: string; end: string; timezone: string };
+  /** Target URL for the webhook channel — POSTed with a lead.alert JSON payload. */
+  webhookUrl?: string;
 }
 
 /** A delivered (or suppressed) notification for a lead. */
@@ -619,6 +621,24 @@ export interface CompetitorAnalysis {
   yourVisibility: number;
   source: CompetitorSource;
   generatedAt: ISODate;
+}
+
+/**
+ * Per-page competitive position: how each published page stacks up against the
+ * top competitor for its target keyword (wins, losses, and actionable suggestions).
+ */
+export interface PageCompetitorInsight {
+  pageId: string;
+  pageTitle: string;
+  pageSlug: string;
+  keyword: string;
+  ourRank: number | null;
+  competitorDomain: string;
+  competitorRank: number;
+  /** competitorRank − ourRank (negative = we're ahead). */
+  gap: number;
+  verdict: "winning" | "losing" | "tied";
+  suggestion: string;
 }
 
 /**

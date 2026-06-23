@@ -50,6 +50,7 @@ export class LeadNotificationStore {
       pages: input.pages,
       ownerOnly: input.ownerOnly,
       quietHours: input.quietHours,
+      webhookUrl: input.webhookUrl,
     };
     s.rules[rule.id] = rule;
     this.persist(tenantId, s);
@@ -135,8 +136,35 @@ export class LeadNotificationStore {
               actualStatus = "suppressed";
             }
           }
+        } else if (channel === "webhook") {
+          // POST to the rule's configured URL; "in_app" is a no-op (shown in UI).
+          const url = r.webhookUrl;
+          if (url) {
+            try {
+              const { fetchWithTimeout } = await import("../common/http");
+              const res = await fetchWithTimeout(url, {
+                method: "POST",
+                headers: { "content-type": "application/json", "x-geoseo-event": "lead.alert" },
+                body: JSON.stringify({
+                  event: "lead.alert",
+                  leadId: lead.id,
+                  leadName: lead.name,
+                  leadEmail: lead.email,
+                  leadCompany: lead.company,
+                  pageTitle: lead.pageTitle,
+                  score: total,
+                  status: lead.status,
+                  ruleName: r.name,
+                  ruleId: r.id,
+                  sentAt: nowIso(),
+                }),
+              }, 10_000);
+              if (!res.ok) actualStatus = "suppressed";
+            } catch {
+              actualStatus = "suppressed";
+            }
+          }
         }
-        // "in_app" and "webhook" channels: recorded as-is (in-app shown in UI; webhook requires custom endpoint)
       }
 
       const entry: LeadNotification = {

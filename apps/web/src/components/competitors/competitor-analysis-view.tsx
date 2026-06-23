@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Loader2, RefreshCw, Sparkles, Swords, ArrowUpRight, Info, Search, ShieldAlert, Check } from "lucide-react";
-import type { CompetitorAnalysis, CompetitorSource, CompetitorPageAnalysis } from "@geoseo/types";
+import { Loader2, RefreshCw, Sparkles, Swords, ArrowUpRight, Info, Search, ShieldAlert, Check, TrendingUp, TrendingDown, Minus } from "lucide-react";
+import type { CompetitorAnalysis, CompetitorSource, CompetitorPageAnalysis, PageCompetitorInsight } from "@geoseo/types";
 import { Panel } from "@/components/dashboard/panel";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -78,6 +78,8 @@ export function CompetitorAnalysisView() {
   const [pageUrl, setPageUrl] = useState("");
   const [analyzing, setAnalyzing] = useState(false);
   const [pageResult, setPageResult] = useState<CompetitorPageAnalysis | null>(null);
+  const [insights, setInsights] = useState<PageCompetitorInsight[]>([]);
+  const [insightsLoading, setInsightsLoading] = useState(true);
 
   async function analyzePage() {
     const url = pageUrl.trim();
@@ -101,6 +103,16 @@ export function CompetitorAnalysisView() {
       setAnalyzing(false);
     }
   }
+
+  // Load page-level insights independently (they always work even when SERP data is absent).
+  useEffect(() => {
+    let cancelled = false;
+    api.getPageInsights()
+      .then((rows) => { if (!cancelled) setInsights(rows); })
+      .catch(() => { /* silent — empty state handles this */ })
+      .finally(() => { if (!cancelled) setInsightsLoading(false); });
+    return () => { cancelled = true; };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -330,6 +342,82 @@ export function CompetitorAnalysisView() {
                         <Sparkles className="size-3.5" />
                         Generate page
                       </Link>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </Panel>
+
+      {/* page insights */}
+      <Panel
+        title="Page insights"
+        description="How each of your published pages ranks against the top competitor for its target keyword"
+      >
+        {insightsLoading ? (
+          <div className="flex items-center gap-2 py-6 text-body text-muted-foreground">
+            <Loader2 className="size-4 animate-spin" aria-hidden="true" /> Loading page insights…
+          </div>
+        ) : insights.length === 0 ? (
+          <p className="py-4 text-label text-muted-foreground">
+            No published pages yet — generate some pages to see competitive insights.
+          </p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-label">
+              <thead>
+                <tr className="border-b border-border text-left text-micro uppercase text-muted-foreground">
+                  <th className="pb-2 pr-3 font-medium">Page</th>
+                  <th className="pb-2 pr-3 font-medium">Keyword</th>
+                  <th className="pb-2 pr-3 font-medium">Our rank</th>
+                  <th className="pb-2 pr-3 font-medium">Competitor</th>
+                  <th className="pb-2 pr-3 font-medium">Their rank</th>
+                  <th className="pb-2 pr-3 font-medium">Verdict</th>
+                  <th className="pb-2 font-medium">Suggestion</th>
+                </tr>
+              </thead>
+              <tbody>
+                {insights.map((ins) => (
+                  <tr key={ins.pageId} className="border-b border-border/60 last:border-0">
+                    <td className="py-2.5 pr-3">
+                      <a
+                        href={ins.pageSlug}
+                        className="inline-flex items-center gap-1 font-medium text-foreground hover:text-brand hover:underline"
+                      >
+                        <span className="max-w-[160px] truncate">{ins.pageTitle}</span>
+                        <ArrowUpRight className="size-3 shrink-0 text-muted-foreground" />
+                      </a>
+                    </td>
+                    <td className="py-2.5 pr-3 text-muted-foreground">{ins.keyword}</td>
+                    <td className="tnum py-2.5 pr-3 text-muted-foreground">
+                      {ins.ourRank !== null ? `#${ins.ourRank}` : "—"}
+                    </td>
+                    <td className="py-2.5 pr-3 text-muted-foreground">{ins.competitorDomain}</td>
+                    <td className="tnum py-2.5 pr-3 text-muted-foreground">#{ins.competitorRank}</td>
+                    <td className="py-2.5 pr-3">
+                      {ins.verdict === "winning" && (
+                        <Badge variant="positive" className="inline-flex items-center gap-1">
+                          <TrendingUp className="size-3" aria-hidden="true" />
+                          Winning
+                        </Badge>
+                      )}
+                      {ins.verdict === "losing" && (
+                        <Badge variant="negative" className="inline-flex items-center gap-1">
+                          <TrendingDown className="size-3" aria-hidden="true" />
+                          Losing
+                        </Badge>
+                      )}
+                      {ins.verdict === "tied" && (
+                        <Badge variant="muted" className="inline-flex items-center gap-1">
+                          <Minus className="size-3" aria-hidden="true" />
+                          Tied
+                        </Badge>
+                      )}
+                    </td>
+                    <td className="py-2.5 text-muted-foreground">
+                      <span className="line-clamp-2 max-w-xs">{ins.suggestion}</span>
                     </td>
                   </tr>
                 ))}
