@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Users, BadgeCheck, ShieldAlert, Gauge, Download, Cloud, Check, Trash2, Inbox } from "lucide-react";
+import { Users, BadgeCheck, ShieldAlert, Gauge, Download, Cloud, Check, Trash2, Inbox, LayoutList, TableProperties } from "lucide-react";
 import type { Lead, LeadStatus, SpamStatus } from "@geoseo/types";
 import { Panel } from "@/components/dashboard/panel";
 import { Button } from "@/components/ui/button";
@@ -44,9 +44,12 @@ function scoreColor(s: number) {
   return s >= 75 ? "text-positive" : s >= 50 ? "text-warning" : "text-muted-foreground";
 }
 
+type ViewMode = "list" | "by-page";
+
 export function LeadsView({ leads }: { leads: Lead[] }) {
   const { notify, confirm } = useAppFeedback();
   const [filter, setFilter] = useState<Filter>("all");
+  const [viewMode, setViewMode] = useState<ViewMode>("list");
   const [rows, setRows] = useState(leads);
   const [selected, setSelected] = useState<Lead | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
@@ -132,6 +135,22 @@ export function LeadsView({ leads }: { leads: Lead[] }) {
     [rows, filter],
   );
 
+  const byPage = useMemo(() => {
+    const clean = rows.filter((l) => l.spamStatus === "clean");
+    const map = new Map<string, { pageId: string; pageTitle: string; total: number; clean: number; won: number; avgScore: number; scores: number[] }>();
+    for (const l of clean) {
+      const entry = map.get(l.pageId) ?? { pageId: l.pageId, pageTitle: l.pageTitle, total: 0, clean: 0, won: 0, avgScore: 0, scores: [] };
+      entry.total++;
+      entry.clean++;
+      if (l.status === "won") entry.won++;
+      entry.scores.push(l.score);
+      map.set(l.pageId, entry);
+    }
+    return Array.from(map.values())
+      .map((e) => ({ ...e, avgScore: e.scores.length ? Math.round(e.scores.reduce((a, b) => a + b, 0) / e.scores.length) : 0 }))
+      .sort((a, b) => b.total - a.total);
+  }, [rows]);
+
   function exportCsv() {
     const headers = ["Name", "Email", "Company", "Source Page", "Score", "Status", "Spam", "Created"];
     const rows = filtered.map((l) => [
@@ -180,32 +199,102 @@ export function LeadsView({ leads }: { leads: Lead[] }) {
         bodyClassName="p-0"
         action={
           <div className="flex items-center gap-2">
-            <div
-              role="group"
-              aria-label="Filter leads by spam status"
-              className="hidden items-center gap-1 rounded-xl border border-border bg-card p-1 sm:flex"
-            >
-              {FILTERS.map((f) => (
-                <button
-                  key={f}
-                  onClick={() => setFilter(f)}
-                  aria-pressed={filter === f}
-                  className={cn(
-                    "rounded-lg px-2.5 py-1 text-label font-medium capitalize transition-colors focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/40",
-                    filter === f ? "bg-foreground text-background" : "text-muted-foreground hover:bg-muted hover:text-foreground",
-                  )}
-                >
-                  {f}
-                </button>
-              ))}
+            {/* view mode toggle */}
+            <div role="group" aria-label="Switch leads view" className="flex items-center gap-1 rounded-xl border border-border bg-card p-1">
+              <button
+                onClick={() => setViewMode("list")}
+                aria-pressed={viewMode === "list"}
+                title="All leads"
+                className={cn("rounded-lg p-1.5 transition-colors focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/40", viewMode === "list" ? "bg-foreground text-background" : "text-muted-foreground hover:bg-muted hover:text-foreground")}
+              >
+                <LayoutList className="size-3.5" />
+              </button>
+              <button
+                onClick={() => setViewMode("by-page")}
+                aria-pressed={viewMode === "by-page"}
+                title="By source page"
+                className={cn("rounded-lg p-1.5 transition-colors focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/40", viewMode === "by-page" ? "bg-foreground text-background" : "text-muted-foreground hover:bg-muted hover:text-foreground")}
+              >
+                <TableProperties className="size-3.5" />
+              </button>
             </div>
-            <Button variant="outline" size="sm" className="h-8" onClick={exportCsv}>
-              <Download className="size-3.5" />
-              Export CSV
-            </Button>
+            {viewMode === "list" && (
+              <>
+                <div
+                  role="group"
+                  aria-label="Filter leads by spam status"
+                  className="hidden items-center gap-1 rounded-xl border border-border bg-card p-1 sm:flex"
+                >
+                  {FILTERS.map((f) => (
+                    <button
+                      key={f}
+                      onClick={() => setFilter(f)}
+                      aria-pressed={filter === f}
+                      className={cn(
+                        "rounded-lg px-2.5 py-1 text-label font-medium capitalize transition-colors focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/40",
+                        filter === f ? "bg-foreground text-background" : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                      )}
+                    >
+                      {f}
+                    </button>
+                  ))}
+                </div>
+                <Button variant="outline" size="sm" className="h-8" onClick={exportCsv}>
+                  <Download className="size-3.5" />
+                  Export CSV
+                </Button>
+              </>
+            )}
           </div>
         }
       >
+        {viewMode === "by-page" && (
+          byPage.length === 0 ? (
+            <EmptyState icon={TableProperties} title="No leads yet" description="Once visitors submit the lead form on your published pages, conversion rates by page will appear here." className="py-16" />
+          ) : (
+            <Table className="text-left">
+              <TableHeader>
+                <TableRow className="border-b border-border bg-surface-sunken hover:bg-surface-sunken">
+                  <TableHead scope="col" className="px-5 py-3 text-micro text-muted-foreground">Page</TableHead>
+                  <TableHead scope="col" className="px-3 py-3 text-right text-micro text-muted-foreground">Leads</TableHead>
+                  <TableHead scope="col" className="px-3 py-3 text-right text-micro text-muted-foreground">Won</TableHead>
+                  <TableHead scope="col" className="px-3 py-3 text-right text-micro text-muted-foreground">Conv.</TableHead>
+                  <TableHead scope="col" className="px-5 py-3 text-right text-micro text-muted-foreground">Avg score</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {byPage.map((p) => {
+                  const conv = p.total > 0 ? Math.round((p.won / p.total) * 100) : 0;
+                  return (
+                    <TableRow key={p.pageId} className="border-b border-border hover:bg-surface-sunken">
+                      <TableCell className="px-5 py-3">
+                        <button
+                          onClick={() => { setViewMode("list"); setFilter("all"); }}
+                          className="max-w-xs truncate text-left text-body font-semibold text-foreground transition-colors hover:text-brand focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/40"
+                          title={p.pageTitle}
+                        >
+                          {p.pageTitle}
+                        </button>
+                      </TableCell>
+                      <TableCell className="tnum px-3 py-3 text-right text-body font-semibold text-foreground">{p.total}</TableCell>
+                      <TableCell className="tnum px-3 py-3 text-right text-label text-muted-foreground">{p.won}</TableCell>
+                      <TableCell className="tnum px-3 py-3 text-right">
+                        <span className={cn("text-label font-semibold", conv >= 20 ? "text-positive" : conv >= 10 ? "text-warning" : "text-muted-foreground")}>
+                          {conv}%
+                        </span>
+                      </TableCell>
+                      <TableCell className="tnum px-5 py-3 text-right">
+                        <span className={cn("text-label font-semibold", scoreColor(p.avgScore))}>{p.avgScore}</span>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          )
+        )}
+
+        {viewMode === "list" && (<>
         {/* mobile-reachable filter — the pill group above is sm:flex-only, so a phone
             user otherwise had no way to filter the card list below (§1). */}
         <div className="border-b border-border p-3 sm:hidden">
@@ -390,6 +479,7 @@ export function LeadsView({ leads }: { leads: Lead[] }) {
             </ul>
           </>
         )}
+        </>)}
       </Panel>
 
       <LeadDetailDrawer lead={selected} open={detailOpen} onOpenChange={setDetailOpen} />

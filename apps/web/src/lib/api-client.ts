@@ -539,6 +539,11 @@ export const api = {
       `/performance/overview?range=${encodeURIComponent(range)}`,
       () => performanceOverviewFallback(range),
     ),
+  getROI: () =>
+    get<{
+      rows: { id: string; title: string; slug: string; currentRank: number; impressions: number; clicks: number; leadCount: number; wonCount: number; avgLeadScore: number; conversionRate: number }[];
+      totals: { totalLeads: number; totalWon: number; totalImpressions: number; totalClicks: number; pagesWithLeads: number };
+    }>("/performance/roi", () => ({ rows: [], totals: { totalLeads: 0, totalWon: 0, totalImpressions: 0, totalClicks: 0, pagesWithLeads: 0 } })),
   // Google Search Console seam (real rankings when GSC creds configured)
   getGscStatus: () =>
     get<{ configured: boolean; siteUrl?: string }>("/gsc/status", () => ({ configured: false })),

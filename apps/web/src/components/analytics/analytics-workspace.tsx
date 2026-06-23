@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import {
@@ -18,7 +18,9 @@ import {
   TrendingDown,
   Minus,
   Target,
+  DollarSign,
 } from "lucide-react";
+import { api } from "@/lib/api-client";
 import type {
   RankPoint,
   ImpressionPoint,
@@ -38,7 +40,7 @@ import { TrackedPagesTable } from "@/components/performance/tracked-pages-table"
 import { compact } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
-type Tab = "overview" | "ai" | "rankings" | "pages" | "leads" | "authority";
+type Tab = "overview" | "ai" | "rankings" | "pages" | "leads" | "authority" | "roi";
 const TABS: { id: Tab; label: string; icon: typeof Gauge }[] = [
   { id: "overview", label: "Overview", icon: LayoutGrid },
   { id: "ai", label: "AI Visibility", icon: Sparkles },
@@ -46,6 +48,7 @@ const TABS: { id: Tab; label: string; icon: typeof Gauge }[] = [
   { id: "pages", label: "Pages", icon: FileText },
   { id: "leads", label: "Leads", icon: Users },
   { id: "authority", label: "Authority", icon: ShieldCheck },
+  { id: "roi", label: "ROI", icon: DollarSign },
 ];
 
 interface Kpi {
@@ -73,6 +76,17 @@ export function AnalyticsWorkspace({
   const params = useSearchParams();
   const initialTab = (TABS.find((t) => t.id === params.get("view"))?.id ?? "overview") as Tab;
   const [tab, setTab] = useState<Tab>(initialTab);
+
+  type RoiRow = { id: string; title: string; currentRank: number; impressions: number; clicks: number; leadCount: number; wonCount: number; avgLeadScore: number; conversionRate: number };
+  type RoiTotals = { totalLeads: number; totalWon: number; totalImpressions: number; totalClicks: number; pagesWithLeads: number };
+  const [roiRows, setRoiRows] = useState<RoiRow[]>([]);
+  const [roiTotals, setRoiTotals] = useState<RoiTotals | null>(null);
+  const [roiLoading, setRoiLoading] = useState(false);
+  useEffect(() => {
+    if (tab !== "roi" || roiTotals) return;
+    setRoiLoading(true);
+    api.getROI().then((d) => { setRoiRows(d.rows); setRoiTotals(d.totals); }).finally(() => setRoiLoading(false));
+  }, [tab, roiTotals]);
 
   const m = useMemo(() => {
     const avgRank = ranks.length ? Math.round(ranks.reduce((a, p) => a + p.rank, 0) / ranks.length) : 0;
@@ -497,6 +511,83 @@ export function AnalyticsWorkspace({
           <Link href="/authority" className="inline-flex items-center gap-1 text-[12.5px] font-semibold text-brand hover:underline">
             Open the Authority workspace <ArrowRight className="size-3.5" />
           </Link>
+        </div>
+      )}
+
+      {tab === "roi" && (
+        <div className="space-y-5">
+          {roiLoading && (
+            <div className="flex items-center justify-center py-20 text-muted-foreground text-label">Loading ROI data…</div>
+          )}
+          {!roiLoading && roiTotals && (
+            <>
+              <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
+                {[
+                  { label: "Total impressions", value: compact(roiTotals.totalImpressions) },
+                  { label: "Total clicks", value: compact(roiTotals.totalClicks) },
+                  { label: "Clean leads", value: String(roiTotals.totalLeads) },
+                  { label: "Won", value: String(roiTotals.totalWon) },
+                  { label: "Pages with leads", value: String(roiTotals.pagesWithLeads) },
+                ].map((s) => (
+                  <div key={s.label} className="rounded-2xl border border-border bg-card p-4 shadow-card">
+                    <div className="text-micro text-muted-foreground">{s.label}</div>
+                    <div className="tnum mt-1.5 text-kpi text-foreground">{s.value}</div>
+                  </div>
+                ))}
+              </div>
+              <Panel
+                title="Conversion by page"
+                description="Impressions and clicks from search matched with lead capture per published page"
+                bodyClassName="p-0"
+              >
+                {roiRows.length === 0 ? (
+                  <EmptyState
+                    icon={DollarSign}
+                    title="No conversion data yet"
+                    description="Once pages are published and leads are captured, ROI by page will appear here."
+                    className="py-16"
+                  />
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-label">
+                      <thead>
+                        <tr className="border-b border-border bg-surface-sunken">
+                          <th scope="col" className="px-5 py-3 text-micro font-semibold text-muted-foreground">Page</th>
+                          <th scope="col" className="px-3 py-3 text-right text-micro font-semibold text-muted-foreground">Rank</th>
+                          <th scope="col" className="px-3 py-3 text-right text-micro font-semibold text-muted-foreground">Impressions</th>
+                          <th scope="col" className="px-3 py-3 text-right text-micro font-semibold text-muted-foreground">Clicks</th>
+                          <th scope="col" className="px-3 py-3 text-right text-micro font-semibold text-muted-foreground">Leads</th>
+                          <th scope="col" className="px-3 py-3 text-right text-micro font-semibold text-muted-foreground">Won</th>
+                          <th scope="col" className="px-3 py-3 text-right text-micro font-semibold text-muted-foreground">Conv.</th>
+                          <th scope="col" className="px-5 py-3 text-right text-micro font-semibold text-muted-foreground">Avg score</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {roiRows.map((r) => (
+                          <tr key={r.id} className="border-b border-border hover:bg-surface-sunken">
+                            <td className="max-w-xs px-5 py-3">
+                              <span className="block truncate font-semibold text-foreground" title={r.title}>{r.title}</span>
+                            </td>
+                            <td className="tnum px-3 py-3 text-right text-muted-foreground">{r.currentRank > 0 ? `#${r.currentRank}` : "—"}</td>
+                            <td className="tnum px-3 py-3 text-right text-muted-foreground">{compact(r.impressions)}</td>
+                            <td className="tnum px-3 py-3 text-right text-muted-foreground">{compact(r.clicks)}</td>
+                            <td className={cn("tnum px-3 py-3 text-right font-semibold", r.leadCount > 0 ? "text-positive" : "text-muted-foreground")}>{r.leadCount}</td>
+                            <td className="tnum px-3 py-3 text-right text-muted-foreground">{r.wonCount}</td>
+                            <td className="tnum px-3 py-3 text-right">
+                              <span className={cn("font-semibold", r.conversionRate >= 2 ? "text-positive" : r.conversionRate >= 0.5 ? "text-warning" : "text-muted-foreground")}>
+                                {r.conversionRate > 0 ? `${r.conversionRate}%` : "—"}
+                              </span>
+                            </td>
+                            <td className="tnum px-5 py-3 text-right font-semibold text-muted-foreground">{r.avgLeadScore > 0 ? r.avgLeadScore : "—"}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </Panel>
+            </>
+          )}
         </div>
       )}
     </div>

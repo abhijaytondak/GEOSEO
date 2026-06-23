@@ -7,6 +7,7 @@ import { settled, degradeLogger } from "../common/async";
 import { AiMentionStore } from "./ai-search.service";
 import { resolveTenantId, type TenantRequest } from "../common/tenant";
 import { GscService } from "./gsc.service";
+import { PageEngineStore } from "./page-engine.service";
 
 type SortKey = "rankChange" | "impressions" | "clicks" | "rank";
 
@@ -43,6 +44,7 @@ export class PerformanceController {
     @Inject(SEO_PROVIDER) private readonly seo: SeoDataProvider,
     @Inject(GscService) private readonly gsc: GscService,
     @Inject(AiMentionStore) private readonly mentions: AiMentionStore,
+    @Inject(PageEngineStore) private readonly pageEngine: PageEngineStore,
   ) {}
 
 
@@ -175,5 +177,80 @@ export class PerformanceController {
     if (!page) throw new NotFoundException(`No tracked page '${id}'`);
     const { signals: aiVisibility } = await this.mentions.visibility(resolveTenantId(req));
     return { ...page, aiVisibility };
+  }
+
+  /**
+   * ROI overview — joins published pages with their lead conversion data.
+   * Returns per-page: impressions, clicks, lead count, won count, avg lead score.
+   * Sorted by lead count descending so top-converting pages rise to the top.
+   */
+  @Get("roi")
+  async roi(@Req() req: TenantRequest) {
+    const tenantId = resolveTenantId(req);
+    const [trackedPages, allLeads] = await Promise.all([
+      this.seo.getTrackedPages(),
+      Promise.resolve(this.pageEngine.listLeads(tenantId)),
+    ]);
+
+    // Index leads by pageId (clean leads only for accuracy).
+    const cleanLeads = allLeads.filter((l) => l.spamStatus === "clean");
+    const leadsByPage = new Map<string, typeof cleanLeads>();
+    for (const l of cleanLeads) {
+      const arr = leadsByPage.get(l.pageId) ?? [];
+      arr.push(l);
+      leadsByPage.set(l.pageId, arr);
+    }
+
+    // Build ROI rows — tracked pages enriched with lead data.
+    const rows = trackedPages.map((p) => {
+      const pagLeads = leadsByPage.get(p.id) ?? [];
+      const won = pagLeads.filter((l) => l.status === "won").length;
+      const avgScore = pagLeads.length ? round(pagLeads.reduce((a, l) => a + l.score, 0) / pagLeads.length, 1) : 0;
+      return {
+        id: p.id,
+        title: p.title,
+        slug: p.path,
+        currentRank: p.currentRank,
+        impressions: p.impressions,
+        clicks: p.clicks,
+        leadCount: pagLeads.length,
+        wonCount: won,
+        avgLeadScore: avgScore,
+        conversionRate: p.clicks > 0 ? round((pagLeads.length / p.clicks) * 100, 1) : 0,
+      };
+    });
+
+    // Untracked published pages that have leads but no perf data yet.
+    const trackedIds = new Set(trackedPages.map((p) => p.id));
+    for (const [pageId, pagLeads] of leadsByPage) {
+      if (trackedIds.has(pageId)) continue;
+      const won = pagLeads.filter((l) => l.status === "won").length;
+      const avgScore = round(pagLeads.reduce((a, l) => a + l.score, 0) / pagLeads.length, 1);
+      const sample = pagLeads[0];
+      rows.push({
+        id: pageId,
+        title: sample.pageTitle,
+        slug: "",
+        currentRank: 0,
+        impressions: 0,
+        clicks: 0,
+        leadCount: pagLeads.length,
+        wonCount: won,
+        avgLeadScore: avgScore,
+        conversionRate: 0,
+      });
+    }
+
+    rows.sort((a, b) => b.leadCount - a.leadCount || b.impressions - a.impressions);
+
+    const totals = {
+      totalLeads: cleanLeads.length,
+      totalWon: cleanLeads.filter((l) => l.status === "won").length,
+      totalImpressions: trackedPages.reduce((a, p) => a + p.impressions, 0),
+      totalClicks: trackedPages.reduce((a, p) => a + p.clicks, 0),
+      pagesWithLeads: rows.filter((r) => r.leadCount > 0).length,
+    };
+
+    return { rows, totals };
   }
 }
