@@ -200,16 +200,31 @@ export class PageEngineStore implements OnModuleInit {
     @Inject(ImageGenStore) private readonly images: ImageGenStore,
   ) {}
 
-  /** Best-effort brand hero image for a generated page. Returns the image URL (a real
-   *  raster when IMAGE_GEN is configured, else a theme-aware SVG data URI), or undefined
-   *  on any failure — never blocks or breaks page generation. */
-  private async heroImageFor(tenantId: string, title: string): Promise<{ url: string; alt: string } | undefined> {
+  /** Instant theme-aware placeholder hero (no generation) so page creation never blocks. */
+  private async heroPlaceholderFor(tenantId: string, title: string): Promise<{ url: string; alt: string } | undefined> {
     try {
-      const img = await this.images.generate(tenantId, title, "hero", this.now);
-      return img?.url ? { url: img.url, alt: `${title} — brand illustration` } : undefined;
+      const url = await this.images.placeholderUrl(tenantId, title, "hero");
+      return url ? { url, alt: `${title} — brand illustration` } : undefined;
     } catch {
       return undefined;
     }
+  }
+
+  /** Background hero upgrade: generate the real brand raster (IMAGE_GEN) and persist it onto
+   *  the page without blocking page creation. Best-effort — any failure leaves the placeholder. */
+  private upgradeHeroImage(tenantId: string, pageId: string, title: string): void {
+    void this.images
+      .generate(tenantId, title, "hero", this.now)
+      .then((img) => {
+        if (!img?.url) return;
+        const page = this.st(tenantId).pages.find((p) => p.id === pageId);
+        if (!page) return;
+        page.heroImageUrl = img.url;
+        page.heroImageAlt = `${title} — brand illustration`;
+        page.updatedAt = this.now;
+        this.save(tenantId, T.pages, page.id, page);
+      })
+      .catch(() => {});
   }
 
   /**
@@ -508,11 +523,13 @@ export class PageEngineStore implements OnModuleInit {
       updatedAt: this.now,
     };
     page.wordCount = countWords(page);
-    // Brand hero image — real raster when IMAGE_GEN is configured, else a theme-aware SVG.
-    const hero = await this.heroImageFor(tenantId, title);
-    if (hero) {
-      page.heroImageUrl = hero.url;
-      page.heroImageAlt = hero.alt;
+    // Brand hero: attach a theme-aware placeholder synchronously so the page is returned
+    // without blocking on image generation. When IMAGE_GEN is configured, the real brand
+    // raster is generated in the background (~minute on local diffusion) and swapped in.
+    const placeholder = await this.heroPlaceholderFor(tenantId, title);
+    if (placeholder) {
+      page.heroImageUrl = placeholder.url;
+      page.heroImageAlt = placeholder.alt;
     }
     s.pages.unshift(page);
     this.snapshot(tenantId, page, ai ? "AI-generated draft" : "Template draft", "ai");
@@ -520,6 +537,7 @@ export class PageEngineStore implements OnModuleInit {
     this.save(tenantId, T.pages, page.id, page);
     this.save(tenantId, T.opps, opp.id, opp);
     this.logAudit(tenantId, "generate", "page", page.id);
+    if (this.images.configured) this.upgradeHeroImage(tenantId, page.id, title);
     return page;
   }
 
