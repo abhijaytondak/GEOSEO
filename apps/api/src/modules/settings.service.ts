@@ -8,8 +8,14 @@ export class SettingsStore implements OnModuleInit {
 
   async onModuleInit() {
     await this.db.init(this.settings, (loaded) => {
-      // Backfill fields added after this doc was first persisted.
-      this.settings = { ...this.settings, ...loaded, publishing: loaded.publishing ?? this.settings.publishing };
+      // Merge integrations: seed defines which integrations exist; loaded applies stored
+      // values (credentials, status) on top of the seed so new integrations are never dropped.
+      const seedMap = new Map(this.settings.integrations.map((i) => [i.id, i]));
+      const loadedMap = new Map((loaded.integrations ?? []).map((i) => [i.id, i]));
+      const merged = this.settings.integrations.map((seed) => ({ ...seed, ...(loadedMap.get(seed.id) ?? {}) }));
+      // Preserve any integrations from the loaded doc not in the seed (user-added).
+      for (const [id, item] of loadedMap) if (!seedMap.has(id)) merged.push(item);
+      this.settings = { ...this.settings, ...loaded, publishing: loaded.publishing ?? this.settings.publishing, integrations: merged };
     });
   }
 
@@ -29,6 +35,12 @@ export class SettingsStore implements OnModuleInit {
     // Status here is a seed; SettingsController.get() overlays the real env-detected
     // state for provider-backed rows, so this never claims an unconfigured provider is connected.
     integrations: [
+      {
+        id: "wordpress",
+        label: "WordPress",
+        description: "Publish generated pages directly to your WordPress site via the REST API.",
+        status: "needs-attention",
+      },
       {
         id: "webflow",
         label: "Webflow",

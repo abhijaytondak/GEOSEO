@@ -5,12 +5,15 @@ import {
   Bell,
   BrainCircuit,
   Check,
+  CheckCircle2,
   CreditCard,
+  ExternalLink,
   PlugZap,
   Save,
   Trash2,
   UserPlus,
   Users,
+  XCircle,
 } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
@@ -62,6 +65,16 @@ export function SettingsView({ initial }: { initial: WorkspaceSettings }) {
     [settings.profile, initial.profile],
   );
 
+  const wpIntegration = settings.integrations.find((i) => i.id === "wordpress");
+  const [wpForm, setWpForm] = useState({
+    siteUrl: wpIntegration?.credentials?.siteUrl ?? "",
+    username: wpIntegration?.credentials?.username ?? "",
+    appPassword: wpIntegration?.credentials?.appPassword ?? "",
+  });
+  const [wpTesting, setWpTesting] = useState(false);
+  const [wpSaving, setWpSaving] = useState(false);
+  const [wpTestResult, setWpTestResult] = useState<{ ok: boolean; user?: string; error?: string } | null>(null);
+
   async function saveProfile() {
     setSaving(true);
     try {
@@ -87,6 +100,70 @@ export function SettingsView({ initial }: { initial: WorkspaceSettings }) {
     } catch (err) {
       setSettings(previous);
       notify({ kind: "error", title: "Save failed", message: err instanceof Error ? err.message : "Try again." });
+    }
+  }
+
+  async function testWordPress() {
+    if (!wpForm.siteUrl || !wpForm.username || !wpForm.appPassword) {
+      notify({ kind: "error", title: "Fill in all three WordPress fields before testing" });
+      return;
+    }
+    setWpTesting(true);
+    setWpTestResult(null);
+    try {
+      const result = await api.testWordPressConnection(wpForm);
+      setWpTestResult(result);
+    } catch (err) {
+      setWpTestResult({ ok: false, error: err instanceof Error ? err.message : "Test failed" });
+    } finally {
+      setWpTesting(false);
+    }
+  }
+
+  async function saveWordPress() {
+    if (!wpForm.siteUrl || !wpForm.username || !wpForm.appPassword) {
+      notify({ kind: "error", title: "Fill in all three fields to connect WordPress" });
+      return;
+    }
+    setWpSaving(true);
+    try {
+      const result = await api.updateIntegration("wordpress", {
+        credentials: wpForm,
+        status: "connected",
+      });
+      trackJob(result.job);
+      setSettings((current) => ({
+        ...current,
+        integrations: current.integrations.map((i) => (i.id === "wordpress" ? result.integration : i)),
+      }));
+      notify({ kind: "success", title: "WordPress connected", message: `Publishing to ${wpForm.siteUrl}` });
+    } catch (err) {
+      notify({ kind: "error", title: "Save failed", message: err instanceof Error ? err.message : "Try again." });
+    } finally {
+      setWpSaving(false);
+    }
+  }
+
+  async function disconnectWordPress() {
+    const ok = await confirm({
+      title: "Disconnect WordPress?",
+      message: "Saved credentials will be removed. Pages already published will remain on your site.",
+      confirmLabel: "Disconnect",
+      tone: "danger",
+    });
+    if (!ok) return;
+    try {
+      const result = await api.updateIntegration("wordpress", { credentials: {}, status: "needs-attention" });
+      trackJob(result.job);
+      setSettings((current) => ({
+        ...current,
+        integrations: current.integrations.map((i) => (i.id === "wordpress" ? result.integration : i)),
+      }));
+      setWpForm({ siteUrl: "", username: "", appPassword: "" });
+      setWpTestResult(null);
+      notify({ kind: "success", title: "WordPress disconnected" });
+    } catch (err) {
+      notify({ kind: "error", title: "Could not disconnect", message: err instanceof Error ? err.message : "Try again." });
     }
   }
 
@@ -245,26 +322,131 @@ export function SettingsView({ initial }: { initial: WorkspaceSettings }) {
       )}
 
       {tab === "integrations" && (
-        <Panel title="Integrations" description="Prototype connectors with realistic status controls.">
-          <div className="grid grid-cols-1 gap-3 xl:grid-cols-3">
-            {settings.integrations.map((integration) => (
-              <div key={integration.id} className="rounded-xl border border-border bg-surface-sunken p-4">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <div className="text-h-card text-foreground">{integration.label}</div>
-                    <p className="mt-1 text-label leading-relaxed text-muted-foreground">{integration.description}</p>
-                  </div>
-                  <Badge variant={statusVariant[integration.status]} className="capitalize">
-                    {integration.status}
-                  </Badge>
+        <div className="space-y-5">
+          {/* WordPress — full credential form */}
+          <Panel
+            title="WordPress"
+            description="Publish generated pages directly to your WordPress site. Uses the WordPress REST API with Application Passwords."
+          >
+            <div className="space-y-4">
+              {/* Connection status banner */}
+              {wpIntegration?.status === "connected" && (
+                <div className="flex items-center gap-2 rounded-xl border border-positive/30 bg-positive/8 px-4 py-3">
+                  <CheckCircle2 className="size-4 shrink-0 text-positive" />
+                  <span className="text-label font-semibold text-positive">
+                    Connected{wpIntegration.credentials?.siteUrl ? ` — ${wpIntegration.credentials.siteUrl}` : ""}
+                  </span>
+                  <a
+                    href={wpIntegration.credentials?.siteUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="ml-auto text-label text-positive/80 hover:text-positive focus-visible:outline-none"
+                    aria-label="Open WordPress site"
+                  >
+                    <ExternalLink className="size-3.5" />
+                  </a>
                 </div>
-                <Button variant="outline" className="mt-4 h-9 w-full" onClick={() => toggleIntegration(integration.id)}>
-                  {integration.status === "connected" ? "Disable" : "Connect"}
-                </Button>
+              )}
+
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                <label className="block md:col-span-2">
+                  <span className="text-label font-semibold text-muted-foreground">Site URL</span>
+                  <input
+                    className={cn(inputCls, "mt-1.5")}
+                    placeholder="https://yoursite.com"
+                    value={wpForm.siteUrl}
+                    onChange={(e) => { setWpForm((f) => ({ ...f, siteUrl: e.target.value })); setWpTestResult(null); }}
+                  />
+                </label>
+                <label className="block">
+                  <span className="text-label font-semibold text-muted-foreground">Username</span>
+                  <input
+                    className={cn(inputCls, "mt-1.5")}
+                    placeholder="your-wp-username"
+                    autoComplete="username"
+                    value={wpForm.username}
+                    onChange={(e) => { setWpForm((f) => ({ ...f, username: e.target.value })); setWpTestResult(null); }}
+                  />
+                </label>
+                <label className="block">
+                  <span className="text-label font-semibold text-muted-foreground">Application Password</span>
+                  <input
+                    className={cn(inputCls, "mt-1.5")}
+                    type="password"
+                    placeholder="xxxx xxxx xxxx xxxx xxxx xxxx"
+                    autoComplete="new-password"
+                    value={wpForm.appPassword}
+                    onChange={(e) => { setWpForm((f) => ({ ...f, appPassword: e.target.value })); setWpTestResult(null); }}
+                  />
+                </label>
               </div>
-            ))}
-          </div>
-        </Panel>
+
+              <p className="text-label text-muted-foreground">
+                Use an{" "}
+                <strong className="font-semibold text-foreground">Application Password</strong>
+                {" "}— not your login password. Create one in WordPress{" "}
+                <span className="font-medium text-foreground">→ Users → Edit Profile → Application Passwords</span>.
+              </p>
+
+              {/* Test result */}
+              {wpTestResult && (
+                <div className={cn(
+                  "flex items-center gap-2 rounded-xl border px-4 py-3",
+                  wpTestResult.ok
+                    ? "border-positive/30 bg-positive/8 text-positive"
+                    : "border-negative/30 bg-negative/8 text-negative",
+                )}>
+                  {wpTestResult.ok
+                    ? <CheckCircle2 className="size-4 shrink-0" />
+                    : <XCircle className="size-4 shrink-0" />}
+                  <span className="text-label font-semibold">
+                    {wpTestResult.ok
+                      ? `Connected${wpTestResult.user ? ` as ${wpTestResult.user}` : ""}`
+                      : wpTestResult.error ?? "Connection failed"}
+                  </span>
+                </div>
+              )}
+
+              <div className="flex flex-wrap gap-3">
+                <Button variant="outline" onClick={testWordPress} disabled={wpTesting || wpSaving} loading={wpTesting}>
+                  {!wpTesting && <PlugZap className="size-4" />}
+                  Test connection
+                </Button>
+                <Button variant="brand" onClick={saveWordPress} disabled={wpSaving || wpTesting} loading={wpSaving}>
+                  {!wpSaving && <Save className="size-4" />}
+                  Save & enable
+                </Button>
+                {wpIntegration?.status === "connected" && (
+                  <Button variant="outline" className="text-negative hover:border-negative/40 hover:bg-negative/8" onClick={disconnectWordPress}>
+                    Disconnect
+                  </Button>
+                )}
+              </div>
+            </div>
+          </Panel>
+
+          {/* Other integrations */}
+          <Panel title="Other Integrations" description="Additional connectors — toggle to reflect your current setup.">
+            <div className="grid grid-cols-1 gap-3 xl:grid-cols-3">
+              {settings.integrations.filter((i) => i.id !== "wordpress").map((integration) => (
+                <div key={integration.id} className="rounded-xl border border-border bg-surface-sunken p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <div className="text-h-card text-foreground">{integration.label}</div>
+                      <p className="mt-1 text-label leading-relaxed text-muted-foreground">{integration.description}</p>
+                    </div>
+                    <Badge variant={statusVariant[integration.status]} className="capitalize">
+                      {integration.status}
+                    </Badge>
+                  </div>
+                  <Button variant="outline" className="mt-4 h-9 w-full" onClick={() => toggleIntegration(integration.id)}>
+                    {integration.status === "connected" ? "Disable" : "Connect"}
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </Panel>
+        </div>
       )}
 
       {tab === "team" && (

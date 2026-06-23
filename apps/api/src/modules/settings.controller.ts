@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Inject, Param, Patch, Post, Put } from "@nestjs/common";
+import { BadRequestException, Body, Controller, Delete, Get, Inject, Param, Patch, Post, Put } from "@nestjs/common";
 import { ApiTags } from "@nestjs/swagger";
 import type { IntegrationStatus, TeamMember, WorkspaceIntegration, WorkspaceSettings } from "@geoseo/types";
 import { validateBody } from "../common/validation";
@@ -70,6 +70,14 @@ export class SettingsController {
     const settings = this.settings.update(body);
     this.audit.record("update", "settings", "workspace");
     return { settings, job: this.jobs.create("settings-sync") };
+  }
+
+  @Post("integrations/wordpress/test")
+  async testWordPress(@Body() body: { siteUrl?: string; username?: string; appPassword?: string }) {
+    if (!body?.siteUrl || !body?.username || !body?.appPassword) {
+      throw new BadRequestException("siteUrl, username, and appPassword are required");
+    }
+    return this.cms.testWordPress(body.siteUrl, body.username, body.appPassword);
   }
 
   @Patch("integrations/:id")

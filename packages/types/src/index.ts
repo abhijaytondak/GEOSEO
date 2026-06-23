@@ -778,6 +778,8 @@ export interface WorkspaceIntegration {
   description: string;
   status: IntegrationStatus;
   lastSyncAt?: ISODate;
+  /** Provider-specific connection credentials (stored per-workspace, never logged). */
+  credentials?: Record<string, string>;
 }
 
 export interface TeamMember {

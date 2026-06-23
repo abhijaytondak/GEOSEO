@@ -130,6 +130,7 @@ export const IntegrationWriteSchema: Schema = {
   description: v.optional(v.string({ max: 600 })),
   status: v.optional(v.enumOf(INTEGRATION_STATUSES)),
   lastSyncAt: v.optional(v.isoDate()),
+  credentials: v.optional(v.object()),
 };
 
 /* --------------------------------------------------- workspaces */

@@ -1,7 +1,9 @@
-import { Injectable, Logger } from "@nestjs/common";
+import { Inject, Injectable, Logger } from "@nestjs/common";
 import type { GeneratedPage } from "@geoseo/types";
 import { DocStore } from "../db/db";
 import { fetchWithTimeout } from "../common/http";
+import { assertSafeUrl } from "../common/ssrf";
+import { SettingsStore } from "./settings.service";
 
 /** Record of a page pushed to an external CMS (additive side-store cx_cms_publish). */
 export interface CmsPublishResult {
@@ -154,6 +156,8 @@ export class CmsPublishStore {
   private cache = new Map<string, CmsState>();
   private db = new DocStore<CmsState>("cx_cms_publish");
 
+  constructor(@Inject(SettingsStore) private readonly settingsStore: SettingsStore) {}
+
   private async state(tenantId: string): Promise<CmsState> {
     const cached = this.cache.get(tenantId);
     if (cached) return cached;
@@ -166,12 +170,29 @@ export class CmsPublishStore {
     this.db.saveForTenant(tenantId, s);
   }
 
+  /**
+   * Resolve WordPress credentials: per-workspace stored creds take precedence over
+   * env vars so users can configure from the UI without touching the server config.
+   */
+  private wpConfig(): { base: string; username: string; appPassword: string } | null {
+    const stored = this.settingsStore?.get().integrations.find((i) => i.id === "wordpress")?.credentials;
+    if (stored?.siteUrl && stored?.username && stored?.appPassword) {
+      return { base: stored.siteUrl.replace(/\/+$/, ""), username: stored.username, appPassword: stored.appPassword };
+    }
+    if (process.env.WORDPRESS_BASE_URL && process.env.WORDPRESS_USERNAME && process.env.WORDPRESS_APP_PASSWORD) {
+      return {
+        base: process.env.WORDPRESS_BASE_URL.replace(/\/+$/, ""),
+        username: process.env.WORDPRESS_USERNAME,
+        appPassword: process.env.WORDPRESS_APP_PASSWORD,
+      };
+    }
+    return null;
+  }
+
   /** Active CMS provider — explicit `CMS_PROVIDER` override, else auto-detected from creds. */
   get provider(): "wordpress" | "webflow" | "shopify" | "none" {
     const forced = process.env.CMS_PROVIDER?.toLowerCase();
-    const wp = Boolean(
-      process.env.WORDPRESS_BASE_URL && process.env.WORDPRESS_USERNAME && process.env.WORDPRESS_APP_PASSWORD,
-    );
+    const wp = Boolean(this.wpConfig());
     const wf = Boolean(
       process.env.WEBFLOW_API_TOKEN && process.env.WEBFLOW_COLLECTION_ID && process.env.WEBFLOW_SITE_HOST,
     );
@@ -183,6 +204,35 @@ export class CmsPublishStore {
     if (wf) return "webflow";
     if (sh) return "shopify";
     return "none";
+  }
+
+  /**
+   * Test a WordPress connection with the supplied credentials. Does a GET to
+   * /wp-json/wp/v2/users/me which requires auth and returns the current user's
+   * display name on success. SSRF-safe: the site URL is validated before connecting.
+   */
+  async testWordPress(siteUrl: string, username: string, appPassword: string): Promise<{ ok: boolean; user?: string; error?: string }> {
+    let safeBase: string;
+    try {
+      safeBase = (await assertSafeUrl(siteUrl)).replace(/\/+$/, "");
+    } catch (err) {
+      return { ok: false, error: err instanceof Error ? err.message : "Invalid URL" };
+    }
+    const auth = Buffer.from(`${username}:${appPassword}`).toString("base64");
+    try {
+      const res = await fetchWithTimeout(
+        `${safeBase}/wp-json/wp/v2/users/me`,
+        { headers: { authorization: `Basic ${auth}`, accept: "application/json" } },
+        10_000,
+      );
+      if (res.status === 401) return { ok: false, error: "Invalid username or application password" };
+      if (res.status === 403) return { ok: false, error: "User does not have permission to use the REST API" };
+      if (!res.ok) return { ok: false, error: `WordPress returned ${res.status}` };
+      const json = (await res.json()) as { name?: string };
+      return { ok: true, user: json.name };
+    } catch (err) {
+      return { ok: false, error: err instanceof Error ? err.message : "Connection failed" };
+    }
   }
 
   get configured(): boolean {
@@ -212,8 +262,10 @@ export class CmsPublishStore {
   }
 
   private async publishWordPress(tenantId: string, page: GeneratedPage, now: string): Promise<CmsPublishResult | null> {
-    const base = process.env.WORDPRESS_BASE_URL!.replace(/\/+$/, "");
-    const auth = Buffer.from(`${process.env.WORDPRESS_USERNAME}:${process.env.WORDPRESS_APP_PASSWORD}`).toString("base64");
+    const config = this.wpConfig();
+    if (!config) return null;
+    const { base, username, appPassword } = config;
+    const auth = Buffer.from(`${username}:${appPassword}`).toString("base64");
     const existing = (await this.state(tenantId)).byPage[page.id];
     // Update in place if we've published this page before, else create.
     const url = existing

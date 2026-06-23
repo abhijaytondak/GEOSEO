@@ -590,6 +590,8 @@ export const api = {
       `/settings/integrations/${encodeURIComponent(id)}`,
       update,
     ),
+  testWordPressConnection: (creds: { siteUrl: string; username: string; appPassword: string }) =>
+    send<{ ok: boolean; user?: string; error?: string }>("POST", "/settings/integrations/wordpress/test", creds),
   addTeamMember: (member: Omit<WorkspaceSettings["team"][number], "id">) =>
     send<{ member: WorkspaceSettings["team"][number]; settings: WorkspaceSettings }>("POST", "/settings/team", member),
   updateTeamMember: (id: string, patch: Partial<Omit<WorkspaceSettings["team"][number], "id">>) =>
