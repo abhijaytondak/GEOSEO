@@ -19,6 +19,7 @@ import {
   Minus,
   Target,
   DollarSign,
+  FileDown,
 } from "lucide-react";
 import { api } from "@/lib/api-client";
 import type {
@@ -516,6 +517,17 @@ export function AnalyticsWorkspace({
 
       {tab === "roi" && (
         <div className="space-y-5">
+          <div className="flex justify-end">
+            <a
+              href="/api/v1/performance/report?range=30d"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-label font-medium text-foreground shadow-sm hover:bg-surface-sunken transition-colors"
+            >
+              <FileDown className="h-4 w-4 text-muted-foreground" />
+              Download PDF report
+            </a>
+          </div>
           {roiLoading && (
             <div className="flex items-center justify-center py-20 text-muted-foreground text-label">Loading ROI data…</div>
           )}

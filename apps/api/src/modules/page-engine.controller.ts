@@ -20,6 +20,7 @@ import { PageEngineStore } from "./page-engine.service";
 import { SettingsStore } from "./settings.service";
 import { BrandMemoryStore } from "./brand.service";
 import { ContentMonitorService } from "./content-monitor.service";
+import { DigestService } from "./digest.service";
 import { CmsPublishStore, renderHtml, renderMarkdown, renderStandaloneHtml } from "./cms-publish.service";
 import { Public } from "../common/public.decorator";
 import { resolveTenantId, type TenantRequest } from "../common/tenant";
@@ -392,6 +393,7 @@ export class MonitoringController {
   constructor(
     @Inject(PageEngineStore) private readonly store: PageEngineStore,
     @Inject(ContentMonitorService) private readonly monitor: ContentMonitorService,
+    @Inject(DigestService) private readonly digest: DigestService,
   ) {}
 
   @Get("recommendations/refresh")
@@ -418,6 +420,13 @@ export class MonitoringController {
     const p = this.store.getPage(t, pageId);
     if (!p) throw new NotFoundException(`Page ${pageId} not found`);
     return { page: p, versions: this.store.listVersions(t, pageId) };
+  }
+
+  /** Manually trigger the monthly performance digest email. */
+  @Post("monitoring/digest")
+  async triggerDigest() {
+    const result = await this.digest.sendNow();
+    return { ...result, message: result.sent ? `Digest sent to ${result.to}` : "RESEND_API_KEY or NOTIFY_EMAIL not configured — digest not sent" };
   }
 }
 

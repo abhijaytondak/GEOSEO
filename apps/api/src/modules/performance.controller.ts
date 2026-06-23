@@ -1,4 +1,4 @@
-import { Controller, Get, Inject, Logger, NotFoundException, Param, Query, Req } from "@nestjs/common";
+import { Controller, Get, Header, Inject, Logger, NotFoundException, Param, Query, Req } from "@nestjs/common";
 import { ApiTags, ApiQuery } from "@nestjs/swagger";
 import type { SeoDataProvider, TrackedPage, PerformanceOverview } from "@geoseo/types";
 import { SEO_PROVIDER } from "../seo/seo.module";
@@ -8,6 +8,7 @@ import { AiMentionStore } from "./ai-search.service";
 import { resolveTenantId, type TenantRequest } from "../common/tenant";
 import { GscService } from "./gsc.service";
 import { PageEngineStore } from "./page-engine.service";
+import { SettingsStore } from "./settings.service";
 
 type SortKey = "rankChange" | "impressions" | "clicks" | "rank";
 
@@ -45,6 +46,7 @@ export class PerformanceController {
     @Inject(GscService) private readonly gsc: GscService,
     @Inject(AiMentionStore) private readonly mentions: AiMentionStore,
     @Inject(PageEngineStore) private readonly pageEngine: PageEngineStore,
+    @Inject(SettingsStore) private readonly settings: SettingsStore,
   ) {}
 
 
@@ -253,4 +255,126 @@ export class PerformanceController {
 
     return { rows, totals };
   }
+
+  /**
+   * White-label PDF-ready HTML report.
+   * Returns a fully self-contained HTML page styled for printing. The caller
+   * (front-end or ops script) opens it in a new tab; the user hits Ctrl+P /
+   * Save as PDF. No server-side headless Chrome needed.
+   *
+   * Customise: set REPORT_LOGO_URL and REPORT_BRAND_NAME env vars for white-labelling.
+   * Query params:
+   *   range  — 7d | 30d | 8w | quarter (default: 30d)
+   *   title  — custom report title override
+   */
+  @Get("report")
+  @Header("Content-Type", "text/html; charset=utf-8")
+  @Header("Content-Disposition", "inline; filename=\"seo-report.html\"")
+  async report(@Req() req: TenantRequest, @Query("range") range = "30d", @Query("title") titleOverride?: string) {
+    const tenantId = resolveTenantId(req);
+    const profile = this.settings.get().profile;
+    const brandName = process.env.REPORT_BRAND_NAME ?? profile.workspaceName ?? "GEOSEO";
+    const logoUrl = process.env.REPORT_LOGO_URL ?? "";
+    const reportTitle = titleOverride ?? `SEO Performance Report`;
+    const dateLabel = new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
+
+    // Collect data in parallel.
+    const [overview, { rows, totals }] = await Promise.all([
+      this.overview(req, range),
+      this.roi(req),
+    ]);
+
+    const topRows = rows.slice(0, 10).map((r) =>
+      `<tr><td>${esc(r.title)}</td><td>${r.currentRank > 0 ? `#${r.currentRank}` : "—"}</td><td>${r.impressions.toLocaleString()}</td><td>${r.clicks.toLocaleString()}</td><td>${r.leadCount}</td><td>${r.wonCount}</td><td>${r.conversionRate}%</td></tr>`
+    ).join("");
+
+    return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${esc(reportTitle)} — ${esc(brandName)}</title>
+<style>
+  @page { margin: 20mm 18mm; size: A4; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif; font-size: 13px; color: #1e293b; background: #fff; line-height: 1.5; }
+  .page { max-width: 860px; margin: 0 auto; padding: 40px 32px; }
+  header { display: flex; justify-content: space-between; align-items: flex-start; padding-bottom: 20px; border-bottom: 2px solid #0f172a; margin-bottom: 32px; }
+  .brand { display: flex; align-items: center; gap: 12px; }
+  .brand img { height: 36px; }
+  .brand-name { font-size: 22px; font-weight: 800; color: #0f172a; }
+  .report-meta { text-align: right; }
+  .report-meta h1 { font-size: 16px; font-weight: 700; color: #0f172a; }
+  .report-meta p { font-size: 12px; color: #64748b; margin-top: 2px; }
+  .kpi-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-bottom: 32px; }
+  .kpi { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px; text-align: center; }
+  .kpi label { display: block; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: #64748b; margin-bottom: 6px; }
+  .kpi .val { font-size: 24px; font-weight: 800; color: #0f172a; }
+  .kpi .val.green { color: #16a34a; }
+  .kpi .val.amber { color: #d97706; }
+  h2 { font-size: 14px; font-weight: 700; color: #0f172a; margin-bottom: 12px; padding-bottom: 6px; border-bottom: 1px solid #e2e8f0; }
+  table { width: 100%; border-collapse: collapse; margin-bottom: 32px; font-size: 12px; }
+  thead th { background: #f8fafc; padding: 8px 10px; text-align: left; font-weight: 700; font-size: 10px; text-transform: uppercase; letter-spacing: .05em; color: #64748b; border-bottom: 1px solid #e2e8f0; }
+  tbody td { padding: 9px 10px; border-bottom: 1px solid #f1f5f9; color: #334155; vertical-align: top; }
+  tbody tr:last-child td { border-bottom: none; }
+  .footer { margin-top: 32px; padding-top: 16px; border-top: 1px solid #e2e8f0; display: flex; justify-content: space-between; font-size: 11px; color: #94a3b8; }
+  @media print {
+    .page { padding: 0; }
+    .no-print { display: none; }
+    tr { page-break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+  <header>
+    <div class="brand">
+      ${logoUrl ? `<img src="${esc(logoUrl)}" alt="${esc(brandName)}">` : ""}
+      <span class="brand-name">${esc(brandName)}</span>
+    </div>
+    <div class="report-meta">
+      <h1>${esc(reportTitle)}</h1>
+      <p>${esc(range.toUpperCase())} window · Generated ${esc(dateLabel)}</p>
+    </div>
+  </header>
+
+  <div class="kpi-grid">
+    <div class="kpi"><label>Avg rank</label><div class="val">${overview.avgRank > 0 ? `#${overview.avgRank}` : "—"}</div></div>
+    <div class="kpi"><label>Impressions</label><div class="val">${totals.totalImpressions.toLocaleString()}</div></div>
+    <div class="kpi"><label>Clicks</label><div class="val">${totals.totalClicks.toLocaleString()}</div></div>
+    <div class="kpi"><label>Leads</label><div class="val green">${totals.totalLeads}</div></div>
+    <div class="kpi"><label>Won</label><div class="val green">${totals.totalWon}</div></div>
+  </div>
+
+  <h2>Page Performance &amp; Conversion</h2>
+  <table>
+    <thead>
+      <tr>
+        <th style="width:35%">Page</th>
+        <th>Rank</th>
+        <th>Impressions</th>
+        <th>Clicks</th>
+        <th>Leads</th>
+        <th>Won</th>
+        <th>Conv %</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${topRows || `<tr><td colspan="7" style="text-align:center;color:#94a3b8;padding:20px">No data yet — publish pages and capture leads to see conversion metrics.</td></tr>`}
+    </tbody>
+  </table>
+
+  <div class="footer">
+    <span>${esc(brandName)} · GEOSEO Platform</span>
+    <span class="no-print"><button onclick="window.print()" style="background:#0f172a;color:#fff;border:none;padding:6px 14px;border-radius:6px;font-size:12px;cursor:pointer">Save as PDF</button></span>
+    <span>Page 1 of 1</span>
+  </div>
+</div>
+</body>
+</html>`;
+  }
+}
+
+function esc(s: string | number): string {
+  return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }

@@ -2,13 +2,12 @@ import { Injectable } from "@nestjs/common";
 import type { OutreachTemplate } from "@geoseo/types";
 
 type Edit = { subject?: string; body?: string };
+export interface SentRecord { prospectId: string; templateId: string; to: string; sentAt: string; subject: string }
 
-/** In-memory store of user edits to drafted templates. Templates are
- *  regenerated fresh each request (deterministic from the mock drafter); this
- *  layer re-applies any saved edits on top. Swap for a DB table in production. */
 @Injectable()
 export class OutreachStore {
   private edits = new Map<string, Edit>();
+  private sent: SentRecord[] = [];
 
   saveEdit(id: string, edit: Edit) {
     const prev = this.edits.get(id) ?? {};
@@ -23,5 +22,14 @@ export class OutreachStore {
 
   hasEdit(id: string) {
     return this.edits.has(id);
+  }
+
+  recordSent(record: SentRecord) {
+    this.sent.unshift(record);
+    if (this.sent.length > 500) this.sent.length = 500;
+  }
+
+  sentLog(): SentRecord[] {
+    return this.sent;
   }
 }
