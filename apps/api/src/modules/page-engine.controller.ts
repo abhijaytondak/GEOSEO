@@ -4,6 +4,7 @@ import {
   Controller,
   Delete,
   Get,
+  Header,
   Inject,
   NotFoundException,
   Param,
@@ -17,6 +18,7 @@ import type { LeadStatus, PageBlueprint, PageEdit } from "@geoseo/types";
 import { ApiTags } from "@nestjs/swagger";
 import { PageEngineStore } from "./page-engine.service";
 import { SettingsStore } from "./settings.service";
+import { BrandMemoryStore } from "./brand.service";
 import { CmsPublishStore, renderHtml, renderMarkdown, renderStandaloneHtml } from "./cms-publish.service";
 import { Public } from "../common/public.decorator";
 import { resolveTenantId, type TenantRequest } from "../common/tenant";
@@ -451,6 +453,7 @@ export class PublicController {
   constructor(
     @Inject(PageEngineStore) private readonly store: PageEngineStore,
     @Inject(SettingsStore) private readonly settings: SettingsStore,
+    @Inject(BrandMemoryStore) private readonly brand: BrandMemoryStore,
   ) {}
 
   @Public()
@@ -465,6 +468,78 @@ export class PublicController {
     const p = this.store.getPublishedBySlug(slug);
     if (!p) throw new NotFoundException(`Published page ${slug} not found`);
     return p;
+  }
+
+  /** llms.txt — AI-model-readable index of all published pages. Spec: https://llmstxt.org */
+  @Public()
+  @Get("llms.txt")
+  @Header("Content-Type", "text/plain; charset=utf-8")
+  @Header("Cache-Control", "public, max-age=3600")
+  llmsTxt() {
+    const pages = this.store.listPublishedPages();
+    const profile = this.settings.get().profile;
+    const b = this.brand.current();
+    const siteBase = `https://${profile.domain?.replace(/^https?:\/\//, "") ?? "example.com"}`;
+    const name = b?.company?.trim() || profile.workspaceName || "Our Site";
+    const desc = b?.valueProp?.trim() || `AI-optimised pages from ${name}`;
+    const lines: string[] = [
+      `# ${name}`,
+      "",
+      `> ${desc}`,
+      "",
+      "## Published Pages",
+      "",
+      ...pages.map((p) => {
+        const url = p.publishedUrl ?? `${siteBase}/feeds${p.slug}`;
+        return `- [${p.metaTitle || p.title}](${url}): ${p.metaDescription || ""}`;
+      }),
+    ];
+    return lines.join("\n");
+  }
+
+  /** sitemap.xml — standard XML sitemap for all published pages. */
+  @Public()
+  @Get("sitemap.xml")
+  @Header("Content-Type", "application/xml; charset=utf-8")
+  @Header("Cache-Control", "public, max-age=3600")
+  sitemapXml() {
+    const pages = this.store.listPublishedPages();
+    const domain = this.settings.get().profile.domain?.replace(/^https?:\/\//, "") ?? "example.com";
+    const base = `https://${domain}`;
+    const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    const urls = pages
+      .map((p) => {
+        const loc = esc(p.publishedUrl ?? `${base}/feeds${p.slug}`);
+        const mod = (p.updatedAt || p.createdAt || "").split("T")[0];
+        return `  <url><loc>${loc}</loc>${mod ? `<lastmod>${mod}</lastmod>` : ""}<changefreq>monthly</changefreq><priority>0.8</priority></url>`;
+      })
+      .join("\n");
+    return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>`;
+  }
+
+  /**
+   * Framer-compatible JSON feed. Point Framer's CMS "Fetch" data source here to pull
+   * all published pages into a Framer CMS collection automatically.
+   * URL: GET /api/v1/public/framer-feed
+   */
+  @Public()
+  @Get("framer-feed")
+  framerFeed() {
+    const pages = this.store.listPublishedPages();
+    const domain = this.settings.get().profile.domain?.replace(/^https?:\/\//, "") ?? "example.com";
+    const base = `https://${domain}`;
+    return pages.map((p) => ({
+      id: p.id,
+      name: p.metaTitle || p.title,
+      slug: p.slug.replace(/^\//, ""),
+      excerpt: p.metaDescription ?? "",
+      content: p.heroCopy ?? "",
+      heroImageUrl: p.heroImageUrl ?? "",
+      pageType: p.pageType,
+      targetKeywords: p.targetKeywords.join(", "),
+      publishedAt: p.publishedAt ?? p.createdAt,
+      url: p.publishedUrl ?? `${base}/feeds${p.slug}`,
+    }));
   }
 
   @Public()

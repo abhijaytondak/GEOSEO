@@ -367,6 +367,43 @@ export function PagesView({
     }
   }
 
+  // Refresh All: regenerate every stale page in the "Needs Attention" list sequentially.
+  // Sequential (not parallel) to avoid hammering the LLM and to let the user watch progress.
+  const [refreshingAll, setRefreshingAll] = useState(false);
+  async function regenerateAll() {
+    const pending = recommendations.filter((r) => !refreshedIds.has(r.pageId));
+    if (!pending.length) return;
+    const ok = await confirm({
+      title: `Regenerate ${pending.length} page${pending.length > 1 ? "s" : ""}?`,
+      message: "AI will re-draft each flagged page from current Brand Memory. URLs are preserved and existing versions are saved.",
+      confirmLabel: "Regenerate All",
+    });
+    if (!ok) return;
+    setRefreshingAll(true);
+    let succeeded = 0;
+    for (const r of pending) {
+      setBusy(r.pageId);
+      try {
+        const job = await pageEngineApi.startRegenerate(r.pageId);
+        let res = await pageEngineApi.getRegenerateJob(job.id);
+        for (let i = 0; i < 80 && res.job.status === "running"; i++) {
+          await new Promise((resolve) => setTimeout(resolve, 1500));
+          res = await pageEngineApi.getRegenerateJob(job.id);
+        }
+        if (res.job.status !== "done" || !res.page) continue;
+        setPages((arr) => arr.map((p) => (p.id === r.pageId ? res.page! : p)));
+        setRefreshedIds((s) => new Set(s).add(r.pageId));
+        succeeded++;
+      } catch {
+        /* continue with remaining pages */
+      } finally {
+        setBusy(null);
+      }
+    }
+    setRefreshingAll(false);
+    if (succeeded) notify({ kind: "success", title: `${succeeded} page${succeeded > 1 ? "s" : ""} refreshed`, message: "All URLs preserved; prior versions saved for rollback." });
+  }
+
   // Auto-Updates (#8): manually re-draft a page via the LLM. Slug/URL/canonical are
   // preserved and the prior content is snapshotted as a version (reversible via rollback).
   async function regenerate(id: string) {
@@ -488,6 +525,12 @@ export function PagesView({
           title="Needs Attention"
           description="Monitoring flagged these published pages — regenerate to refresh them"
           bodyClassName="p-0"
+          action={
+            <Button size="sm" variant="outline" className="h-8 rounded-full px-3 gap-1.5" disabled={refreshingAll} onClick={regenerateAll}>
+              {refreshingAll ? <Loader2 className="size-3.5 animate-spin" /> : <RefreshCw className="size-3.5" />}
+              Refresh All
+            </Button>
+          }
         >
           <div className="divide-y divide-border">
             {recommendations.filter((r) => !refreshedIds.has(r.pageId)).map((r) => (
