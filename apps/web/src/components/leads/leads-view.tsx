@@ -347,7 +347,7 @@ export function LeadsView({ leads }: { leads: Lead[] }) {
                   {filtered.map((l) => (
                     <TableRow
                       key={l.id}
-                      className={cn("border-b border-border hover:bg-surface-sunken", l.spamStatus !== "clean" && "opacity-70")}
+                      className={cn("row-hover border-b border-border", l.spamStatus !== "clean" && "opacity-70")}
                     >
                       <TableCell className="px-5 py-3">
                         <button

@@ -124,12 +124,12 @@ export function ContentView({
   return (
     <div className="space-y-5">
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        {stats.map((s) => {
+        {stats.map((s, i) => {
           const Icon = s.icon;
           return (
-            <div key={s.label} className="rounded-2xl border border-border bg-card p-4 shadow-card">
+            <div key={s.label} className={`card-lift rounded-2xl border border-border bg-card p-4 shadow-card animate-fade-in-up stagger-${Math.min(i + 1, 4) as 1 | 2 | 3 | 4}`}>
               <div className="flex items-center justify-between">
-                <span className="text-micro font-semibold uppercase text-muted-foreground">
+                <span className="text-micro font-semibold uppercase tracking-wide text-muted-foreground">
                   {s.label}
                 </span>
                 <Icon className="size-4 text-muted-foreground" />
@@ -154,7 +154,7 @@ export function ContentView({
             {items.map(({ page, freshness, health, reason, daysSinceUpdate }) => {
               const state = states[page.id] ?? "idle";
               return (
-                <div key={page.id} className="flex items-center gap-4 px-5 py-3.5">
+                <div key={page.id} className="row-hover flex items-center gap-4 px-5 py-3.5">
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
                       <span className="truncate text-label font-semibold text-foreground">
@@ -164,8 +164,8 @@ export function ContentView({
                         {FRESH[freshness].label}
                       </Badge>
                     </div>
-                    <div className="mt-0.5 truncate text-label text-muted-foreground">
-                      {page.path} · {daysSinceUpdate}d ago · {reason}
+                    <div className="mt-0.5 truncate text-label text-muted-foreground" title={reason}>
+                      <span className="font-medium">{page.path}</span> · {daysSinceUpdate}d · {reason}
                     </div>
                   </div>
                   <HealthDot health={health} />

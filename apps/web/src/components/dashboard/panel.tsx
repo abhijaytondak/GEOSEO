@@ -26,7 +26,7 @@ export function Panel({
   return (
     <section
       className={cn(
-        "rounded-2xl border border-border bg-card shadow-card",
+        "rounded-2xl border border-border bg-card shadow-card animate-fade-in-up",
         className,
       )}
     >

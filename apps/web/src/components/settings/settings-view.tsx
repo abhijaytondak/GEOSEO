@@ -9,7 +9,9 @@ import {
   CreditCard,
   ExternalLink,
   PlugZap,
+  RefreshCw,
   Save,
+  Send,
   Trash2,
   UserPlus,
   Users,
@@ -503,20 +505,80 @@ export function SettingsView({ initial }: { initial: WorkspaceSettings }) {
       )}
 
       {tab === "notifications" && (
-        <Panel title="Notifications" description="Control the alerts this workspace sends.">
-          <div className="space-y-3">
-            {Object.entries(settings.notifications).map(([key, enabled]) => (
-              <NotificationToggle
-                key={key}
-                label={key.replace(/([A-Z])/g, " $1").replace(/^./, (c) => c.toUpperCase())}
-                checked={enabled}
-                onCheckedChange={(next) =>
-                  updateNotifications({ ...settings.notifications, [key]: next })
-                }
-              />
-            ))}
-          </div>
-        </Panel>
+        <div className="space-y-5">
+          <Panel title="Alert preferences" description="Control which events trigger notifications.">
+            <div className="space-y-3">
+              {Object.entries(settings.notifications).map(([key, enabled]) => (
+                <NotificationToggle
+                  key={key}
+                  label={key.replace(/([A-Z])/g, " $1").replace(/^./, (c) => c.toUpperCase())}
+                  checked={enabled}
+                  onCheckedChange={(next) =>
+                    updateNotifications({ ...settings.notifications, [key]: next })
+                  }
+                />
+              ))}
+            </div>
+          </Panel>
+
+          <Panel
+            title="Email delivery"
+            description="Configure where lead alerts and monthly digests are sent. Requires RESEND_API_KEY on the server."
+          >
+            <div className="space-y-4">
+              <div>
+                <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">
+                  Notification email
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="email"
+                    placeholder="you@company.com"
+                    className={inputCls}
+                    value={settings.profile.notifyEmail ?? ""}
+                    onChange={(e) =>
+                      setSettings((s) => ({
+                        ...s,
+                        profile: { ...s.profile, notifyEmail: e.target.value },
+                      }))
+                    }
+                  />
+                  <Button
+                    variant="outline"
+                    className="h-10 shrink-0"
+                    disabled={saving}
+                    onClick={saveProfile}
+                  >
+                    {saving ? <RefreshCw className="size-4 animate-spin" /> : <Save className="size-4" />}
+                    Save
+                  </Button>
+                </div>
+                <p className="mt-1.5 text-[12px] text-muted-foreground">
+                  Also set <code className="rounded bg-muted px-1 py-0.5 text-[11px]">NOTIFY_EMAIL</code> on the server for lead alert delivery.
+                </p>
+              </div>
+
+              <div className="rounded-xl border border-border bg-surface-sunken p-4">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <div className="text-label font-semibold text-foreground">Monthly digest</div>
+                    <div className="mt-0.5 text-[12px] text-muted-foreground">
+                      Sent on the 1st of each month — published pages, leads, and top converting pages.
+                    </div>
+                  </div>
+                  <DigestButton notify={notify} />
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-border bg-surface-sunken p-4">
+                <div className="text-label font-semibold text-foreground">Slack notifications</div>
+                <div className="mt-0.5 text-[12px] text-muted-foreground">
+                  Set <code className="rounded bg-muted px-1 py-0.5 text-[11px]">NOTIFY_SLACK_WEBHOOK</code> on the server with an Incoming Webhook URL to receive lead alerts in Slack.
+                </div>
+              </div>
+            </div>
+          </Panel>
+        </div>
       )}
 
       {tab === "billing" && (
@@ -557,11 +619,54 @@ function NotificationToggle({
 }) {
   const id = useId();
   return (
-    <div className="flex items-center justify-between rounded-xl border border-border bg-surface-sunken p-4">
-      <label htmlFor={id} className="text-label font-semibold text-foreground select-none">
+    <div className="flex items-center justify-between rounded-xl border border-border bg-surface-sunken p-4 transition-colors hover:bg-muted/40">
+      <label htmlFor={id} className="cursor-pointer text-label font-semibold text-foreground select-none">
         {label}
       </label>
       <Switch id={id} checked={checked} onCheckedChange={onCheckedChange} />
     </div>
+  );
+}
+
+function DigestButton({ notify }: { notify: ReturnType<typeof useAppFeedback>["notify"] }) {
+  const [state, setState] = useState<"idle" | "sending" | "sent" | "failed">("idle");
+
+  async function trigger() {
+    if (state !== "idle") return;
+    setState("sending");
+    try {
+      const result = await api.triggerDigest();
+      if (result.sent) {
+        setState("sent");
+        notify({ kind: "success", title: "Digest sent", message: `Monthly summary sent to ${result.to}` });
+        setTimeout(() => setState("idle"), 4000);
+      } else {
+        setState("idle");
+        notify({ kind: "warning", title: "Digest not sent", message: result.message });
+      }
+    } catch (err) {
+      setState("failed");
+      notify({ kind: "error", title: "Failed", message: err instanceof Error ? err.message : "Try again." });
+      setTimeout(() => setState("idle"), 3000);
+    }
+  }
+
+  return (
+    <Button
+      variant="outline"
+      size="sm"
+      className="h-9 shrink-0 transition-all"
+      disabled={state === "sending" || state === "sent"}
+      onClick={trigger}
+    >
+      {state === "sending" ? (
+        <RefreshCw className="size-3.5 animate-spin" />
+      ) : state === "sent" ? (
+        <Check className="size-3.5 text-positive" />
+      ) : (
+        <Send className="size-3.5" />
+      )}
+      {state === "sending" ? "Sending…" : state === "sent" ? "Sent!" : "Send test digest"}
+    </Button>
   );
 }

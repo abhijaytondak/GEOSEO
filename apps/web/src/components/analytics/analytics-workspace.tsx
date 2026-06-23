@@ -540,9 +540,9 @@ export function AnalyticsWorkspace({
                   { label: "Clean leads", value: String(roiTotals.totalLeads) },
                   { label: "Won", value: String(roiTotals.totalWon) },
                   { label: "Pages with leads", value: String(roiTotals.pagesWithLeads) },
-                ].map((s) => (
-                  <div key={s.label} className="rounded-2xl border border-border bg-card p-4 shadow-card">
-                    <div className="text-micro text-muted-foreground">{s.label}</div>
+                ].map((s, i) => (
+                  <div key={s.label} className={`card-lift rounded-2xl border border-border bg-card p-4 shadow-card animate-fade-in-up stagger-${Math.min(i + 1, 4) as 1 | 2 | 3 | 4}`}>
+                    <div className="text-micro font-semibold uppercase tracking-wide text-muted-foreground">{s.label}</div>
                     <div className="tnum mt-1.5 text-kpi text-foreground">{s.value}</div>
                   </div>
                 ))}
@@ -576,9 +576,10 @@ export function AnalyticsWorkspace({
                       </thead>
                       <tbody>
                         {roiRows.map((r) => (
-                          <tr key={r.id} className="border-b border-border hover:bg-surface-sunken">
-                            <td className="max-w-xs px-5 py-3">
+                          <tr key={r.id} className="row-hover border-b border-border">
+                            <td className="max-w-[220px] px-5 py-3">
                               <span className="block truncate font-semibold text-foreground" title={r.title}>{r.title}</span>
+                              {r.slug && <span className="block truncate text-micro text-muted-foreground">{r.slug}</span>}
                             </td>
                             <td className="tnum px-3 py-3 text-right text-muted-foreground">{r.currentRank > 0 ? `#${r.currentRank}` : "—"}</td>
                             <td className="tnum px-3 py-3 text-right text-muted-foreground">{compact(r.impressions)}</td>

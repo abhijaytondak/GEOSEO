@@ -369,9 +369,9 @@ export function OpportunitiesView({
           <button
             key={m.label}
             onClick={m.onClick}
-            className="rounded-2xl border border-border bg-card p-4 text-left shadow-card transition-colors hover:bg-surface-sunken focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/40"
+            className="card-lift rounded-2xl border border-border bg-card p-4 text-left shadow-card focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/40"
           >
-            <div className="text-micro text-muted-foreground">{m.label}</div>
+            <div className="text-micro font-semibold uppercase tracking-wide text-muted-foreground">{m.label}</div>
             <div className="tnum mt-1.5 text-kpi text-foreground">{m.value}</div>
           </button>
         ))}
@@ -682,7 +682,7 @@ export function OpportunitiesView({
               <TableRow
                 key={p.id}
                 className={cn(
-                  "group border-b border-border hover:bg-surface-sunken",
+                  "group row-hover border-b border-border",
                   selectedIds.has(p.id) && "bg-brand/5",
                   highlightId === p.id && "animate-pulse bg-brand/10 ring-1 ring-inset ring-brand/40",
                 )}
@@ -877,6 +877,11 @@ export function OpportunitiesView({
         brand={brand}
         open={open}
         onOpenChange={setOpen}
+        onSent={(id) =>
+          setProspects((items) =>
+            items.map((p) => (p.id === id ? { ...p, status: "contacted" } : p)),
+          )
+        }
       />
 
       <ProspectEditDrawer

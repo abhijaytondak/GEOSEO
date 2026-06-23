@@ -504,9 +504,9 @@ export function PagesView({
         ].map((s) => {
           const Icon = s.icon;
           return (
-            <div key={s.label} className="rounded-2xl border border-border bg-card p-4 shadow-card">
+            <div key={s.label} className="card-lift rounded-2xl border border-border bg-card p-4 shadow-card animate-fade-in-up">
               <div className="flex items-center justify-between">
-                <span className="text-micro text-muted-foreground">
+                <span className="text-micro font-semibold uppercase tracking-wide text-muted-foreground">
                   {s.label}
                 </span>
                 <Icon className="size-4 text-muted-foreground" />
@@ -617,7 +617,7 @@ export function PagesView({
               return (
                 <div
                   key={p.id}
-                  className="group flex flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-card transition-shadow hover:shadow-md"
+                  className="group flex flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-card transition-[box-shadow,transform] duration-200 ease-out hover:shadow-raised hover:-translate-y-0.5"
                 >
                   {/* themed hero strip */}
                   <button onClick={() => openPage(p.id)} className="relative block h-20 w-full overflow-hidden text-left">

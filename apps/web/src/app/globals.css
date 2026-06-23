@@ -285,6 +285,91 @@
   }
 }
 
+/* ============================================================
+   Micro-animations — lightweight entrance and interaction motion
+   ============================================================ */
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes fade-in-up {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes slide-in-from-bottom {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes scale-in {
+  from { opacity: 0; transform: scale(0.96); }
+  to   { opacity: 1; transform: scale(1); }
+}
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.35; }
+}
+
+@layer utilities {
+  /* entrance animations */
+  .animate-fade-in       { animation: fade-in 180ms var(--ease-out-expo) both; }
+  .animate-fade-in-up    { animation: fade-in-up 220ms var(--ease-out-expo) both; }
+  .animate-slide-in-up   { animation: slide-in-from-bottom 260ms var(--ease-out-expo) both; }
+  .animate-scale-in      { animation: scale-in 200ms var(--ease-out-expo) both; }
+  .animate-pulse-dot     { animation: pulse-dot 1.4s ease-in-out infinite; }
+
+  /* stagger helpers — apply to children via [&>*:nth-child(N)] */
+  .stagger-1 { animation-delay: 40ms; }
+  .stagger-2 { animation-delay: 80ms; }
+  .stagger-3 { animation-delay: 120ms; }
+  .stagger-4 { animation-delay: 160ms; }
+
+  /* card hover lift — subtle elevation on hover */
+  .card-lift {
+    transition: box-shadow 180ms var(--ease-out-expo), transform 180ms var(--ease-out-expo);
+  }
+  .card-lift:hover {
+    box-shadow: var(--shadow-raised);
+    transform: translateY(-1px);
+  }
+
+  /* interactive row highlight */
+  .row-hover {
+    transition: background-color 120ms ease;
+  }
+  .row-hover:hover {
+    background-color: color-mix(in oklch, var(--brand), transparent 96%);
+  }
+
+  /* focus ring short-hand used on pill/chip controls */
+  .focus-ring {
+    outline: none;
+    transition: box-shadow 150ms ease;
+  }
+  .focus-ring:focus-visible {
+    box-shadow: 0 0 0 3px color-mix(in oklch, var(--ring), transparent 60%);
+  }
+
+  /* smooth text truncation with fade edge (works best on single-line) */
+  .fade-truncate {
+    overflow: hidden;
+    white-space: nowrap;
+    -webkit-mask-image: linear-gradient(to right, black 85%, transparent 100%);
+    mask-image: linear-gradient(to right, black 85%, transparent 100%);
+  }
+
+  /* pill status badge — always caps text to one line */
+  .status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3em;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    max-width: 9rem;
+  }
+}
+
 /* Accessibility: honor reduced-motion globally (Framer components also check
    useReducedMotion, this covers CSS transitions/animations). */
 @media (prefers-reduced-motion: reduce) {

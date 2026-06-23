@@ -583,6 +583,14 @@ export const api = {
       `/outreach/templates/${encodeURIComponent(id)}`,
       draft,
     ),
+  sendOutreach: (prospectId: string, opts?: { variant?: string; to?: string }) =>
+    send<{ sent: boolean; prospectId: string; to: string; subject: string; message: string }>(
+      "POST",
+      "/outreach/send",
+      { prospectId, ...opts },
+    ),
+  triggerDigest: () =>
+    send<{ sent: boolean; to: string; message: string }>("POST", "/monitoring/digest", {}),
 
   // settings
   getSettings: () =>
