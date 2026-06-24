@@ -1,4 +1,5 @@
 import type { PageType } from "@geoseo/types";
+import { jsonLdSafe } from "../common/escape";
 
 /**
  * Per-page-type generation spec. The SAME spec drives (a) the LLM prompt in
@@ -157,5 +158,8 @@ export function buildSchemaJson(
 
   if (spec.schemaType !== "FAQPage" && faqs.length) graph.push(faqNode(`${data.title} — FAQ`));
 
-  return JSON.stringify({ "@context": "https://schema.org", "@graph": graph }, null, 2);
+  // Escape < > & at the source so the stored schemaJson is safe to embed in a
+  // <script type="application/ld+json"> block (defense-in-depth; render sinks also escape,
+  // and jsonLdSafe is idempotent). Output remains valid JSON.
+  return jsonLdSafe(JSON.stringify({ "@context": "https://schema.org", "@graph": graph }, null, 2));
 }
