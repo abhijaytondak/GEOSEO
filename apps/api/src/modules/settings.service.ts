@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException, OnModuleInit } from "@nestjs/common";
 import type { TeamMember, WorkspaceIntegration, WorkspaceSettings } from "@geoseo/types";
 import { DocStore } from "../db/db";
+import { mergeCredentials } from "../common/redact";
 
 @Injectable()
 export class SettingsStore implements OnModuleInit {
@@ -96,12 +97,21 @@ export class SettingsStore implements OnModuleInit {
   }
 
   update(update: Partial<WorkspaceSettings>) {
+    // When integrations are replaced wholesale, preserve stored secrets that a redacted
+    // read blanked out: merge each incoming integration's credentials over the stored one
+    // by id, skipping blank values (audit 2026-06-24).
+    const integrations = update.integrations
+      ? update.integrations.map((incoming) => {
+          const stored = this.settings.integrations.find((s) => s.id === incoming.id);
+          return { ...incoming, credentials: mergeCredentials(stored?.credentials, incoming.credentials) };
+        })
+      : this.settings.integrations;
     this.settings = {
       ...this.settings,
       ...update,
       profile: { ...this.settings.profile, ...(update.profile ?? {}) },
       notifications: { ...this.settings.notifications, ...(update.notifications ?? {}) },
-      integrations: update.integrations ?? this.settings.integrations,
+      integrations,
       team: update.team ?? this.settings.team,
       billing: { ...this.settings.billing, ...(update.billing ?? {}) },
       publishing: { ...this.settings.publishing, ...(update.publishing ?? {}) },
@@ -118,6 +128,9 @@ export class SettingsStore implements OnModuleInit {
       return {
         ...integration,
         ...update,
+        // Merge credentials, skipping blank incoming values, so a redacted read round-trip
+        // can't wipe a stored secret (audit 2026-06-24).
+        credentials: mergeCredentials(integration.credentials, update.credentials),
         lastSyncAt: update.status === "connected" ? new Date().toISOString() : integration.lastSyncAt,
       };
     });
