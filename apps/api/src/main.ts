@@ -5,13 +5,16 @@ import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 import { AppModule } from "./app.module";
 import { EnvelopeInterceptor } from "./common/envelope.interceptor";
 import { HttpExceptionFilter } from "./common/http-exception.filter";
-import { resolveMode, persistenceKind, authRequired, assertModeConfig, assertPersistenceConfig } from "./common/mode";
+import { resolveMode, persistenceKind, authRequired, assertModeConfig, assertPersistenceConfig, assertHostedAuthInvariant } from "./common/mode";
 import { dbPing } from "./db/db";
 
 async function bootstrap() {
   const mode = resolveMode();
   // Abort a prod/staging boot that's missing required security config (PRD §3.2).
   assertModeConfig(mode);
+  // Incident invariant: a hosted + DB-backed deployment must not serve the app API
+  // unauthenticated, even under GEOSEO_MODE=demo (deep-audit 2026-06-24).
+  assertHostedAuthInvariant();
   // Abort a prod/staging boot that would run on in-memory state (No-Dummy-Data §6.4).
   assertPersistenceConfig(mode);
   if (mode !== "demo") {
