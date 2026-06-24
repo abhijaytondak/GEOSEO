@@ -8,7 +8,9 @@ import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 const REQUIRE_AUTH =
   process.env.GEOSEO_REQUIRE_AUTH === "true" || (process.env.NEXT_PUBLIC_GEOSEO_MODE ?? "demo") === "production";
 const isApiRoute = createRouteMatcher(["/api(.*)"]);
-const isPublicPage = createRouteMatcher(["/feeds(.*)", "/sign-in(.*)", "/sign-up(.*)"]);
+// Public marketing root + lead-gen pages must stay open in production so they can rank
+// and capture leads; "/" is the (marketing) landing, the rest of the app stays gated.
+const isPublicPage = createRouteMatcher(["/", "/pricing", "/product", "/use-cases", "/demo", "/feeds(.*)", "/sign-in(.*)", "/sign-up(.*)"]);
 
 export default clerkMiddleware(async (auth, req) => {
   if (!REQUIRE_AUTH) return;

@@ -141,10 +141,13 @@ function RuleRow({
   const nameId = useId();
   const minScoreId = useId();
 
-  // Keep draft in sync when rule prop changes (e.g. after optimistic toggle).
-  useEffect(() => {
+  // Keep draft in sync when the rule prop changes (e.g. after an optimistic toggle) —
+  // adjust-during-render, the React-endorsed alternative to a setState-in-effect reset.
+  const [prevRule, setPrevRule] = useState(rule);
+  if (rule !== prevRule) {
+    setPrevRule(rule);
     setDraft(ruleToRuleDraft(rule));
-  }, [rule]);
+  }
 
   async function handleSave() {
     if (!draft.name.trim()) return;
