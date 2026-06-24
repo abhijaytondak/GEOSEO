@@ -194,6 +194,17 @@ export const PLATFORM: FeaturePageData[] = [
         ],
       },
       {
+        kind: "funnel",
+        title: "Traffic in, qualified pipeline out.",
+        subtitle: "Spam and tire-kickers fall away — your team sees only the conversations worth having.",
+        stages: [
+          { label: "Visitors captured", value: "100%", pct: 100 },
+          { label: "Real (spam filtered)", value: "62%", pct: 74 },
+          { label: "Scored & routed", value: "38%", pct: 52 },
+          { label: "Qualified — ready to talk", value: "19%", pct: 34 },
+        ],
+      },
+      {
         kind: "steps",
         title: "From visitor to conversation",
         items: [
@@ -304,6 +315,19 @@ export const PLATFORM: FeaturePageData[] = [
         steps: ["Publish", "Expose via llms.txt", "Get crawled", "Get cited"],
       },
       {
+        kind: "schema",
+        title: "Structured the way engines expect.",
+        subtitle: "Every page emits clean JSON-LD, so an AI engine can extract who you are and what you do — no scraping guesswork.",
+        note: "Generated automatically on every page",
+        lines: [
+          { k: "@type", v: "Article" },
+          { k: "headline", v: "Best analytics for product teams" },
+          { k: "about", v: "Product analytics" },
+          { k: "author", v: "Your Brand" },
+          { k: "isPartOf", v: "llms.txt + sitemap.xml" },
+        ],
+      },
+      {
         kind: "split",
         eyebrow: "Machine-readable by design",
         title: "Built for machines to read — and humans to trust.",
@@ -375,6 +399,13 @@ export const PLATFORM: FeaturePageData[] = [
         ],
       },
       {
+        kind: "flywheel",
+        title: "A loop that compounds.",
+        subtitle: "Each turn feeds the next — authority you build keeps paying off instead of decaying.",
+        steps: ["Audit", "Discover", "Outreach", "Refresh"],
+        center: "Compounding authority",
+      },
+      {
         kind: "split",
         eyebrow: "Compounding, not one-off",
         title: "The work that pays off for years.",
@@ -424,6 +455,15 @@ export const SOLUTIONS: FeaturePageData[] = [
         kind: "callout",
         title: "Your buyers ask AI before they search.",
         body: "AI answers collapse the results page into one cited source. If you're not that source, you're invisible — no matter how good your product is. This solution makes you the answer.",
+      },
+      {
+        kind: "answerbox",
+        title: "This is what winning looks like.",
+        subtitle: "When a buyer asks an engine, you're the brand it names — with your own pages cited as the source.",
+        query: "What's the best analytics tool for a product team?",
+        brand: "your brand",
+        answer: "For product teams, your brand is a top recommendation — it's built for self-serve analytics and activation tracking, with strong adoption among startups.",
+        cited: ["yourbrand.com/guides", "yourbrand.com/vs", "yourbrand.com/product-analytics"],
       },
       {
         kind: "steps",
@@ -483,6 +523,17 @@ export const SOLUTIONS: FeaturePageData[] = [
         kind: "callout",
         title: "Most visitors leave without a trace.",
         body: "Without capture, scoring, and fast follow-up, hard-won traffic never becomes pipeline. Lead Conversion closes that gap end-to-end — every visitor accounted for.",
+      },
+      {
+        kind: "funnel",
+        title: "More of every visit becomes a conversation.",
+        subtitle: "Capture, score, and follow up automatically — so fewer hard-won visits slip away.",
+        stages: [
+          { label: "Page visitors", value: "100%", pct: 100 },
+          { label: "Captured", value: "41%", pct: 70 },
+          { label: "Qualified & routed", value: "23%", pct: 48 },
+          { label: "In conversation", value: "12%", pct: 30 },
+        ],
       },
       {
         kind: "steps",
