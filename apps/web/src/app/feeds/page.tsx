@@ -30,7 +30,9 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     title: `${brand} · AI Feed`,
     description: `AI-optimized content from ${brand} — answers built for AI agents and human visitors. Structured, citation-ready pages for AI search.`,
-    robots: { index: true, follow: true },
+    // Demo deployments serve sample content — keep the feed index out of search indexes so a
+    // demo never publishes a demo identity to crawlers (audit critical #1). Real feeds index.
+    robots: process.env.NEXT_PUBLIC_GEOSEO_MODE === "demo" ? { index: false, follow: false } : { index: true, follow: true },
   };
 }
 
