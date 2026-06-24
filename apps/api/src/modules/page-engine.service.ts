@@ -1068,6 +1068,13 @@ export class PageEngineStore implements OnModuleInit {
     return p;
   }
 
+  /** All hydrated tenant ids. Lets background jobs (digest, content-monitor) fan out per
+   *  tenant instead of hardcoding ws-default — derived from already-loaded state, no new
+   *  table. (A real tenant registry on Clerk-org provisioning is the long-term source.) */
+  tenantIds(): string[] {
+    return [...this.tenants.keys()];
+  }
+
   /* published pages (PUBLIC surfaces). Published pages are public by nature and a visitor
    * doesn't know the owning workspace, so these search across ALL tenants (A5). */
   listPublishedPages() {
