@@ -141,8 +141,13 @@ export class LeadNotificationStore {
           const url = r.webhookUrl;
           if (url) {
             try {
+              // SSRF guard: the URL is tenant-supplied and we POST lead PII to it, so validate
+              // it (blocks localhost/private/link-local/metadata) before fetching. Throws on
+              // unsafe → caught below → suppressed.
+              const { assertSafeUrl } = await import("../common/ssrf");
+              const safeUrl = await assertSafeUrl(url);
               const { fetchWithTimeout } = await import("../common/http");
-              const res = await fetchWithTimeout(url, {
+              const res = await fetchWithTimeout(safeUrl, {
                 method: "POST",
                 headers: { "content-type": "application/json", "x-geoseo-event": "lead.alert" },
                 body: JSON.stringify({

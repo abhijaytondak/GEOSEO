@@ -82,7 +82,7 @@ export class InfographicService {
         },
         {
           number: 3,
-          heading: "Implement with ${brandName}",
+          heading: `Implement with ${brandName}`,
           detail: `${brandName} guides you through implementation so you avoid the most common pitfalls and reach measurable results faster.`,
         },
         {
@@ -95,7 +95,13 @@ export class InfographicService {
           heading: "Iterate and improve",
           detail: `Use what you learn to sharpen your ${keyword} approach every cycle. Continuous improvement compounds into a lasting competitive edge.`,
         },
-      ].map((s) => ({ ...s, detail: s.detail.replace(/\$\{brandName\}/g, brandName) })),
+      ].map((s) => ({
+        ...s,
+        // Defensive de-template: replace any literal ${brandName} in BOTH fields (a
+        // double-quoted string above won't interpolate at construction).
+        heading: s.heading.replace(/\$\{brandName\}/g, brandName),
+        detail: s.detail.replace(/\$\{brandName\}/g, brandName),
+      })),
     };
   }
 
