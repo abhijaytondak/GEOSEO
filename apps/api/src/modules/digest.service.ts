@@ -1,5 +1,6 @@
 import { Injectable, Logger, OnModuleInit, Inject } from "@nestjs/common";
 import { DEFAULT_TENANT_ID } from "../common/tenant";
+import { DocStore } from "../db/db";
 import { PageEngineStore } from "./page-engine.service";
 import { sendEmail } from "../common/email";
 
@@ -19,11 +20,16 @@ const BOOT_DELAY_MS = 60_000;
 @Injectable()
 export class DigestService implements OnModuleInit {
   private readonly log = new Logger(DigestService.name);
-  private lastSentMonth = -1; // -1 means "never sent this process lifetime"
+  private db = new DocStore<{ lastSentKey: string }>("cx_digest");
+  // "YYYY-M" of the last auto-sent digest. Persisted so a restart on the 1st can't
+  // re-send a digest already sent this month; "" means never sent.
+  private lastSentKey = "";
 
   constructor(@Inject(PageEngineStore) private readonly pages: PageEngineStore) {}
 
-  onModuleInit() {
+  async onModuleInit() {
+    const s = await this.db.loadForTenant(DEFAULT_TENANT_ID);
+    this.lastSentKey = s?.lastSentKey ?? "";
     setTimeout(() => {
       this.maybeSend();
       setInterval(() => this.maybeSend(), POLL_MS);
@@ -37,8 +43,12 @@ export class DigestService implements OnModuleInit {
 
   private maybeSend() {
     const now = new Date();
-    if (now.getUTCDate() === 1 && now.getUTCMonth() !== this.lastSentMonth) {
-      this.lastSentMonth = now.getUTCMonth();
+    // Year-month key (not just month number) so the same month across different years
+    // is distinct, and the cursor is persisted to dedupe across restarts.
+    const key = `${now.getUTCFullYear()}-${now.getUTCMonth()}`;
+    if (now.getUTCDate() === 1 && key !== this.lastSentKey) {
+      this.lastSentKey = key;
+      this.db.saveForTenant(DEFAULT_TENANT_ID, { lastSentKey: key });
       void this.send();
     }
   }
