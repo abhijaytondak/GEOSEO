@@ -1,9 +1,9 @@
 import Link from "next/link";
-import { ArrowRight, Check, Clock } from "lucide-react";
+import { ArrowRight, Clock } from "lucide-react";
 import { Reveal } from "@/components/motion/reveal";
 import { cn } from "@/lib/utils";
 import { AuditForm } from "./audit-form";
-import { ProductDemo } from "./product-demo";
+import { FeatureBlock } from "./feature-sections";
 import { type FeaturePageData, resolveRelated, featureHref } from "./platform-data";
 
 const DISPLAY = "[font-family:var(--font-display)] font-semibold tracking-tight";
@@ -57,73 +57,10 @@ export function FeaturePage({ data }: { data: FeaturePageData }) {
         </div>
       </section>
 
-      {/* problem */}
-      <section className="border-y border-border bg-surface-sunken py-16 sm:py-20">
-        <div className="mx-auto max-w-3xl px-5 text-center sm:px-6">
-          <Reveal>
-            <h2 className={cn(DISPLAY, "text-2xl text-foreground sm:text-3xl")}>{data.problem.title}</h2>
-            <p className="mx-auto mt-4 max-w-2xl text-lg leading-relaxed text-muted-foreground">{data.problem.body}</p>
-          </Reveal>
-        </div>
-      </section>
-
-      {/* how it works */}
-      <section className="bg-background py-20 sm:py-24">
-        <div className="mx-auto max-w-6xl px-5 sm:px-6">
-          <Reveal>
-            <h2 className={cn(DISPLAY, "text-center text-3xl text-foreground sm:text-4xl")}>How it works</h2>
-          </Reveal>
-          <div className="mt-12 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            {data.steps.map((s, i) => (
-              <Reveal key={s.title} delay={i * 0.06}>
-                <div className="flex h-full flex-col rounded-2xl border border-border bg-card p-5 shadow-card">
-                  <span className="grid size-9 place-items-center rounded-xl bg-brand/10 font-mono text-sm font-semibold text-brand">{String(i + 1).padStart(2, "0")}</span>
-                  <h3 className="mt-4 text-base font-semibold text-foreground">{s.title}</h3>
-                  <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{s.body}</p>
-                </div>
-              </Reveal>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* product glimpse (platform pages with a demo tab) */}
-      {data.demoTab && (
-        <section className="border-t border-border bg-surface-sunken py-20 sm:py-24">
-          <div className="mx-auto max-w-4xl px-5 sm:px-6">
-            <Reveal>
-              <h2 className={cn(DISPLAY, "text-center text-3xl text-foreground sm:text-4xl")}>See it in the product</h2>
-            </Reveal>
-            <Reveal delay={0.1}>
-              <div className="mt-10">
-                <ProductDemo initialTab={data.demoTab} />
-              </div>
-            </Reveal>
-          </div>
-        </section>
-      )}
-
-      {/* capabilities */}
-      <section className="bg-background py-20 sm:py-24">
-        <div className="mx-auto max-w-5xl px-5 sm:px-6">
-          <Reveal>
-            <div className="mx-auto max-w-2xl text-center">
-              <Eyebrow>What&apos;s included</Eyebrow>
-              <h2 className={cn(DISPLAY, "mt-5 text-3xl text-foreground sm:text-4xl")}>Built to do the work, not just report on it.</h2>
-            </div>
-          </Reveal>
-          <div className="mt-12 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {data.capabilities.map((c, i) => (
-              <Reveal key={c} delay={(i % 3) * 0.05}>
-                <div className="flex items-center gap-3 rounded-xl border border-border bg-card p-4 shadow-card">
-                  <span className="grid size-7 shrink-0 place-items-center rounded-full bg-positive/12 text-positive"><Check className="size-4" /></span>
-                  <span className="text-[15px] font-medium text-foreground">{c}</span>
-                </div>
-              </Reveal>
-            ))}
-          </div>
-        </div>
-      </section>
+      {/* product-specific sections — order + content vary per product */}
+      {data.sections.map((block, i) => (
+        <FeatureBlock key={`${block.kind}-${i}`} block={block} index={i} />
+      ))}
 
       {/* related */}
       {related.length > 0 && (
