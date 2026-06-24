@@ -1,29 +1,29 @@
 import Link from "next/link";
 import { BRAND } from "./data";
+import { PLATFORM, SOLUTIONS, featureHref } from "./platform-data";
 
-const COLUMNS: { title: string; links: { label: string; href: string }[] }[] = [
+type Col = { title: string; links: { label: string; href: string }[] };
+
+const COLUMNS: Col[] = [
   {
-    title: "Product",
-    links: [
-      { label: "How it works", href: "#how-it-works" },
-      { label: "Product tour", href: "#product" },
-      { label: "Why GEOSEO", href: "#why" },
-      { label: "Free audit", href: "#audit" },
-    ],
+    title: "Platform",
+    links: PLATFORM.map((p) => ({ label: p.label, href: featureHref(p) })),
   },
   {
-    title: "Resources",
+    title: "Solutions",
     links: [
+      ...SOLUTIONS.map((s) => ({ label: s.label, href: featureHref(s) })),
       { label: "Content hub", href: "/feeds" },
-      { label: "FAQ", href: "#faq" },
-      { label: "Sign in", href: "/home" },
     ],
   },
   {
     title: "Company",
     links: [
-      { label: "Get a demo", href: "#audit" },
-      { label: "Contact", href: "#audit" },
+      { label: "How it works", href: "/#how-it-works" },
+      { label: "Why GEOSEO", href: "/#why" },
+      { label: "FAQ", href: "/#faq" },
+      { label: "Free audit", href: "/#audit" },
+      { label: "Sign in", href: "/home" },
     ],
   },
 ];
@@ -35,7 +35,7 @@ export function MarketingFooter() {
         <div className="grid gap-10 md:grid-cols-[1.4fr_repeat(3,1fr)]">
           <div>
             <div className="flex items-center gap-2 font-semibold tracking-tight">
-              <span className="grid size-7 place-items-center rounded-lg bg-brand text-brand-foreground">
+              <span className="grid size-7 place-items-center rounded-lg bg-gradient-to-br from-brand to-info text-brand-foreground">
                 <span className="size-3 rounded-full bg-brand-foreground/90" />
               </span>
               <span className="text-lg">{BRAND}</span>
