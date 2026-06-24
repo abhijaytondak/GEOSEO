@@ -4,6 +4,8 @@ import { cn } from "@/lib/utils";
 import { ProductDemo } from "./product-demo";
 
 const DISPLAY = "[font-family:var(--font-display)] font-semibold tracking-tight";
+/** Premium card: gradient-lit border on hover + float. */
+const CARD = "group relative rounded-2xl border border-border bg-card shadow-card transition-all duration-300 hover:-translate-y-1 hover:border-brand/30 hover:shadow-float";
 
 export type DemoTab = "brand" | "discover" | "pages" | "leads";
 
@@ -28,8 +30,8 @@ export type Block =
 
 function Eyebrow({ children }: { children: React.ReactNode }) {
   return (
-    <span className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1 text-xs font-semibold uppercase tracking-[0.08em] text-brand">
-      <span className="size-1.5 rounded-full bg-brand" /> {children}
+    <span className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-3.5 py-1.5 text-xs font-semibold uppercase tracking-[0.1em] text-brand shadow-xs">
+      <span className="size-1.5 rounded-full bg-brand shadow-[0_0_8px_var(--brand)]" /> {children}
     </span>
   );
 }
@@ -38,11 +40,26 @@ function Heading({ children, className }: { children: React.ReactNode; className
   return <h2 className={cn(DISPLAY, "text-3xl text-foreground sm:text-4xl", className)}>{children}</h2>;
 }
 
+/** Soft blurred glow blob for atmospheric depth. */
+function Glow({ className }: { className?: string }) {
+  return <div aria-hidden className={cn("pointer-events-none absolute rounded-full blur-3xl", className)} />;
+}
+
+/** Gradient check chip — signature accent for bullets/capabilities. */
+function GradCheck({ className }: { className?: string }) {
+  return (
+    <span className={cn("grid shrink-0 place-items-center rounded-full bg-gradient-to-br from-brand to-info text-white", className)}>
+      <Check className="size-3.5" />
+    </span>
+  );
+}
+
 /* ---------------------------------------------------------------- callout */
 function Callout({ b }: { b: Extract<Block, { kind: "callout" }> }) {
   return (
-    <section className="border-y border-border bg-surface-sunken py-16 sm:py-20">
-      <div className="mx-auto max-w-3xl px-5 text-center sm:px-6">
+    <section className="relative overflow-hidden border-y border-border bg-surface-sunken py-16 sm:py-20">
+      <Glow className="left-1/2 top-[-30%] h-56 w-[560px] -translate-x-1/2 bg-brand/10" />
+      <div className="relative mx-auto max-w-3xl px-5 text-center sm:px-6">
         <Reveal>
           {b.eyebrow && <div className="mb-5 flex justify-center"><Eyebrow>{b.eyebrow}</Eyebrow></div>}
           <Heading className="text-2xl sm:text-3xl">{b.title}</Heading>
@@ -65,11 +82,11 @@ function Steps({ b }: { b: Extract<Block, { kind: "steps" }> }) {
             {b.subtitle && <p className="mt-4 text-lg text-muted-foreground">{b.subtitle}</p>}
           </div>
         </Reveal>
-        <div className={cn("mt-12 grid gap-4 md:grid-cols-2", cols)}>
+        <div className={cn("mt-14 grid gap-4 md:grid-cols-2", cols)}>
           {b.items.map((s, i) => (
             <Reveal key={s.title} delay={i * 0.06}>
-              <div className="flex h-full flex-col rounded-2xl border border-border bg-card p-5 shadow-card">
-                <span className="grid size-9 place-items-center rounded-xl bg-brand/10 font-mono text-sm font-semibold text-brand">{String(i + 1).padStart(2, "0")}</span>
+              <div className={cn(CARD, "flex h-full flex-col p-5")}>
+                <span className="grid size-10 place-items-center rounded-xl bg-gradient-to-br from-brand to-info font-mono text-sm font-semibold text-white shadow-[0_8px_22px_-8px_rgba(108,76,241,0.65)]">{String(i + 1).padStart(2, "0")}</span>
                 <h3 className="mt-4 text-base font-semibold text-foreground">{s.title}</h3>
                 <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{s.body}</p>
               </div>
@@ -97,8 +114,8 @@ function Split({ b, index }: { b: Extract<Block, { kind: "split" }>; index: numb
         <Reveal delay={0.1} className={cn(flip && "lg:order-1")}>
           <ul className="grid gap-2.5">
             {b.bullets.map((it) => (
-              <li key={it} className="flex items-start gap-3 rounded-xl border border-border bg-card p-4 shadow-card">
-                <span className="mt-0.5 grid size-6 shrink-0 place-items-center rounded-full bg-positive/12 text-positive"><Check className="size-3.5" /></span>
+              <li key={it} className={cn(CARD, "flex items-start gap-3 p-4 hover:translate-y-0")}>
+                <GradCheck className="mt-0.5 size-6" />
                 <span className="text-[15px] leading-snug text-foreground">{it}</span>
               </li>
             ))}
@@ -112,24 +129,25 @@ function Split({ b, index }: { b: Extract<Block, { kind: "split" }>; index: numb
 /* --------------------------------------------------------------- pipeline */
 function Pipeline({ b }: { b: Extract<Block, { kind: "pipeline" }> }) {
   return (
-    <section className="border-y border-border bg-surface-sunken py-20 sm:py-24">
-      <div className="mx-auto max-w-6xl px-5 sm:px-6">
+    <section className="relative overflow-hidden border-y border-border bg-surface-sunken py-20 sm:py-24">
+      <Glow className="left-1/2 top-1/3 h-56 w-[620px] -translate-x-1/2 bg-brand/10" />
+      <div className="relative mx-auto max-w-6xl px-5 sm:px-6">
         <Reveal>
           <div className="mx-auto max-w-2xl text-center">
             <Heading>{b.title}</Heading>
             {b.subtitle && <p className="mt-4 text-lg text-muted-foreground">{b.subtitle}</p>}
           </div>
         </Reveal>
-        <div className="mt-12 flex flex-wrap items-center justify-center gap-x-3 gap-y-4">
+        <div className="mt-14 flex flex-wrap items-center justify-center gap-x-3 gap-y-4">
           {b.steps.map((s, i) => (
             <div key={s} className="flex items-center gap-3">
               <Reveal delay={i * 0.06}>
-                <div className="flex items-center gap-2.5 rounded-xl border border-border bg-card px-4 py-3 shadow-card">
-                  <span className="grid size-6 place-items-center rounded-full bg-brand/10 font-mono text-xs font-semibold text-brand">{i + 1}</span>
+                <div className={cn(CARD, "flex items-center gap-2.5 px-4 py-3 hover:translate-y-0")}>
+                  <span className="grid size-6 place-items-center rounded-full bg-gradient-to-br from-brand to-info font-mono text-xs font-semibold text-white">{i + 1}</span>
                   <span className="text-sm font-semibold text-foreground">{s}</span>
                 </div>
               </Reveal>
-              {i < b.steps.length - 1 && <ArrowRight className="size-4 shrink-0 text-muted-foreground/50" />}
+              {i < b.steps.length - 1 && <ArrowRight className="size-4 shrink-0 text-brand/40" />}
             </div>
           ))}
         </div>
@@ -142,7 +160,9 @@ function Pipeline({ b }: { b: Extract<Block, { kind: "pipeline" }> }) {
 function Stats({ b }: { b: Extract<Block, { kind: "stats" }> }) {
   return (
     <section className="relative overflow-hidden bg-foreground py-16 text-background sm:py-20">
-      <div aria-hidden className="bg-aurora pointer-events-none absolute inset-0 opacity-50" />
+      <div aria-hidden className="bg-aurora pointer-events-none absolute inset-0 opacity-60" />
+      <Glow className="left-1/4 top-0 h-60 w-60 bg-brand/25" />
+      <Glow className="right-1/4 bottom-0 h-60 w-60 bg-info/20" />
       <div className="relative mx-auto max-w-6xl px-5 sm:px-6">
         {b.title && (
           <Reveal>
@@ -153,7 +173,7 @@ function Stats({ b }: { b: Extract<Block, { kind: "stats" }> }) {
           {b.items.map((m, i) => (
             <Reveal key={m.label} delay={i * 0.06}>
               <div className="text-center sm:text-left">
-                <div className={cn(DISPLAY, "text-3xl text-white sm:text-4xl")}>{m.value}</div>
+                <div className={cn(DISPLAY, "bg-gradient-to-br from-white to-white/60 bg-clip-text text-3xl text-transparent sm:text-4xl")}>{m.value}</div>
                 <div className="mt-1.5 text-sm text-white/65">{m.label}</div>
               </div>
             </Reveal>
@@ -167,13 +187,17 @@ function Stats({ b }: { b: Extract<Block, { kind: "stats" }> }) {
 /* ------------------------------------------------------------------- demo */
 function Demo({ b }: { b: Extract<Block, { kind: "demo" }> }) {
   return (
-    <section className="bg-background py-20 sm:py-24">
-      <div className="mx-auto max-w-4xl px-5 sm:px-6">
+    <section className="relative overflow-hidden bg-background py-20 sm:py-24">
+      <Glow className="left-1/2 top-1/4 h-72 w-[640px] -translate-x-1/2 bg-brand/10" />
+      <div className="relative mx-auto max-w-4xl px-5 sm:px-6">
         <Reveal>
           <h2 className={cn(DISPLAY, "text-center text-3xl text-foreground sm:text-4xl")}>{b.title ?? "See it in the product"}</h2>
         </Reveal>
         <Reveal delay={0.1}>
-          <div className="mt-10"><ProductDemo initialTab={b.tab} /></div>
+          <div className="relative mt-12">
+            <Glow className="inset-x-10 -bottom-6 top-8 bg-brand/15" />
+            <div className="relative"><ProductDemo initialTab={b.tab} /></div>
+          </div>
         </Reveal>
       </div>
     </section>
@@ -191,11 +215,11 @@ function Checklist({ b }: { b: Extract<Block, { kind: "checklist" }> }) {
             <Heading>{b.title}</Heading>
           </div>
         </Reveal>
-        <div className="mt-12 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="mt-14 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {b.items.map((c, i) => (
             <Reveal key={c} delay={(i % 3) * 0.05}>
-              <div className="flex items-center gap-3 rounded-xl border border-border bg-card p-4 shadow-card">
-                <span className="grid size-7 shrink-0 place-items-center rounded-full bg-positive/12 text-positive"><Check className="size-4" /></span>
+              <div className={cn(CARD, "flex items-center gap-3 p-4 hover:translate-y-0")}>
+                <GradCheck className="size-7" />
                 <span className="text-[15px] font-medium text-foreground">{c}</span>
               </div>
             </Reveal>
@@ -221,18 +245,18 @@ function Compare({ b }: { b: Extract<Block, { kind: "compare" }> }) {
         </Reveal>
         <Reveal delay={0.1}>
           <div className="mt-12 overflow-x-auto">
-            <div className="min-w-[520px] overflow-hidden rounded-2xl border border-border bg-card shadow-card">
+            <div className="min-w-[520px] overflow-hidden rounded-2xl border border-border bg-card shadow-raised">
               <div className="grid border-b border-border bg-surface-sunken text-sm font-semibold" style={{ gridTemplateColumns: gridCols }}>
-                <div className="px-3 py-3.5 sm:px-5" />
+                <div className="px-3 py-4 sm:px-5" />
                 {b.columns.map((c, i) => (
-                  <div key={c} className={cn("px-2 py-3.5 text-center sm:px-4", i === hi ? "text-brand" : "text-foreground")}>{c}</div>
+                  <div key={c} className={cn("px-2 py-4 text-center sm:px-4", i === hi ? "bg-brand/5 text-brand" : "text-foreground")}>{c}</div>
                 ))}
               </div>
               {b.rows.map((row, ri) => (
                 <div key={row.label} className={cn("grid items-center text-sm", ri % 2 ? "bg-surface-sunken/40" : "")} style={{ gridTemplateColumns: gridCols }}>
                   <div className="px-3 py-3.5 font-medium text-foreground sm:px-5">{row.label}</div>
                   {row.cells.map((cell, ci) => (
-                    <div key={ci} className={cn("px-2 py-3.5 text-center sm:px-4", ci === hi ? "font-semibold text-foreground" : "text-muted-foreground")}>
+                    <div key={ci} className={cn("h-full px-2 py-3.5 text-center sm:px-4", ci === hi ? "bg-brand/5 font-semibold text-foreground" : "text-muted-foreground")}>
                       <span className="inline-flex items-center justify-center gap-1">
                         {ci === hi && <Check className="size-3.5 shrink-0 text-positive" />}
                         <span>{cell}</span>
