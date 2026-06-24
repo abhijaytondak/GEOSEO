@@ -1,4 +1,6 @@
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
+import { NextResponse, type NextFetchEvent, type NextRequest } from "next/server";
+import { resolveClerkProxyMode } from "@/proxy-policy";
 
 // Auth enforcement is mode-driven (P0.2): enforced when GEOSEO_REQUIRE_AUTH=true OR
 // NEXT_PUBLIC_GEOSEO_MODE=production (so production can't silently stay open); demo
@@ -25,11 +27,34 @@ const isPublicPage = createRouteMatcher([
   "/sign-up(.*)",
 ]);
 
-export default clerkMiddleware(async (auth, req) => {
+const withClerk = clerkMiddleware(async (auth, req) => {
   if (!REQUIRE_AUTH) return;
   if (isApiRoute(req) || isPublicPage(req)) return;
   await auth.protect();
 });
+
+/**
+ * Keep public marketing and demo previews available when Clerk is not configured.
+ * Protected production pages still fail closed instead of crashing every route.
+ */
+export default function proxy(req: NextRequest, event: NextFetchEvent) {
+  const mode = resolveClerkProxyMode({
+    requireAuth: REQUIRE_AUTH,
+    hasPublishableKey: Boolean(process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY?.trim()),
+    hasSecretKey: Boolean(process.env.CLERK_SECRET_KEY?.trim()),
+    isPublic: isPublicPage(req),
+    isApi: isApiRoute(req),
+  });
+
+  if (mode === "clerk") return withClerk(req, event);
+  if (mode === "unavailable") {
+    return NextResponse.json(
+      { error: "Authentication service is unavailable" },
+      { status: 503, headers: { "Cache-Control": "no-store" } },
+    );
+  }
+  return NextResponse.next();
+}
 
 export const config = {
   matcher: [

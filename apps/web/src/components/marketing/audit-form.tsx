@@ -6,6 +6,7 @@ import { pageEngineApi } from "@/lib/page-engine-client";
 import { getVisitorId } from "@/lib/visitor";
 import { trackOnboarding } from "@/lib/analytics";
 import { validateWebsite, cn } from "@/lib/utils";
+import { submitAuditLead } from "./audit-submit";
 
 /**
  * Free AI-visibility audit lead capture — the marketing site's primary conversion.
@@ -34,21 +35,25 @@ export function AuditForm({ tone = "light" }: { tone?: "light" | "dark" }) {
     }
     setError(null);
     setState("sending");
-    try {
-      const sourceUrl = typeof window !== "undefined" ? window.location.href : "";
-      const lead = await pageEngineApi.captureLead({
+    const result = await submitAuditLead(
+      {
         email: email.trim(),
         company: v.domain,
-        message: `Free AI-visibility audit requested for ${v.url}`,
-        sourceUrl,
-      });
-      pageEngineApi.linkLeadVisitor(lead.id, getVisitorId()).catch(() => {});
-      trackOnboarding({ event: "website_analysis_started", domain: v.domain });
+        websiteUrl: v.url,
+        sourceUrl: typeof window !== "undefined" ? window.location.href : "",
+        visitorId: getVisitorId(),
+      },
+      {
+        captureLead: (input) => pageEngineApi.captureLead(input),
+        linkLeadVisitor: (leadId, visitorId) => pageEngineApi.linkLeadVisitor(leadId, visitorId),
+        trackAuditStarted: (domain) => trackOnboarding({ event: "website_analysis_started", domain }),
+      },
+    );
+    if (result.ok) {
       setState("done");
-    } catch {
-      // Lead endpoint unreachable (e.g. demo with no live API) — still confirm to the
-      // user; the request is non-critical and the team also captures via onboarding.
-      setState("done");
+    } else {
+      setError("We couldn't submit your request. Please try again in a moment.");
+      setState("idle");
     }
   }
 
