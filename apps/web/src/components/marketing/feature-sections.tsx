@@ -1,4 +1,4 @@
-import { ArrowRight, Check } from "lucide-react";
+import { ArrowRight, Check, Sparkles, RotateCw, TrendingUp } from "lucide-react";
 import { Reveal } from "@/components/motion/reveal";
 import { cn } from "@/lib/utils";
 import { ProductDemo } from "./product-demo";
@@ -26,7 +26,12 @@ export type Block =
       columns: string[];
       rows: { label: string; cells: string[] }[];
       highlight?: number;
-    };
+    }
+  // ---- purpose-specific signature sections (one per product) ----
+  | { kind: "answerbox"; title: string; subtitle?: string; query: string; brand: string; answer: string; cited: string[] }
+  | { kind: "schema"; title: string; subtitle?: string; lines: { k: string; v: string }[]; note?: string }
+  | { kind: "funnel"; title: string; subtitle?: string; stages: { label: string; value: string; pct: number }[] }
+  | { kind: "flywheel"; title: string; subtitle?: string; steps: string[]; center?: string };
 
 function Eyebrow({ children }: { children: React.ReactNode }) {
   return (
@@ -273,6 +278,161 @@ function Compare({ b }: { b: Extract<Block, { kind: "compare" }> }) {
   );
 }
 
+/* --------------------------------------------------------------- answerbox
+   Signature for AI Search: a mock AI-engine answer that cites the brand. */
+function AnswerBox({ b }: { b: Extract<Block, { kind: "answerbox" }> }) {
+  const parts = b.answer.split(b.brand);
+  return (
+    <section className="relative overflow-hidden bg-background py-20 sm:py-24">
+      <Glow className="left-1/2 top-1/4 h-72 w-[640px] -translate-x-1/2 bg-brand/10" />
+      <div className="relative mx-auto max-w-3xl px-5 sm:px-6">
+        <Reveal>
+          <div className="mx-auto max-w-2xl text-center">
+            <Heading>{b.title}</Heading>
+            {b.subtitle && <p className="mt-4 text-lg text-muted-foreground">{b.subtitle}</p>}
+          </div>
+        </Reveal>
+        <Reveal delay={0.1}>
+          <div className="mx-auto mt-12 max-w-xl overflow-hidden rounded-2xl border border-border bg-card shadow-float">
+            <div className="flex items-center gap-2 border-b border-border bg-surface-sunken px-4 py-3">
+              <Sparkles className="size-4 text-brand" />
+              <span className="text-sm font-medium text-muted-foreground">AI answer</span>
+            </div>
+            <div className="space-y-4 p-5">
+              <div className="flex justify-end">
+                <span className="max-w-[80%] rounded-2xl rounded-br-md bg-brand px-4 py-2.5 text-sm text-brand-foreground">{b.query}</span>
+              </div>
+              <div className="flex gap-3">
+                <span className="grid size-8 shrink-0 place-items-center rounded-full bg-gradient-to-br from-brand to-info text-white"><Sparkles className="size-4" /></span>
+                <div className="rounded-2xl rounded-tl-md bg-surface-sunken px-4 py-3 text-sm leading-relaxed text-foreground">
+                  {parts[0]}
+                  <span className="rounded bg-brand/15 px-1 font-semibold text-brand">{b.brand}</span>
+                  {parts.slice(1).join(b.brand)}
+                  <div className="mt-3 flex flex-wrap gap-1.5 border-t border-border pt-3">
+                    {b.cited.map((c) => (
+                      <span key={c} className="inline-flex items-center gap-1 rounded-md bg-card px-2 py-1 text-xs text-muted-foreground shadow-xs">
+                        <span className="size-1.5 rounded-full bg-positive" /> {c}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </Reveal>
+      </div>
+    </section>
+  );
+}
+
+/* ------------------------------------------------------------------ schema
+   Signature for AI Feed: a JSON-LD preview that proves the machine surface. */
+function Schema({ b }: { b: Extract<Block, { kind: "schema" }> }) {
+  return (
+    <section className="border-y border-border bg-surface-sunken py-20 sm:py-24">
+      <div className="mx-auto grid max-w-6xl items-center gap-10 px-5 sm:px-6 lg:grid-cols-2">
+        <Reveal>
+          <div>
+            <Heading>{b.title}</Heading>
+            {b.subtitle && <p className="mt-4 text-lg leading-relaxed text-muted-foreground">{b.subtitle}</p>}
+            {b.note && <p className="mt-4 inline-flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1.5 text-xs font-medium text-muted-foreground"><span className="size-1.5 rounded-full bg-positive" /> {b.note}</p>}
+          </div>
+        </Reveal>
+        <Reveal delay={0.1}>
+          <div className="overflow-hidden rounded-2xl border border-border bg-foreground shadow-float">
+            <div className="flex items-center gap-2 border-b border-white/10 px-4 py-3">
+              <span className="size-2.5 rounded-full bg-negative/60" />
+              <span className="size-2.5 rounded-full bg-warning/60" />
+              <span className="size-2.5 rounded-full bg-positive/60" />
+              <span className="ml-2 font-mono text-xs text-white/50">ld+json</span>
+            </div>
+            <pre className="overflow-x-auto p-4 font-mono text-[12.5px] leading-relaxed text-white/85">
+              <span className="text-white/40">{"{"}</span>
+              {"\n"}
+              {b.lines.map((l) => (
+                <span key={l.k}>
+                  {"  "}
+                  <span className="text-info">&quot;{l.k}&quot;</span>
+                  <span className="text-white/40">: </span>
+                  <span className="text-[#9be7a0]">&quot;{l.v}&quot;</span>
+                  <span className="text-white/40">,</span>
+                  {"\n"}
+                </span>
+              ))}
+              <span className="text-white/40">{"}"}</span>
+            </pre>
+          </div>
+        </Reveal>
+      </div>
+    </section>
+  );
+}
+
+/* ------------------------------------------------------------------ funnel
+   Signature for Leads / Lead Conversion: a visitor→qualified funnel. */
+function Funnel({ b }: { b: Extract<Block, { kind: "funnel" }> }) {
+  return (
+    <section className="bg-background py-20 sm:py-24">
+      <div className="mx-auto max-w-3xl px-5 sm:px-6">
+        <Reveal>
+          <div className="mx-auto max-w-2xl text-center">
+            <Heading>{b.title}</Heading>
+            {b.subtitle && <p className="mt-4 text-lg text-muted-foreground">{b.subtitle}</p>}
+          </div>
+        </Reveal>
+        <div className="mt-12 space-y-2.5">
+          {b.stages.map((s, i) => (
+            <Reveal key={s.label} delay={i * 0.08}>
+              <div className="mx-auto" style={{ width: `${s.pct}%`, minWidth: "min(100%, 16rem)" }}>
+                <div className="flex items-center justify-between gap-3 rounded-xl border border-border bg-gradient-to-r from-brand/10 to-info/10 px-5 py-4 shadow-card">
+                  <span className="text-sm font-semibold text-foreground">{s.label}</span>
+                  <span className={cn(DISPLAY, "text-xl text-brand")}>{s.value}</span>
+                </div>
+              </div>
+            </Reveal>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ---------------------------------------------------------------- flywheel
+   Signature for Content & Authority: the compounding loop. */
+function Flywheel({ b }: { b: Extract<Block, { kind: "flywheel" }> }) {
+  return (
+    <section className="relative overflow-hidden border-y border-border bg-surface-sunken py-20 sm:py-24">
+      <Glow className="left-1/2 top-1/2 h-72 w-72 -translate-x-1/2 -translate-y-1/2 bg-brand/10" />
+      <div className="relative mx-auto max-w-5xl px-5 sm:px-6">
+        <Reveal>
+          <div className="mx-auto max-w-2xl text-center">
+            <Heading>{b.title}</Heading>
+            {b.subtitle && <p className="mt-4 text-lg text-muted-foreground">{b.subtitle}</p>}
+          </div>
+        </Reveal>
+        <div className="mt-14 flex flex-wrap items-center justify-center gap-3">
+          {b.steps.map((s, i) => (
+            <div key={s} className="flex items-center gap-3">
+              <Reveal delay={i * 0.07}>
+                <div className="flex items-center gap-2.5 rounded-full border border-border bg-card px-5 py-3 shadow-card">
+                  <span className="grid size-7 place-items-center rounded-full bg-gradient-to-br from-brand to-info font-mono text-xs font-semibold text-white">{i + 1}</span>
+                  <span className="text-sm font-semibold text-foreground">{s}</span>
+                </div>
+              </Reveal>
+              <RotateCw className={cn("size-4 shrink-0 text-brand/40", i === b.steps.length - 1 && "rotate-90")} />
+            </div>
+          ))}
+          <Reveal delay={b.steps.length * 0.07}>
+            <div className="flex items-center gap-2 rounded-full bg-gradient-to-br from-brand to-info px-5 py-3 text-sm font-semibold text-white shadow-[0_8px_22px_-8px_rgba(108,76,241,0.7)]">
+              <TrendingUp className="size-4" /> {b.center ?? "Compounding authority"}
+            </div>
+          </Reveal>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 /** Render one block by kind. `index` drives split alternation + section backgrounds. */
 export function FeatureBlock({ block, index }: { block: Block; index: number }) {
   switch (block.kind) {
@@ -292,6 +452,14 @@ export function FeatureBlock({ block, index }: { block: Block; index: number }) 
       return <Checklist b={block} />;
     case "compare":
       return <Compare b={block} />;
+    case "answerbox":
+      return <AnswerBox b={block} />;
+    case "schema":
+      return <Schema b={block} />;
+    case "funnel":
+      return <Funnel b={block} />;
+    case "flywheel":
+      return <Flywheel b={block} />;
     default:
       return null;
   }
