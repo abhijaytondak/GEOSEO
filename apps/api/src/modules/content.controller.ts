@@ -5,6 +5,7 @@ import { IdListSchema, PageIdListSchema } from "../common/schemas";
 import { ContentStore } from "./content.service";
 import { JobsStore } from "./jobs.service";
 import { PageEngineStore } from "./page-engine.service";
+import { escapeHtml } from "../common/escape";
 import { resolveTenantId, type TenantRequest } from "../common/tenant";
 
 @ApiTags("content")
@@ -51,7 +52,9 @@ export class ContentController {
       const from = published.find((p) => p.id === fromId);
       const to = published.find((p) => p.id === toId);
       if (!from || !to || !from.sections?.length) continue;
-      const anchor = `<a href="${to.slug}">${to.metaTitle || to.title}</a>`;
+      // Escape the page-derived href + anchor text — these fields are user-editable and the
+      // anchor is persisted into another page's body (stored-XSS defense, audit 2026-06-24).
+      const anchor = `<a href="${escapeHtml(to.slug)}">${escapeHtml(to.metaTitle || to.title)}</a>`;
       // Only inject once — skip if anchor already present.
       if (from.sections[0].body.includes(anchor)) continue;
       from.sections[0].body = `${from.sections[0].body} See also: ${anchor}.`;
