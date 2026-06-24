@@ -19,6 +19,7 @@ import type {
 } from "@geoseo/types";
 import { SEO_PROVIDER, BRAND_SOURCE, OUTREACH_DRAFTER } from "../seo/seo.module";
 import { validateBody, v } from "../common/validation";
+import { Roles } from "../common/roles.decorator";
 import { OutreachStore } from "./outreach.service";
 import { OpportunitiesStore } from "./opportunities.service";
 import { sendEmail } from "../common/email";
@@ -92,6 +93,7 @@ export class OutreachController {
    * Required env vars: RESEND_API_KEY, EMAIL_FROM
    * Body: { prospectId, variant? (default: "cold"), to? (override contactEmail) }
    */
+  @Roles("marketer")
   @Post("send")
   async send(
     @Body(validateBody(OutreachSendSchema))

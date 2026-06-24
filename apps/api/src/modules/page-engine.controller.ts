@@ -26,6 +26,7 @@ import { ContentMonitorService } from "./content-monitor.service";
 import { DigestService } from "./digest.service";
 import { CmsPublishStore, renderHtml, renderMarkdown, renderStandaloneHtml } from "./cms-publish.service";
 import { Public } from "../common/public.decorator";
+import { Roles } from "../common/roles.decorator";
 import { resolveTenantId, type TenantRequest } from "../common/tenant";
 import { validateBody, v } from "../common/validation";
 import { BlueprintUpdateSchema, PageEditSchema, IntegrationWriteSchema, LeadStatusUpdateSchema } from "../common/schemas";
@@ -423,6 +424,7 @@ export class MonitoringController {
 
   /** Manually trigger a content-health scan (rank-drop detection). Runs the same
    *  logic as the background 6-hour poll and returns how many pages were flagged. */
+  @Roles("marketer")
   @Post("monitoring/scan")
   async triggerScan() {
     const result = await this.monitor.scan("manual");
@@ -443,6 +445,7 @@ export class MonitoringController {
   }
 
   /** Manually trigger the monthly performance digest email. */
+  @Roles("marketer")
   @Post("monitoring/digest")
   async triggerDigest() {
     const result = await this.digest.sendNow();
