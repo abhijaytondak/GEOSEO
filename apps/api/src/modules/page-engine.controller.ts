@@ -185,10 +185,14 @@ export class PagesController {
   ) {
     if (!body?.opportunityId) throw new BadRequestException("opportunityId is required");
     const tenantId = resolveTenantId(req);
-    const existingPageCount = this.store.listPages(tenantId).length;
-    const { allowed, limit, plan } = await this.billing.checkLimit(tenantId, "pages", existingPageCount);
+    // Per-calendar-month limit: count only pages created in the current month (UTC).
+    const thisMonth = new Date().toISOString().slice(0, 7); // "YYYY-MM"
+    const monthPageCount = this.store
+      .listPages(tenantId)
+      .filter((p) => (p.createdAt ?? "").slice(0, 7) === thisMonth).length;
+    const { allowed, limit, plan } = await this.billing.checkLimit(tenantId, "pages", monthPageCount);
     if (!allowed) {
-      throw new ForbiddenException(`Page limit reached (${limit} pages on ${plan} plan). Upgrade to generate more pages.`);
+      throw new ForbiddenException(`Monthly page limit reached (${limit} pages/month on ${plan} plan). Upgrade or wait until next month to generate more.`);
     }
     const valid =
       body.content &&
