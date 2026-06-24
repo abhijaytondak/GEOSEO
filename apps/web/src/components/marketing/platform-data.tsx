@@ -10,28 +10,25 @@ import {
   Megaphone,
   type LucideIcon,
 } from "lucide-react";
+import type { Block } from "./feature-sections";
 
-/** A platform/solution page — drives both the mega-menu and the [slug] page template. */
+/** A platform/solution page — drives the mega-menu (label/tagline/icon) and the
+ *  [slug] page (hero from eyebrow/title/subtitle; body from the per-product `sections`). */
 export interface FeaturePageData {
   slug: string;
-  /** Short nav label + tagline shown in the mega-menu. */
   label: string;
   tagline: string;
   icon: LucideIcon;
   kind: "platform" | "solutions";
   comingSoon?: boolean;
-  /** Page content. */
   eyebrow: string;
   title: string;
   subtitle: string;
   metaTitle: string;
   metaDescription: string;
-  problem: { title: string; body: string };
-  steps: { title: string; body: string }[];
-  capabilities: string[];
-  /** Which ProductDemo tab to feature (platform pages). */
-  demoTab?: "brand" | "discover" | "pages" | "leads";
-  /** Cross-link slugs (kind:slug). */
+  /** Ordered, product-specific page structure — varies per product. */
+  sections: Block[];
+  /** Cross-link slugs ("kind:slug"). */
   related: string[];
 }
 
@@ -49,25 +46,50 @@ export const PLATFORM: FeaturePageData[] = [
     metaTitle: "Brand Memory — grounded AI content | GEOSEO",
     metaDescription:
       "Brand Memory is a structured source of truth — products, personas, proof, and voice — extracted from your site to ground every page GEOSEO generates. No fabricated claims.",
-    problem: {
-      title: "AI writes confidently — and wrongly.",
-      body: "Without a grounded source of truth, generated content invents claims, drifts off-brand, and erodes the trust you spent years building. Brand Memory fixes the root cause.",
-    },
-    steps: [
-      { title: "Scan your site", body: "We read your public pages and extract what your business actually is — no manual data entry." },
-      { title: "Structure it", body: "Products, buyer personas, proof points, terminology, and tone of voice become a structured, reviewable profile." },
-      { title: "Review & refine", body: "You confirm and edit the draft. It stays versioned, so you can see and roll back every change." },
-      { title: "Ground everything", body: "Every page, follow-up, and answer the engine produces pulls from Brand Memory — accurate and on-brand by default." },
+    sections: [
+      {
+        kind: "callout",
+        title: "AI writes confidently — and wrongly.",
+        body: "Without a grounded source of truth, generated content invents claims, drifts off-brand, and erodes the trust you spent years building. Brand Memory fixes that at the root: every word the engine writes traces back to a fact you approved.",
+      },
+      {
+        kind: "split",
+        eyebrow: "What's inside",
+        title: "Your business, structured.",
+        body: "We turn your public site into a reviewable profile the engine can reason over — not a vague prompt, but concrete facts with provenance.",
+        bullets: [
+          "Brand identity & value proposition",
+          "Products and services you actually sell",
+          "Buyer personas with their pains and goals",
+          "Proof points — stats, case studies, awards",
+          "Tone of voice and terminology to match",
+        ],
+      },
+      {
+        kind: "steps",
+        title: "How Brand Memory is built",
+        items: [
+          { title: "Scan your site", body: "We read your public pages and extract what your business actually is — no manual data entry." },
+          { title: "Structure it", body: "Products, personas, proof points, terminology, and tone become a structured, reviewable profile." },
+          { title: "Review & refine", body: "You confirm and edit the draft. It's versioned, so you can see and roll back every change." },
+          { title: "Ground everything", body: "Every page, follow-up, and answer pulls from Brand Memory — accurate and on-brand by default." },
+        ],
+      },
+      { kind: "demo", tab: "brand", title: "A living profile, not a static brief" },
+      {
+        kind: "checklist",
+        eyebrow: "Capabilities",
+        title: "Grounded, not guessed.",
+        items: [
+          "Auto-extracted from your website",
+          "Products, personas & proof points",
+          "Tone-of-voice capture",
+          "Competitor context",
+          "Editable & fully versioned",
+          "Powers page-gen, leads & outreach",
+        ],
+      },
     ],
-    capabilities: [
-      "Auto-extracted from your website",
-      "Products, personas & proof points",
-      "Tone-of-voice capture",
-      "Competitor context",
-      "Editable & versioned",
-      "Powers page-gen, leads & outreach",
-    ],
-    demoTab: "brand",
     related: ["platform:page-engine", "solutions:ai-search"],
   },
   {
@@ -83,25 +105,60 @@ export const PLATFORM: FeaturePageData[] = [
     metaTitle: "Page Creation Engine — automated SEO + GEO pages | GEOSEO",
     metaDescription:
       "Generate and publish GEO + SEO pages grounded in Brand Memory — with JSON-LD, sitemap, and llms.txt — to WordPress, Webflow, Shopify, or a managed subdirectory.",
-    problem: {
-      title: "Content can't keep up with modern search.",
-      body: "Teams can't produce the volume search demands — and one-off pages miss the structured signals AI engines need to cite you. The Page Engine makes both effortless.",
-    },
-    steps: [
-      { title: "Pick a topic", body: "Choose a discovered buyer-intent opportunity, or bring your own." },
-      { title: "Generate", body: "A grounded draft with per-type structure, FAQ schema, and JSON-LD — written from your real facts." },
-      { title: "Review in place", body: "See keyword coverage, edit, and rewrite-with-keywords before anything ships." },
-      { title: "Publish anywhere", body: "One click to WordPress, Webflow, Shopify, or a managed subdirectory — sitemap and llms.txt update automatically." },
+    sections: [
+      {
+        kind: "callout",
+        title: "Content can't keep up with modern search.",
+        body: "Teams can't produce the volume search demands — and one-off pages miss the structured signals AI engines need to cite you. The Page Engine makes both effortless, without sacrificing accuracy.",
+      },
+      {
+        kind: "pipeline",
+        title: "One continuous pipeline",
+        subtitle: "Every stage runs grounded in your Brand Memory — not a generic prompt.",
+        steps: ["Research", "Blueprint", "Draft", "Review", "Publish"],
+      },
+      {
+        kind: "split",
+        eyebrow: "Built for the answer",
+        title: "Every page type, done right.",
+        body: "Comparisons, guides, landing pages, and FAQs each get the structure, schema, and depth their intent demands — not a single flattened template.",
+        bullets: [
+          "Per-page-type generation (guide, comparison, landing, FAQ)",
+          "JSON-LD + FAQ schema on every page",
+          "Answer-shaped sections engineered to be cited",
+          "Keyword-coverage review before you ship",
+          "Version history and one-click rollback",
+        ],
+      },
+      { kind: "demo", tab: "pages", title: "Research → review → publish, in one place" },
+      {
+        kind: "split",
+        flip: true,
+        eyebrow: "Publish anywhere",
+        title: "It ships to your real site.",
+        body: "One click pushes the page to your CMS — or a managed subdirectory if you don't have one — and updates the machine-readable surface AI crawlers rely on.",
+        bullets: [
+          "WordPress, Webflow & Shopify adapters",
+          "Managed subdirectory — no developer needed",
+          "Sitemap.xml updated automatically",
+          "llms.txt entry so AI engines can find it",
+          "Native-theme rendering in your brand",
+        ],
+      },
+      {
+        kind: "checklist",
+        eyebrow: "Capabilities",
+        title: "An engine, not a generator.",
+        items: [
+          "Per-page-type generation",
+          "Structured data + FAQ schema",
+          "Keyword-coverage review",
+          "Version history & rollback",
+          "One-click multi-CMS publish",
+          "Auto sitemap + llms.txt",
+        ],
+      },
     ],
-    capabilities: [
-      "Per-page-type generation",
-      "Structured data + FAQ schema",
-      "Keyword-coverage review",
-      "Version history & rollback",
-      "One-click multi-CMS publish",
-      "Auto sitemap + llms.txt",
-    ],
-    demoTab: "pages",
     related: ["platform:brand-memory", "platform:ai-feed"],
   },
   {
@@ -117,25 +174,50 @@ export const PLATFORM: FeaturePageData[] = [
     metaTitle: "Leads Dashboard — score & route inbound leads | GEOSEO",
     metaDescription:
       "Capture visitors from every page, filter spam, score by fit and intent with explainable reasons, route by rules, and follow up with AI-drafted emails. CRM sync included.",
-    problem: {
-      title: "Traffic isn't pipeline.",
-      body: "Most analytics show you numbers, not the named, qualified people ready to talk. The Leads dashboard turns page visitors into a prioritized, actionable inbox.",
-    },
-    steps: [
-      { title: "Capture", body: "Lead forms on every published page, tied to the visitor's journey." },
-      { title: "Score", body: "Fit, intent, and engagement combine into an explainable score — you see why." },
-      { title: "Route", body: "Rules assign each lead to the right owner automatically." },
-      { title: "Follow up", body: "AI-drafted, brand-grounded follow-ups; sync qualified leads to your CRM." },
+    sections: [
+      {
+        kind: "callout",
+        title: "Traffic isn't pipeline.",
+        body: "Most analytics show you numbers, not the named, qualified people ready to talk. The Leads dashboard turns page visitors into a prioritized, actionable inbox — with the reasoning attached.",
+      },
+      {
+        kind: "split",
+        eyebrow: "Explainable scoring",
+        title: "Know who's worth your time — and why.",
+        body: "Every lead gets a transparent score from three signals, so your team trusts it instead of second-guessing it.",
+        bullets: [
+          "Fit — how well they match your ideal customer",
+          "Intent — what their behavior signals",
+          "Engagement — how deeply they've explored",
+          "Spam risk — filtered out automatically",
+          "A plain-English 'why this score' for every lead",
+        ],
+      },
+      {
+        kind: "steps",
+        title: "From visitor to conversation",
+        items: [
+          { title: "Capture", body: "Lead forms on every published page, tied to the visitor's full journey." },
+          { title: "Score", body: "Fit, intent, and engagement combine into an explainable score." },
+          { title: "Route", body: "Rules assign each lead to the right owner automatically." },
+          { title: "Follow up", body: "AI-drafted, brand-grounded follow-ups; sync qualified leads to your CRM." },
+        ],
+      },
+      { kind: "demo", tab: "leads", title: "A prioritized inbox, not a spreadsheet" },
+      {
+        kind: "checklist",
+        eyebrow: "Capabilities",
+        title: "Turn pages into pipeline.",
+        items: [
+          "Visitor journey tracking",
+          "Explainable lead scoring",
+          "Automatic spam filtering",
+          "Routing rules & assignment",
+          "AI follow-up drafts",
+          "CRM sync",
+        ],
+      },
     ],
-    capabilities: [
-      "Visitor journey tracking",
-      "Explainable lead scoring",
-      "Automatic spam filtering",
-      "Routing rules & assignment",
-      "AI follow-up drafts",
-      "CRM sync",
-    ],
-    demoTab: "leads",
     related: ["solutions:lead-conversion", "platform:analytics"],
   },
   {
@@ -151,25 +233,50 @@ export const PLATFORM: FeaturePageData[] = [
     metaTitle: "Analytics — AI citations + SEO performance | GEOSEO",
     metaDescription:
       "Track AI-engine citations, search rankings, AI-bot crawls, and page-level ROI with lead attribution — the visibility Google Analytics can't show you.",
-    problem: {
-      title: "AI visibility is invisible in your analytics.",
-      body: "You can't improve what you can't see being cited. GEOSEO surfaces AI-engine citations and bot activity alongside classic SEO performance.",
-    },
-    steps: [
-      { title: "Connect", body: "Link Search Console and the page tracker — honest 'connect a source' states until you do." },
-      { title: "Track", body: "Ranks, impressions, clicks, and AI-bot crawls (GPTBot, PerplexityBot, and more)." },
-      { title: "Attribute", body: "Tie each page to the leads and pipeline it produces." },
-      { title: "Act", body: "See the highest-leverage fix and send it to the Page Engine." },
+    sections: [
+      {
+        kind: "callout",
+        title: "AI visibility is invisible in your analytics.",
+        body: "You can't improve what you can't see being cited. GEOSEO surfaces AI-engine citations and bot activity alongside classic SEO performance — and ties it all to pipeline.",
+      },
+      {
+        kind: "split",
+        eyebrow: "Finally measurable",
+        title: "The metrics the AI era added.",
+        body: "Classic analytics stops at the click. GEOSEO tracks the layer above it — who's citing you, which bots are reading you, and what it's worth.",
+        bullets: [
+          "AI-engine citations across ChatGPT, Perplexity & more",
+          "AI-bot crawls (GPTBot, PerplexityBot, Google-Extended)",
+          "Search ranks, impressions & clicks",
+          "Page-level ROI with lead attribution",
+          "Honest 'connect a source' states — never fake numbers",
+        ],
+      },
+      { kind: "demo", tab: "discover", title: "One view, from crawl to closed lead" },
+      {
+        kind: "steps",
+        title: "How measurement works",
+        items: [
+          { title: "Connect", body: "Link Search Console and the page tracker — clear 'connect a source' states until you do." },
+          { title: "Track", body: "Ranks, impressions, clicks, and AI-bot crawls, updated continuously." },
+          { title: "Attribute", body: "Tie each page to the leads and pipeline it produces." },
+          { title: "Act", body: "See the highest-leverage fix and send it straight to the Page Engine." },
+        ],
+      },
+      {
+        kind: "checklist",
+        eyebrow: "Capabilities",
+        title: "Measurement you can act on.",
+        items: [
+          "AI-citation tracking",
+          "Rank & impression trends",
+          "AI-bot crawl analytics",
+          "Page-level ROI",
+          "Lead attribution",
+          "Honest connect-your-data states",
+        ],
+      },
     ],
-    capabilities: [
-      "AI-citation tracking",
-      "Rank & impression trends",
-      "AI-bot crawl analytics",
-      "Page-level ROI",
-      "Lead attribution",
-      "Honest connect-your-data states",
-    ],
-    demoTab: "discover",
     related: ["platform:ai-feed", "platform:leads"],
   },
   {
@@ -185,25 +292,57 @@ export const PLATFORM: FeaturePageData[] = [
     metaTitle: "AI Feed — make your site readable to AI engines | GEOSEO",
     metaDescription:
       "The AI Feed publishes fast, structured pages with JSON-LD and llms.txt so AI crawlers can read and cite you — plus bot-hit tracking to prove it's working.",
-    problem: {
-      title: "AI crawlers can't read a JS-heavy site.",
-      body: "If GPTBot and PerplexityBot can't parse your pages cleanly, they won't cite you. The AI Feed gives them a structured surface built for exactly this.",
-    },
-    steps: [
-      { title: "Publish", body: "Pages land on a fast, structured public feed rendered in your brand theme." },
-      { title: "Expose", body: "An llms.txt index and sitemap make every page discoverable to AI crawlers." },
-      { title: "Get crawled", body: "We classify and track AI-bot hits so you can see who's reading you." },
-      { title: "Get cited", body: "Clean structure + answer-shaped content is what earns the citation." },
+    sections: [
+      {
+        kind: "callout",
+        title: "AI crawlers can't read a JS-heavy site.",
+        body: "If GPTBot and PerplexityBot can't parse your pages cleanly, they won't cite you. The AI Feed gives them a structured surface built for exactly this — fast, semantic, and discoverable.",
+      },
+      {
+        kind: "pipeline",
+        title: "From published to cited",
+        steps: ["Publish", "Expose via llms.txt", "Get crawled", "Get cited"],
+      },
+      {
+        kind: "split",
+        eyebrow: "Machine-readable by design",
+        title: "Built for machines to read — and humans to trust.",
+        body: "Every page ships fast and structured, so an answer engine can extract your facts without guesswork.",
+        bullets: [
+          "JSON-LD structured data on every page",
+          "An llms.txt index for AI crawlers",
+          "Canonical URLs and clean semantics",
+          "Answer-shaped content, not walls of text",
+          "Rendered in your native brand theme",
+        ],
+      },
+      {
+        kind: "split",
+        flip: true,
+        eyebrow: "Proof it's working",
+        title: "See which bots are reading you.",
+        body: "We classify and track AI-bot hits, so 'are we discoverable?' stops being a guess.",
+        bullets: [
+          "GPTBot, PerplexityBot, ClaudeBot & Google-Extended detection",
+          "Per-bot crawl activity over time",
+          "Tied back to the pages they read",
+          "No-ops on human traffic — bots only",
+        ],
+      },
+      {
+        kind: "checklist",
+        eyebrow: "Capabilities",
+        title: "The surface AI engines prefer.",
+        items: [
+          "Fast, structured public pages",
+          "JSON-LD on every page",
+          "llms.txt for AI crawlers",
+          "AI-bot hit tracking",
+          "Canonical + schema",
+          "Native-theme rendering",
+        ],
+      },
     ],
-    capabilities: [
-      "Fast, structured public pages",
-      "JSON-LD on every page",
-      "llms.txt for AI crawlers",
-      "AI-bot hit tracking",
-      "Canonical + schema",
-      "Native-theme rendering",
-    ],
-    demoTab: "pages",
     related: ["platform:page-engine", "platform:analytics"],
   },
   {
@@ -219,25 +358,49 @@ export const PLATFORM: FeaturePageData[] = [
     metaTitle: "Content & Authority — backlinks + refreshes on autopilot | GEOSEO",
     metaDescription:
       "Discover backlink opportunities, analyze competitors, draft outreach, and auto-refresh aging pages — the continuous SEO work that compounds domain authority.",
-    problem: {
-      title: "SEO isn't a one-time project.",
-      body: "Rankings decay, competitors move, and manual upkeep doesn't scale. GEOSEO runs the compounding authority work continuously, in the background.",
-    },
-    steps: [
-      { title: "Audit", body: "Baseline your authority, content health, and competitor gaps." },
-      { title: "Discover", body: "Surface backlink prospects and pages due for a refresh." },
-      { title: "Outreach", body: "AI-drafted, brand-grounded outreach for link opportunities." },
-      { title: "Refresh", body: "Auto re-draft aging pages so they keep ranking." },
+    sections: [
+      {
+        kind: "callout",
+        title: "SEO isn't a one-time project.",
+        body: "Rankings decay, competitors move, and manual upkeep doesn't scale. GEOSEO runs the compounding authority work continuously, in the background — so your gains hold and grow.",
+      },
+      {
+        kind: "steps",
+        title: "The authority flywheel",
+        items: [
+          { title: "Audit", body: "Baseline your authority, content health, and the gaps competitors leave open." },
+          { title: "Discover", body: "Surface backlink prospects and the pages most due for a refresh." },
+          { title: "Outreach", body: "AI-drafted, brand-grounded outreach for every link opportunity." },
+          { title: "Refresh", body: "Auto re-draft aging pages so they keep their rank instead of slipping." },
+        ],
+      },
+      {
+        kind: "split",
+        eyebrow: "Compounding, not one-off",
+        title: "The work that pays off for years.",
+        body: "Authority is the moat AI engines weigh most heavily. GEOSEO does the unglamorous, compounding work on a schedule.",
+        bullets: [
+          "Backlink opportunity discovery",
+          "Competitor gap analysis",
+          "Brand-grounded outreach drafts",
+          "Content-refresh recommendations",
+          "Works on any CMS — plugs into your stack",
+        ],
+      },
+      {
+        kind: "checklist",
+        eyebrow: "Capabilities",
+        title: "Continuous SEO, handled.",
+        items: [
+          "Backlink opportunity discovery",
+          "Competitor intelligence",
+          "Outreach drafting",
+          "Content-refresh recommendations",
+          "Authority scoring",
+          "Works on any CMS",
+        ],
+      },
     ],
-    capabilities: [
-      "Backlink opportunity discovery",
-      "Competitor intelligence",
-      "Outreach drafting",
-      "Content-refresh recommendations",
-      "Authority scoring",
-      "Works on any CMS",
-    ],
-    demoTab: "discover",
     related: ["platform:analytics", "solutions:ai-search"],
   },
 ];
@@ -256,23 +419,49 @@ export const SOLUTIONS: FeaturePageData[] = [
     metaTitle: "AI Search Agent — get cited & convert in AI search | GEOSEO",
     metaDescription:
       "Win the answer in ChatGPT, Perplexity, and AI Overviews: Brand Memory grounding, cited-ready pages, AI-citation tracking, and built-in lead capture.",
-    problem: {
-      title: "Your buyers ask AI before they search.",
-      body: "AI answers collapse the results page into one cited source. If you're not that source, you're invisible — no matter how good your product is.",
-    },
-    steps: [
-      { title: "Build Brand Memory", body: "Ground the engine in your real business so answers are accurate." },
-      { title: "Generate cited-ready pages", body: "Structured, answer-shaped content engineered to be the source." },
-      { title: "Get crawled & cited", body: "Publish to the AI Feed and track citations across engines." },
-      { title: "Capture the leads", body: "Convert the visibility into scored, routed pipeline." },
-    ],
-    capabilities: [
-      "GEO-optimized pages",
-      "AI-citation tracking",
-      "Answer-shaped content",
-      "Multi-engine coverage",
-      "Built-in lead capture",
-      "Honest measurement",
+    sections: [
+      {
+        kind: "callout",
+        title: "Your buyers ask AI before they search.",
+        body: "AI answers collapse the results page into one cited source. If you're not that source, you're invisible — no matter how good your product is. This solution makes you the answer.",
+      },
+      {
+        kind: "steps",
+        title: "How you win the answer",
+        items: [
+          { title: "Build Brand Memory", body: "Ground the engine in your real business so answers are accurate." },
+          { title: "Generate cited-ready pages", body: "Structured, answer-shaped content engineered to be the source." },
+          { title: "Get crawled & cited", body: "Publish to the AI Feed and track citations across engines." },
+          { title: "Capture the leads", body: "Convert the visibility into scored, routed pipeline." },
+        ],
+      },
+      {
+        kind: "compare",
+        title: "GEO vs. the old playbook",
+        subtitle: "Traditional SEO optimizes for a results page buyers increasingly skip.",
+        columns: ["GEOSEO (GEO)", "Traditional SEO"],
+        highlight: 0,
+        rows: [
+          { label: "Goal", cells: ["Be the cited answer", "Rank in the blue links"] },
+          { label: "Surface", cells: ["AI answers + search", "Search results only"] },
+          { label: "Content", cells: ["Answer-shaped + schema", "Keyword-shaped"] },
+          { label: "Grounding", cells: ["Your Brand Memory", "Whatever you write"] },
+          { label: "Outcome", cells: ["Cited + captured leads", "Clicks, maybe"] },
+        ],
+      },
+      {
+        kind: "checklist",
+        eyebrow: "What's included",
+        title: "Everything to win — and measure — the answer.",
+        items: [
+          "GEO-optimized pages",
+          "AI-citation tracking",
+          "Answer-shaped content",
+          "Multi-engine coverage",
+          "Built-in lead capture",
+          "Honest measurement",
+        ],
+      },
     ],
     related: ["platform:brand-memory", "platform:page-engine", "solutions:lead-conversion"],
   },
@@ -289,23 +478,48 @@ export const SOLUTIONS: FeaturePageData[] = [
     metaTitle: "Lead Conversion — capture, score & follow up | GEOSEO",
     metaDescription:
       "Convert page visitors into pipeline: journey tracking, explainable scoring, routing rules, AI-drafted follow-ups, a conversion audit, and CRM sync.",
-    problem: {
-      title: "Most visitors leave without a trace.",
-      body: "Without capture, scoring, and fast follow-up, hard-won traffic never becomes pipeline. Lead Conversion closes that gap end-to-end.",
-    },
-    steps: [
-      { title: "Capture", body: "Forms on every page, tied to each visitor's journey." },
-      { title: "Score", body: "Explainable fit + intent scoring ranks who's worth your time." },
-      { title: "Route", body: "Rules send each lead to the right owner instantly." },
-      { title: "Follow up", body: "AI-drafted, on-brand follow-ups; sync to your CRM." },
-    ],
-    capabilities: [
-      "Lead capture forms",
-      "Explainable scoring",
-      "Routing & assignment",
-      "AI follow-up drafts",
-      "Conversion audit",
-      "CRM sync",
+    sections: [
+      {
+        kind: "callout",
+        title: "Most visitors leave without a trace.",
+        body: "Without capture, scoring, and fast follow-up, hard-won traffic never becomes pipeline. Lead Conversion closes that gap end-to-end — every visitor accounted for.",
+      },
+      {
+        kind: "steps",
+        title: "From click to conversation",
+        items: [
+          { title: "Capture", body: "Forms on every page, tied to each visitor's journey." },
+          { title: "Score", body: "Explainable fit + intent scoring ranks who's worth your time." },
+          { title: "Route", body: "Rules send each lead to the right owner instantly." },
+          { title: "Follow up", body: "AI-drafted, on-brand follow-ups; sync to your CRM." },
+        ],
+      },
+      {
+        kind: "split",
+        eyebrow: "No lead left behind",
+        title: "Built to convert, not just collect.",
+        body: "Capturing an email is the easy part. Lead Conversion does the work that actually turns it into a meeting.",
+        bullets: [
+          "Explainable fit + intent scoring",
+          "Automatic routing & owner assignment",
+          "AI-drafted, brand-grounded follow-ups",
+          "A conversion audit that finds the friction",
+          "CRM sync to your existing pipeline",
+        ],
+      },
+      {
+        kind: "checklist",
+        eyebrow: "What's included",
+        title: "The full conversion loop.",
+        items: [
+          "Lead capture forms",
+          "Explainable scoring",
+          "Routing & assignment",
+          "AI follow-up drafts",
+          "Conversion audit",
+          "CRM sync",
+        ],
+      },
     ],
     related: ["platform:leads", "solutions:ai-search"],
   },
@@ -323,23 +537,36 @@ export const SOLUTIONS: FeaturePageData[] = [
     metaTitle: "Paid Boost (coming soon) — qualified leads from paid | GEOSEO",
     metaDescription:
       "Paid Boost is on the GEOSEO roadmap: bring Brand Memory grounding and the lead engine to paid campaigns. Join the waitlist for early access.",
-    problem: {
-      title: "Paid traffic deserves the same engine.",
-      body: "Ads send expensive clicks to pages that aren't grounded or built to convert. Paid Boost will bring GEOSEO's grounding and lead engine to paid — without a separate tool.",
-    },
-    steps: [
-      { title: "Ground", body: "Reuse Brand Memory so paid landing pages stay accurate and on-brand." },
-      { title: "Generate", body: "Spin up campaign-specific, conversion-optimized landing pages." },
-      { title: "Capture", body: "The same scoring, routing, and follow-up as your organic leads." },
-      { title: "Measure", body: "One view of paid + organic pipeline." },
-    ],
-    capabilities: [
-      "Campaign landing pages",
-      "Brand-grounded copy",
-      "Shared lead scoring",
-      "Unified paid + organic view",
-      "Conversion-first templates",
-      "On the roadmap",
+    sections: [
+      {
+        kind: "callout",
+        eyebrow: "On the roadmap",
+        title: "Paid traffic deserves the same engine.",
+        body: "Ads send expensive clicks to pages that aren't grounded or built to convert. Paid Boost will bring GEOSEO's grounding and lead engine to paid — without a separate tool. It's in active development.",
+      },
+      {
+        kind: "split",
+        eyebrow: "What it'll do",
+        title: "Your organic engine, pointed at paid.",
+        body: "The same Brand Memory, the same scoring, the same follow-up — applied to campaign landing pages so paid and organic finally share one system.",
+        bullets: [
+          "Campaign-specific, conversion-first landing pages",
+          "Brand-grounded ad and page copy",
+          "The same explainable lead scoring",
+          "One unified paid + organic pipeline view",
+          "No separate tool to learn",
+        ],
+      },
+      {
+        kind: "steps",
+        title: "The planned flow",
+        items: [
+          { title: "Ground", body: "Reuse Brand Memory so paid landing pages stay accurate and on-brand." },
+          { title: "Generate", body: "Spin up campaign-specific, conversion-optimized landing pages." },
+          { title: "Capture", body: "The same scoring, routing, and follow-up as your organic leads." },
+          { title: "Measure", body: "One view of paid + organic pipeline together." },
+        ],
+      },
     ],
     related: ["solutions:lead-conversion", "platform:leads"],
   },

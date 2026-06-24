@@ -7,7 +7,8 @@ import {
   Problem,
   HowItWorks,
   ProductSection,
-  FeatureGrid,
+  PlatformGrid,
+  SolutionsRow,
   MetricsBand,
   Comparison,
   ProofBand,
@@ -97,9 +98,10 @@ export default function MarketingHome() {
       <Hero />
       <EnginesStrip />
       <Problem />
+      <PlatformGrid />
       <HowItWorks />
       <ProductSection />
-      <FeatureGrid />
+      <SolutionsRow />
       <MetricsBand />
       <Comparison />
       <ProofBand />
