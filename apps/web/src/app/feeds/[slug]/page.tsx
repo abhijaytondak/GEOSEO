@@ -9,6 +9,9 @@ import { LeadForm } from "@/components/feeds/lead-form";
 import { FeedTracker } from "@/components/feeds/feed-tracker";
 import { BrandHero } from "@/components/feeds/brand-hero";
 import { jsonLdSafe } from "@/lib/utils";
+
+/** Demo deployments serve sample feed content — noindex it so crawlers never see a demo identity. */
+const DEMO_MODE = process.env.NEXT_PUBLIC_GEOSEO_MODE === "demo";
 import { Infographic } from "@/components/feeds/infographic";
 import { RichText } from "@/components/feeds/rich-text";
 import { themeStyle } from "@/lib/feed-theme";
@@ -30,6 +33,9 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
     title: page.metaTitle,
     description: page.metaDescription,
     alternates: { canonical },
+    // In demo mode the feed serves sample/demo content — keep it out of search indexes so
+    // a demo deployment never publishes a demo identity to crawlers (audit critical #1).
+    ...(DEMO_MODE ? { robots: { index: false, follow: false } } : {}),
     openGraph: {
       title: page.metaTitle,
       description: page.metaDescription,
