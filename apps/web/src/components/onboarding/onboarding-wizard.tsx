@@ -108,12 +108,13 @@ export function OnboardingWizard() {
     trackOnboarding({ event: "onboarding_step_viewed", step: step + 1, device });
   }, [step]);
 
-  // Auto-populate seed topics from brand topics when entering step 3.
-  useEffect(() => {
-    if (step === 3 && !seeds.trim() && brand.topics.trim()) {
-      setSeeds(brand.topics);
-    }
-  }, [step]);
+  // Auto-populate seed topics from brand topics when entering step 3 —
+  // adjust-during-render instead of a setState-in-effect.
+  const [seedStepSeen, setSeedStepSeen] = useState(step);
+  if (step !== seedStepSeen) {
+    setSeedStepSeen(step);
+    if (step === 3 && !seeds.trim() && brand.topics.trim()) setSeeds(brand.topics);
+  }
 
   const normalized = normalizeUrl(url);
   const domain = (normalized ? new URL(normalized).hostname : "") || "yourcompany.com";
@@ -809,7 +810,7 @@ export function OnboardingWizard() {
             </ul>
 
             <div className="mt-7 grid grid-cols-1 gap-2.5 sm:grid-cols-2">
-              <Button className="h-12 rounded-full" onClick={() => router.push("/")}>
+              <Button className="h-12 rounded-full" onClick={() => router.push("/home")}>
                 <Gauge className="size-4" /> Open dashboard <ArrowRight className="size-4" />
               </Button>
               <Button variant="outline" className="h-12 rounded-full" onClick={() => router.push("/pages")}>

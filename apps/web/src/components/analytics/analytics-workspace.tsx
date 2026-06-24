@@ -82,11 +82,16 @@ export function AnalyticsWorkspace({
   type RoiTotals = { totalLeads: number; totalWon: number; totalImpressions: number; totalClicks: number; pagesWithLeads: number };
   const [roiRows, setRoiRows] = useState<RoiRow[]>([]);
   const [roiTotals, setRoiTotals] = useState<RoiTotals | null>(null);
-  const [roiLoading, setRoiLoading] = useState(false);
+  const [roiError, setRoiError] = useState(false);
+  // Derived (not effect state) so there's no synchronous setState in the effect body.
+  const roiLoading = tab === "roi" && roiTotals === null && !roiError;
   useEffect(() => {
     if (tab !== "roi" || roiTotals) return;
-    setRoiLoading(true);
-    api.getROI().then((d) => { setRoiRows(d.rows); setRoiTotals(d.totals); }).finally(() => setRoiLoading(false));
+    let cancelled = false;
+    api.getROI()
+      .then((d) => { if (!cancelled) { setRoiRows(d.rows); setRoiTotals(d.totals); } })
+      .catch(() => { if (!cancelled) setRoiError(true); });
+    return () => { cancelled = true; };
   }, [tab, roiTotals]);
 
   const m = useMemo(() => {
