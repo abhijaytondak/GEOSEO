@@ -44,9 +44,9 @@ export function OutreachDrawer({ prospect, brand, open, onOpenChange, onSent }: 
   useEffect(() => {
     if (!prospect || !open) return;
     let cancelled = false;
-    setSendState("idle");
     api.getOutreachTemplates(prospect.id).then((t) => {
       if (cancelled) return;
+      setSendState("idle");
       setTemplates(t);
       setDrafts(Object.fromEntries(t.map((v) => [v.id, { subject: v.subject, body: v.body }])));
       setActive(t[0]?.id ?? "");
@@ -103,7 +103,6 @@ export function OutreachDrawer({ prospect, brand, open, onOpenChange, onSent }: 
   }
 
   const current = drafts[active];
-  const activeTemplate = templates.find((t) => t.id === active);
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>

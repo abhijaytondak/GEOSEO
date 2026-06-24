@@ -192,7 +192,7 @@ function Palette({ onClose }: { onClose: () => void }) {
         keywords: "authority scan check",
         run: async () => {
           await startJob("audit", "Running a full authority + content audit.");
-          router.push("/");
+          router.push("/home");
         },
       },
       {

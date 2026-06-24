@@ -47,7 +47,7 @@ export interface NavSection {
 export const navSections: NavSection[] = [
   {
     items: [
-      { label: "Home", href: "/", icon: Home },
+      { label: "Home", href: "/home", icon: Home },
       { label: "Pipeline", href: "/pipeline", icon: Workflow },
       { label: "Pages", href: "/pages", icon: Files, keywords: "generated pages create review publish editor blueprint" },
       { label: "Authority", href: "/authority", icon: ShieldCheck },
@@ -72,7 +72,7 @@ export const navSections: NavSection[] = [
  * routes are added.
  */
 export const commandDestinations: NavItem[] = [
-  { label: "Home", href: "/", icon: Home, keywords: "command center growth hq authority overview" },
+  { label: "Home", href: "/home", icon: Home, keywords: "command center growth hq authority overview dashboard" },
   { label: "Pipeline", href: "/pipeline", icon: Workflow, keywords: "page engine workflow discover plan create review publish refresh" },
   { label: "Authority", href: "/authority", icon: ShieldCheck, keywords: "backlinks competitors citations trust signals" },
   { label: "Leads", href: "/leads", icon: Inbox, keywords: "demand inbox qualified conversion crm" },
