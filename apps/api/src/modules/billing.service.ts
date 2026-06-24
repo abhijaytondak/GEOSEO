@@ -65,12 +65,15 @@ export const PLAN_LIMITS = {
   Scale:  { pages: 999, keywords: 999, teamMembers: 999, cmsIntegrations: 999 },
 } as const;
 
+/** Map a Stripe subscription's PlanId (lowercase) to the Title-Case PLAN_LIMITS key. */
+const PLAN_TIER: Record<PlanId, keyof typeof PLAN_LIMITS> = { launch: "Launch", grow: "Grow", scale: "Scale" };
+
 export const PLANS: PlanEntitlements[] = [
   {
     id: "launch",
     label: "Launch",
     priceMonthlyUsd: 0,
-    pagesPerMonth: 5,
+    pagesPerMonth: 10,
     leadsPerMonth: 50,
     teamSeats: 1,
     features: ["Managed /feeds publishing", "Basic analytics", "1 workspace"],
@@ -155,8 +158,25 @@ export class BillingStore {
   }
 
   /**
-   * Check whether a tenant is within their plan limit for the given resource.
-   * Reads the billing plan from WorkspaceSettings (Title-Case keys).
+   * The authoritative plan tier for limit enforcement. When billing is configured, this is
+   * the real Stripe subscription's plan (only an active/trialing subscription grants its
+   * tier; anything else → free Launch), so a stale or manually-edited WorkspaceSettings
+   * value can neither grant nor bypass entitlements. When billing is unconfigured
+   * (demo/local), fall back to the settings plan.
+   */
+  private async activePlanTier(tenantId: string): Promise<keyof typeof PLAN_LIMITS> {
+    if (this.configured) {
+      const sub = (await this.state(tenantId)).subscription;
+      if (sub.status === "active" || sub.status === "trialing") return PLAN_TIER[sub.plan];
+      return "Launch";
+    }
+    return this.settingsStore.get().billing.plan ?? "Launch";
+  }
+
+  /**
+   * Check whether a tenant is within their plan limit for the given resource. The plan is
+   * the real Stripe subscription when billing is configured (see `activePlanTier`), and
+   * `current` is the count for the relevant window (per-calendar-month for pages/keywords).
    * Returns `{ allowed, limit, plan }` — never throws.
    */
   async checkLimit(
@@ -164,8 +184,7 @@ export class BillingStore {
     resource: keyof typeof PLAN_LIMITS.Launch,
     current: number,
   ): Promise<{ allowed: boolean; limit: number; plan: string }> {
-    const settings = this.settingsStore.get();
-    const plan = settings.billing.plan; // "Launch" | "Grow" | "Scale"
+    const plan = await this.activePlanTier(tenantId);
     const limits = PLAN_LIMITS[plan] ?? PLAN_LIMITS.Launch;
     const limit = limits[resource];
     return { allowed: current < limit, limit, plan };
