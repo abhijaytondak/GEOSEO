@@ -168,6 +168,12 @@ export class PagesController {
     return { pages: this.store.listPages(resolveTenantId(req)) };
   }
 
+  /** Pages created in the current calendar month (UTC) — the billing window for the page limit. */
+  private monthlyPageCount(tenantId: string): number {
+    const thisMonth = new Date().toISOString().slice(0, 7); // "YYYY-MM"
+    return this.store.listPages(tenantId).filter((p) => (p.createdAt ?? "").slice(0, 7) === thisMonth).length;
+  }
+
   @Post("generate")
   async generate(
     @Req() req: TenantRequest,
@@ -185,12 +191,7 @@ export class PagesController {
   ) {
     if (!body?.opportunityId) throw new BadRequestException("opportunityId is required");
     const tenantId = resolveTenantId(req);
-    // Per-calendar-month limit: count only pages created in the current month (UTC).
-    const thisMonth = new Date().toISOString().slice(0, 7); // "YYYY-MM"
-    const monthPageCount = this.store
-      .listPages(tenantId)
-      .filter((p) => (p.createdAt ?? "").slice(0, 7) === thisMonth).length;
-    const { allowed, limit, plan } = await this.billing.checkLimit(tenantId, "pages", monthPageCount);
+    const { allowed, limit, plan } = await this.billing.checkLimit(tenantId, "pages", this.monthlyPageCount(tenantId));
     if (!allowed) {
       throw new ForbiddenException(`Monthly page limit reached (${limit} pages/month on ${plan} plan). Upgrade or wait until next month to generate more.`);
     }
@@ -205,10 +206,27 @@ export class PagesController {
 
   /** Growth Plan "Initiate": draft N opportunities in the background, return a job handle. */
   @Post("generate-batch")
-  generateBatch(@Req() req: TenantRequest, @Body() body: { opportunityIds?: string[] }) {
+  async generateBatch(@Req() req: TenantRequest, @Body() body: { opportunityIds?: string[] }) {
     const ids = Array.isArray(body?.opportunityIds) ? body.opportunityIds.filter((x) => typeof x === "string") : [];
     if (!ids.length) throw new BadRequestException("opportunityIds[] is required");
-    return { job: this.store.startBatchGeneration(resolveTenantId(req), ids) };
+    const tenantId = resolveTenantId(req);
+    // Same monthly page limit as single-page generation. Reject when already at the cap,
+    // otherwise cap the batch to the remaining quota so it can't exceed the plan limit.
+    const used = this.monthlyPageCount(tenantId);
+    const { allowed, limit, plan } = await this.billing.checkLimit(tenantId, "pages", used);
+    if (!allowed) {
+      throw new ForbiddenException(`Monthly page limit reached (${limit} pages/month on ${plan} plan). Upgrade or wait until next month to generate more.`);
+    }
+    const remaining = Math.max(0, limit - used);
+    const acceptedIds = ids.slice(0, remaining);
+    const job = this.store.startBatchGeneration(tenantId, acceptedIds);
+    return {
+      job,
+      // Tell the client when the batch was trimmed to fit the remaining monthly quota.
+      ...(acceptedIds.length < ids.length
+        ? { capped: { requested: ids.length, accepted: acceptedIds.length, limit, plan } }
+        : {}),
+    };
   }
 
   /** Poll progress for an Initiate batch. */
