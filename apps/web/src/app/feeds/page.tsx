@@ -5,6 +5,7 @@ import type { GeneratedPage, SiteThemeProfile } from "@geoseo/types";
 import { pageEngineApi } from "@/lib/page-engine-client";
 import { api } from "@/lib/api-client";
 import { themeStyle } from "@/lib/feed-theme";
+import { jsonLdSafe } from "@/lib/utils";
 
 /**
  * AI Feed — the dedicated, AI-optimized content section. A browsable library of
@@ -74,7 +75,7 @@ export default async function AiFeedIndex() {
 
   return (
     <div className="min-h-dvh bg-background text-foreground" style={themeStyle(theme)}>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdSafe(JSON.stringify(schema)) }} />
 
       <header className="border-b border-border bg-card/80 backdrop-blur">
         <div className="mx-auto flex h-14 max-w-5xl items-center gap-2.5 px-6">

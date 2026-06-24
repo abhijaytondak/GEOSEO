@@ -58,3 +58,16 @@ export function validateWebsite(raw: string): WebsiteValidation {
   if (!h.includes(".")) return { ok: false, reason: "invalid_format" }
   return { ok: true, url: `${u.protocol}//${h}${u.port ? `:${u.port}` : ""}`, domain: h }
 }
+
+/**
+ * Sanitize a JSON-LD string for embedding in a `<script type="application/ld+json">`
+ * via dangerouslySetInnerHTML. Escapes `<`, `>`, `&` to their JSON unicode forms so a
+ * `</script>` inside a user-editable field (title/FAQ) can't break out and inject markup.
+ * Output is still valid JSON. (Stored-XSS defense — audit 2026-06-24.)
+ */
+export function jsonLdSafe(json: string): string {
+  return String(json)
+    .replace(/</g, "\\u003c")
+    .replace(/>/g, "\\u003e")
+    .replace(/&/g, "\\u0026")
+}
