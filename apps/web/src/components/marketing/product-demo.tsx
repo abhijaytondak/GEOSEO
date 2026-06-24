@@ -17,8 +17,8 @@ const TABS: { key: TabKey; label: string; icon: LucideIcon }[] = [
  * tab per pipeline stage. Mock data, faithful to the real dashboard's tokens/layout
  * (honest representation, crisp at any resolution, no screenshot bitmaps).
  */
-export function ProductDemo() {
-  const [tab, setTab] = useState<TabKey>("brand");
+export function ProductDemo({ initialTab = "brand" }: { initialTab?: TabKey }) {
+  const [tab, setTab] = useState<TabKey>(initialTab);
 
   return (
     <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-float">
