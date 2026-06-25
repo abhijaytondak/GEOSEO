@@ -15,6 +15,9 @@ import { themeStyle } from "@/lib/feed-theme";
 
 export const dynamic = "force-dynamic";
 
+/** Demo deployments serve sample feed content — noindex so crawlers never see a demo identity. */
+const DEMO = process.env.NEXT_PUBLIC_GEOSEO_MODE === "demo";
+
 type Params = { params: Promise<{ slug: string }> };
 
 export async function generateMetadata({ params }: Params): Promise<Metadata> {
@@ -30,6 +33,7 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
     title: page.metaTitle,
     description: page.metaDescription,
     alternates: { canonical },
+    ...(DEMO ? { robots: { index: false, follow: false } } : {}),
     openGraph: {
       title: page.metaTitle,
       description: page.metaDescription,

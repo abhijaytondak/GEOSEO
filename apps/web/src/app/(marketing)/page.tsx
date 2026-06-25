@@ -3,17 +3,16 @@ import { Reveal } from "@/components/motion/reveal";
 import { cn } from "@/lib/utils";
 import {
   Hero,
-  EnginesStrip,
   Problem,
   HowItWorks,
   ProductSection,
-  PlatformGrid,
   SolutionsRow,
   MetricsBand,
   Comparison,
   ProofBand,
   CtaBand,
 } from "@/components/marketing/sections";
+import { BentoShowcase, BentoPlatform } from "@/components/marketing/bento";
 import { Faq } from "@/components/marketing/faq";
 import { FAQS, SITE_URL, BRAND, TAGLINE } from "@/components/marketing/data";
 
@@ -96,9 +95,9 @@ export default function MarketingHome() {
     <>
       <StructuredData />
       <Hero />
-      <EnginesStrip />
+      <BentoShowcase />
       <Problem />
-      <PlatformGrid />
+      <BentoPlatform />
       <HowItWorks />
       <ProductSection />
       <SolutionsRow />

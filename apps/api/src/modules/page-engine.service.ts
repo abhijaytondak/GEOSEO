@@ -704,6 +704,7 @@ export class PageEngineStore implements OnModuleInit {
     const s = this.st(tenantId);
     const opp = this.getOpportunity(tenantId, opportunityId);
     if (!opp) return undefined;
+    const nowIso = new Date().toISOString();
     this.seq += 1;
     const slug = `/${opp.query.replace(/\s+/g, "-").toLowerCase()}`;
     const ai = content ?? (await draftPageContent(opp.query, opp.recommendedPageType, await this.brandHint(tenantId)));
@@ -758,8 +759,10 @@ export class PageEngineStore implements OnModuleInit {
         { label: "Readability grade 8–10", pass: true },
         { label: "No banned claims", pass: true },
       ],
-      createdAt: this.now,
-      updatedAt: this.now,
+      // Real wall-clock timestamps (not the fixed `this.now`) so the per-calendar-month
+      // billing limit and "created" displays are accurate for runtime-generated pages.
+      createdAt: nowIso,
+      updatedAt: nowIso,
     };
     page.wordCount = countWords(page);
     // Brand hero: attach a theme-aware placeholder synchronously so the page is returned
@@ -1069,6 +1072,13 @@ export class PageEngineStore implements OnModuleInit {
     this.save(tenantId, T.pages, p.id, p);
     this.logAudit(tenantId, "rollback", "page", p.id);
     return p;
+  }
+
+  /** All hydrated tenant ids. Lets background jobs (digest, content-monitor) fan out per
+   *  tenant instead of hardcoding ws-default — derived from already-loaded state, no new
+   *  table. (A real tenant registry on Clerk-org provisioning is the long-term source.) */
+  tenantIds(): string[] {
+    return [...this.tenants.keys()];
   }
 
   /**

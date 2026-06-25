@@ -19,6 +19,10 @@ const RuleSchema = {
   pages: v.optional(v.arrayOf(v.string({ max: 128 }))),
   ownerOnly: v.optional(v.boolean()),
   quietHours: v.optional(v.object()),
+  // The UI submits this for the "webhook" channel; without it here validateBody strips it
+  // and the webhook channel silently no-ops. Destination safety is enforced at send time
+  // (assertSafeUrl + no-redirect) in lead-notification.service.
+  webhookUrl: v.optional(v.string({ max: 2048 })),
 };
 const RulePatchSchema = { ...RuleSchema, name: v.optional(v.string({ min: 1, max: 120 })) };
 
