@@ -130,6 +130,40 @@ export const TOPICS: Topic[] = [
   { slug: "geo-vs-aeo-vs-seo", cluster: "comparisons", title: "GEO vs AEO vs SEO: a clear breakdown", keyword: "geo vs aeo vs seo", intent: "comparison" },
   { slug: "ai-overviews-vs-featured-snippets", cluster: "comparisons", title: "AI Overviews vs featured snippets", keyword: "ai overviews vs featured snippets", intent: "comparison" },
   { slug: "chatgpt-vs-perplexity-for-search", cluster: "comparisons", title: "ChatGPT vs Perplexity for search visibility", keyword: "chatgpt vs perplexity search", intent: "comparison" },
+
+  // ── Batch: advanced tactics + tools (71 → 100) ──────────────────────
+  { slug: "how-to-get-cited-in-ai-answers", cluster: "tactics", title: "How to get cited in AI answers: the complete guide", keyword: "how to get cited in ai answers", intent: "informational" },
+  { slug: "heading-structure-for-seo-and-ai", cluster: "tactics", title: "Heading structure for SEO and AI extraction", keyword: "heading structure seo", intent: "informational" },
+  { slug: "how-to-use-tables-for-ai-extraction", cluster: "tactics", title: "Using tables and lists so AI can extract your data", keyword: "tables lists ai extraction", intent: "informational" },
+  { slug: "image-seo-and-alt-text-for-ai", cluster: "tactics", title: "Image SEO and alt text in the AI era", keyword: "image seo alt text ai", intent: "informational" },
+  { slug: "content-clusters-and-pillar-pages", cluster: "tactics", title: "Content clusters and pillar pages for topical authority", keyword: "content clusters pillar pages", intent: "informational" },
+  { slug: "how-to-optimize-for-google-ai-mode", cluster: "ai-engines", title: "How to optimize for Google AI Mode", keyword: "google ai mode optimization", intent: "informational" },
+  { slug: "multilingual-geo", cluster: "tactics", title: "Multilingual GEO: getting cited across languages", keyword: "multilingual geo", intent: "informational" },
+  { slug: "meta-descriptions-for-ai-search", cluster: "tactics", title: "Do meta descriptions matter for AI search?", keyword: "meta descriptions ai search", intent: "informational" },
+  { slug: "how-to-make-content-quotable", cluster: "tactics", title: "How to make your content quotable by AI", keyword: "quotable content for ai", intent: "informational" },
+  { slug: "best-geo-tools", cluster: "measurement", title: "The best GEO tools in 2026 (and what to look for)", keyword: "best geo tools", intent: "commercial" },
+  { slug: "how-to-audit-your-ai-visibility", cluster: "measurement", title: "How to audit your AI visibility", keyword: "ai visibility audit", intent: "informational" },
+  { slug: "how-to-set-up-ai-citation-monitoring", cluster: "measurement", title: "How to set up AI citation monitoring", keyword: "ai citation monitoring", intent: "informational" },
+  { slug: "robots-txt-for-ai-crawlers", cluster: "tactics", title: "robots.txt for AI crawlers: a configuration guide", keyword: "robots txt ai crawlers", intent: "informational" },
+  { slug: "schema-markup-mistakes", cluster: "tactics", title: "Common schema markup mistakes that cost citations", keyword: "schema markup mistakes", intent: "informational" },
+  { slug: "how-often-to-publish-for-geo", cluster: "tactics", title: "How often should you publish for GEO?", keyword: "how often to publish geo", intent: "informational" },
+
+  // ── Batch: verticals + decisions + strategy (71 → 100) ──────────────
+  { slug: "geo-for-marketplaces", cluster: "use-cases", title: "GEO for marketplaces", keyword: "geo for marketplaces", intent: "commercial" },
+  { slug: "geo-for-d2c-brands", cluster: "use-cases", title: "GEO for D2C brands", keyword: "geo for d2c brands", intent: "commercial" },
+  { slug: "geo-for-professional-services", cluster: "use-cases", title: "GEO for professional services firms", keyword: "geo for professional services", intent: "commercial" },
+  { slug: "geo-for-real-estate", cluster: "use-cases", title: "GEO for real estate", keyword: "geo for real estate", intent: "commercial" },
+  { slug: "geo-for-education", cluster: "use-cases", title: "GEO for education and edtech", keyword: "geo for education edtech", intent: "commercial" },
+  { slug: "geo-for-publishers", cluster: "use-cases", title: "GEO for content publishers and media", keyword: "geo for publishers media", intent: "commercial" },
+  { slug: "geo-for-marketing-teams", cluster: "use-cases", title: "GEO for in-house marketing teams", keyword: "geo for marketing teams", intent: "commercial" },
+  { slug: "geo-for-founders", cluster: "use-cases", title: "GEO for founders doing it themselves", keyword: "geo for founders", intent: "commercial" },
+  { slug: "geo-for-nonprofits", cluster: "use-cases", title: "GEO for nonprofits", keyword: "geo for nonprofits", intent: "commercial" },
+  { slug: "in-house-vs-agency-for-geo", cluster: "comparisons", title: "In-house vs agency for GEO", keyword: "in-house vs agency geo", intent: "comparison" },
+  { slug: "geo-platform-vs-manual", cluster: "comparisons", title: "GEO platform vs doing it manually", keyword: "geo platform vs manual", intent: "comparison" },
+  { slug: "geo-vs-content-marketing", cluster: "comparisons", title: "GEO vs traditional content marketing", keyword: "geo vs content marketing", intent: "comparison" },
+  { slug: "building-a-geo-content-strategy", cluster: "tactics", title: "How to build a GEO content strategy", keyword: "geo content strategy", intent: "informational" },
+  { slug: "how-to-prioritize-geo-topics", cluster: "tactics", title: "How to prioritize which GEO topics to target", keyword: "prioritize geo topics", intent: "informational" },
+  { slug: "geo-content-calendar", cluster: "tactics", title: "Building a GEO content calendar", keyword: "geo content calendar", intent: "informational" },
 ];
 
 /** Resolve a topic by slug. */
