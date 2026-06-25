@@ -1,6 +1,8 @@
 import type { Article } from "./content-types";
 import { BATCH_FUNDAMENTALS } from "./content-fundamentals";
 import { BATCH_TACTICS } from "./content-tactics";
+import { BATCH_ENGINES } from "./content-engines";
+import { BATCH_FOUNDATIONS } from "./content-foundations";
 
 /**
  * Authored resource content. Each entry is a real, substantive article — published only
@@ -370,6 +372,8 @@ export const CONTENT: Record<string, Article> = {
   ...FLAGSHIP,
   ...BATCH_FUNDAMENTALS,
   ...BATCH_TACTICS,
+  ...BATCH_ENGINES,
+  ...BATCH_FOUNDATIONS,
 };
 
 export function getArticle(slug: string): Article | undefined {
