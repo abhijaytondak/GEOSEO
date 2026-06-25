@@ -2,7 +2,6 @@ import Link from "next/link";
 import { ArrowRight, Sparkles, Check, TrendingUp, Bot } from "lucide-react";
 import { Reveal } from "@/components/motion/reveal";
 import { cn } from "@/lib/utils";
-import { AuditForm } from "./audit-form";
 import { ENGINES } from "./data";
 import { PLATFORM, featureHref } from "./platform-data";
 
@@ -65,36 +64,47 @@ function MiniLead() {
   );
 }
 
-/* ----------------------------------------------------------- BENTO HERO */
-export function BentoHero() {
+/* ------------------------------------------------------- BENTO SHOWCASE
+   Sits BELOW the hero — an app-UI card mosaic that makes the product tangible. */
+export function BentoShowcase() {
   return (
-    <section className="relative overflow-hidden bg-background">
-      <div aria-hidden className="bg-aurora pointer-events-none absolute inset-0" />
-      <div aria-hidden className="bg-grid pointer-events-none absolute inset-0 opacity-[0.5] [mask-image:radial-gradient(80%_60%_at_50%_0%,black,transparent)]" />
-      <Glow className="left-1/2 top-[-12%] h-[460px] w-[760px] -translate-x-1/2 bg-brand/15" />
-      <div className="relative mx-auto max-w-6xl px-5 pb-16 pt-28 sm:px-6 sm:pt-32">
-        <div className="grid gap-3.5 lg:grid-cols-3 lg:auto-rows-min">
-          {/* hero cell */}
-          <Reveal className="lg:col-span-2 lg:row-span-2">
-            <Cell className="flex h-full flex-col justify-center p-7 sm:p-9">
-              <Glow className="right-[-10%] top-[-10%] h-56 w-56 bg-brand/10" />
-              <span className="relative inline-flex w-fit items-center gap-2 rounded-full border border-border bg-surface-sunken px-3.5 py-1.5 text-xs font-semibold uppercase tracking-[0.1em] text-brand shadow-xs">
-                <span className="size-1.5 rounded-full bg-brand shadow-[0_0_8px_var(--brand)]" /> Generative Engine Optimization
-              </span>
-              <h1 className={cn(DISPLAY, "relative mt-5 text-4xl leading-[1.04] text-foreground sm:text-5xl md:text-[3.4rem]")}>
-                Be the answer buyers find — in Google <span className={GRAD}>and AI.</span>
-              </h1>
-              <p className="relative mt-4 max-w-lg text-lg leading-relaxed text-muted-foreground">
-                GEOSEO learns your brand, then continuously creates and publishes pages engineered to rank in Google and get cited by ChatGPT, Perplexity, and AI Overviews.
-              </p>
-              <div id="audit" className="relative mt-7 max-w-md scroll-mt-24">
-                <AuditForm />
-              </div>
+    <section className="relative overflow-hidden bg-background py-20 sm:py-28">
+      <Glow className="left-[-6%] top-1/4 h-72 w-72 bg-brand/10" />
+      <Glow className="right-[-6%] bottom-10 h-72 w-72 bg-info/10" />
+      <div className="relative mx-auto max-w-6xl px-5 sm:px-6">
+        <Reveal>
+          <div className="mx-auto max-w-2xl text-center">
+            <span className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-3.5 py-1.5 text-xs font-semibold uppercase tracking-[0.1em] text-brand shadow-xs">
+              <span className="size-1.5 rounded-full bg-brand shadow-[0_0_8px_var(--brand)]" /> The product, at a glance
+            </span>
+            <h2 className={cn(DISPLAY, "mt-5 text-3xl text-foreground sm:text-4xl")}>One engine, from <span className={GRAD}>cited to closed.</span></h2>
+            <p className="mt-4 text-lg text-muted-foreground">Get cited by AI, publish in minutes, and capture the leads it earns — all in one place.</p>
+          </div>
+        </Reveal>
+
+        <div className="mt-14 grid gap-3.5 lg:grid-cols-3 lg:auto-rows-min">
+          {/* live AI answer — tall */}
+          <Reveal className="lg:row-span-2">
+            <Cell className="flex h-full flex-col justify-center">
+              <div className="text-xs font-semibold uppercase tracking-[0.1em] text-muted-foreground">When a buyer asks AI</div>
+              <div className="mt-3"><MiniAnswer /></div>
+              <p className="mt-3 text-sm text-muted-foreground">You&apos;re the brand it names — with your own pages cited as the source.</p>
             </Cell>
           </Reveal>
 
-          {/* engines proof cell */}
-          <Reveal delay={0.08}>
+          {/* traffic -> pipeline — wide */}
+          <Reveal delay={0.08} className="lg:col-span-2">
+            <Cell className="flex flex-col gap-4 sm:flex-row sm:items-center">
+              <div className="flex-1">
+                <div className={cn(DISPLAY, "text-3xl text-foreground")}>Traffic → <span className={GRAD}>pipeline</span></div>
+                <p className="mt-1.5 text-sm text-muted-foreground">Every page captures, scores, and routes the leads it earns — automatically.</p>
+              </div>
+              <div className="w-full sm:w-64"><MiniLead /></div>
+            </Cell>
+          </Reveal>
+
+          {/* engines proof */}
+          <Reveal delay={0.14}>
             <Cell className="flex h-full flex-col">
               <div className="text-xs font-semibold uppercase tracking-[0.1em] text-muted-foreground">Get cited across</div>
               <div className="mt-3 flex flex-wrap gap-1.5">
@@ -108,26 +118,8 @@ export function BentoHero() {
             </Cell>
           </Reveal>
 
-          {/* live answer mini-card cell */}
-          <Reveal delay={0.14}>
-            <Cell>
-              <MiniAnswer />
-            </Cell>
-          </Reveal>
-
-          {/* wide product strip: leads + stat */}
-          <Reveal delay={0.1} className="lg:col-span-2">
-            <Cell className="flex flex-col gap-4 sm:flex-row sm:items-center">
-              <div className="flex-1">
-                <div className={cn(DISPLAY, "text-3xl text-foreground")}>Traffic → <span className={GRAD}>pipeline</span></div>
-                <p className="mt-1.5 text-sm text-muted-foreground">Every page captures, scores, and routes the leads it earns — automatically.</p>
-              </div>
-              <div className="w-full sm:w-64"><MiniLead /></div>
-            </Cell>
-          </Reveal>
-
-          {/* metric cell */}
-          <Reveal delay={0.16}>
+          {/* minutes metric */}
+          <Reveal delay={0.18}>
             <Cell className="flex h-full flex-col justify-center">
               <div className={cn(DISPLAY, "bg-gradient-to-br from-brand to-info bg-clip-text text-4xl text-transparent")}>Minutes</div>
               <div className="mt-1.5 text-sm text-muted-foreground">From a topic to a published, optimized page — with schema, sitemap &amp; llms.txt.</div>
