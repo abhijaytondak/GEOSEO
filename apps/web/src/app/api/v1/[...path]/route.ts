@@ -34,10 +34,14 @@ async function forward(req: NextRequest, path: string): Promise<Response> {
   // Workspace derived from the VERIFIED Clerk session (never a client header), forwarded
   // to the API as x-workspace-id on the trusted dev-token path so it scopes by tenant (P0-5).
   let workspace: string | undefined;
+  let verifiedUserId: string | undefined;
+  let verifiedRole: string | undefined;
   if (REQUIRE_AUTH && !isPublic(path)) {
-    const { userId, orgId } = await auth();
+    const { userId, orgId, orgRole } = await auth();
     if (!userId) return envelope("Authentication required", 401);
     workspace = orgId ?? `u-${userId}`;
+    verifiedUserId = userId;
+    verifiedRole = orgRole ?? undefined; // e.g. "org:admin" — RolesGuard normalizes the prefix
   }
 
   const target = `${API}/api/v1/${path}${req.nextUrl.search}`;
@@ -45,7 +49,12 @@ async function forward(req: NextRequest, path: string): Promise<Response> {
   const requestContentType = req.headers.get("content-type");
   if (requestContentType) headers["content-type"] = requestContentType;
   if (TOKEN) headers.authorization = `Bearer ${TOKEN}`; // service auth to the API
-  if (workspace) headers["x-workspace-id"] = workspace; // verified tenant (trusted s2s)
+  // Verified Clerk context, forwarded ONLY on the trusted dev-token path so the API's
+  // RolesGuard authorizes by the real org role instead of collapsing every user to viewer
+  // (audit 2026-06-24). Derived from the verified session, never from a client header.
+  if (workspace) headers["x-workspace-id"] = workspace;
+  if (verifiedRole) headers["x-workspace-role"] = verifiedRole;
+  if (verifiedUserId) headers["x-workspace-user"] = verifiedUserId;
 
   const body = req.method === "GET" || req.method === "HEAD" ? undefined : await req.text();
 
