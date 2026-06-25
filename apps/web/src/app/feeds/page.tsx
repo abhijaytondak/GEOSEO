@@ -5,6 +5,7 @@ import type { GeneratedPage, SiteThemeProfile } from "@geoseo/types";
 import { pageEngineApi } from "@/lib/page-engine-client";
 import { api } from "@/lib/api-client";
 import { themeStyle } from "@/lib/feed-theme";
+import { jsonLdSafe } from "@/lib/utils";
 
 /**
  * AI Feed — the dedicated, AI-optimized content section. A browsable library of
@@ -30,7 +31,9 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     title: `${brand} · AI Feed`,
     description: `AI-optimized content from ${brand} — answers built for AI agents and human visitors. Structured, citation-ready pages for AI search.`,
-    robots: { index: true, follow: true },
+    // Demo deployments serve sample content — keep the feed index out of search indexes so a
+    // demo never publishes a demo identity to crawlers (audit critical #1). Real feeds index.
+    robots: process.env.NEXT_PUBLIC_GEOSEO_MODE === "demo" ? { index: false, follow: false } : { index: true, follow: true },
   };
 }
 
@@ -74,7 +77,7 @@ export default async function AiFeedIndex() {
 
   return (
     <div className="min-h-dvh bg-background text-foreground" style={themeStyle(theme)}>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdSafe(JSON.stringify(schema)) }} />
 
       <header className="border-b border-border bg-card/80 backdrop-blur">
         <div className="mx-auto flex h-14 max-w-5xl items-center gap-2.5 px-6">

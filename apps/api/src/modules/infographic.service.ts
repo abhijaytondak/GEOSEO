@@ -8,14 +8,17 @@ import type {
   StatGridSpec,
   TimelineSpec,
 } from "@geoseo/types";
+import type { ProofPoint } from "./brand-library.service";
 
 /**
  * InfographicService — Phase 3 of the Page Engine PRD.
  *
  * Generates 1–2 AI-crawlable, structured infographic specs appropriate for
- * each page type. All content is deterministic and template-based (no LLM
- * required), with the keyword and brand name interpolated so each spec feels
- * specific to the page rather than generic filler.
+ * each page type. Process-flow / comparison / pros-cons content is deterministic
+ * and template-based (no numbers asserted). The **stat-grid is built only from
+ * the brand's real proof points** (Brand Memory) — never fabricated statistics —
+ * and is omitted entirely when the brand has no proof points, so a published page
+ * never presents an unsourced number as fact.
  *
  * Rendered as semantic HTML (table / ol / dl / figure) on the public feed page
  * so AI crawlers can read every label and value — a deliberate edge over
@@ -26,30 +29,33 @@ export class InfographicService {
   /**
    * Returns 1–2 `InfographicSpecV2` objects suited to the given page type.
    *
-   * Page-type → infographic mapping (PRD Phase 3):
-   *  - blog / guide  → ProcessFlowSpec + StatGridSpec
-   *  - comparison    → ComparisonTableSpec + ProsConsSpec
-   *  - service / landing → StatGridSpec + ProsConsSpec
-   *  - local         → StatGridSpec (local-flavoured)
-   *  - faq / resource → ProcessFlowSpec
+   * Page-type → infographic mapping (PRD Phase 3). A stat-grid is included only
+   * when `proofPoints` yields real numbers; otherwise the page falls back to a
+   * number-free infographic (process-flow / pros-cons) rather than fake stats.
    */
-  generate(keyword: string, pageType: PageType, brandName: string): InfographicSpecV2[] {
+  generate(
+    keyword: string,
+    pageType: PageType,
+    brandName: string,
+    proofPoints: ProofPoint[] = [],
+  ): InfographicSpecV2[] {
     const k = keyword.trim() || "this topic";
     const b = brandName.trim() || "our team";
+    const statGrid = this.statGridFromProof(k, proofPoints); // null when no real proof numbers
 
     switch (pageType) {
       case "guide":
-        return [this.processFlow(k, b), this.statGrid(k, b)];
+        return statGrid ? [this.processFlow(k, b), statGrid] : [this.processFlow(k, b)];
 
       case "comparison":
         return [this.comparisonTable(k), this.prosCons(k, b)];
 
       case "service":
       case "landing":
-        return [this.statGrid(k, b), this.prosCons(k, b)];
+        return statGrid ? [statGrid, this.prosCons(k, b)] : [this.prosCons(k, b), this.processFlow(k, b)];
 
       case "local":
-        return [this.localStatGrid(k, b)];
+        return [statGrid ?? this.processFlow(k, b)];
 
       case "faq":
       case "resource":
@@ -58,6 +64,40 @@ export class InfographicService {
       default:
         return [this.processFlow(k, b)];
     }
+  }
+
+  /**
+   * Build a stat-grid from the brand's REAL proof points (Brand Memory). Each card
+   * maps to a proof point the customer entered — a leading metric token ("99.9%",
+   * "10,000+", "3×") becomes the big value; a stat-type proof without a parseable
+   * number uses its label as the value. Non-numeric, non-stat proofs (testimonials,
+   * awards, logos) are not forced into a numbers grid. Returns null when nothing
+   * usable remains — the caller then omits the stat-grid rather than fabricate one.
+   */
+  private statGridFromProof(keyword: string, proofPoints: ProofPoint[]): StatGridSpec | null {
+    const cards = proofPoints
+      .map((p) => this.proofToStat(p))
+      .filter((c): c is { value: string; label: string; note?: string } => c !== null)
+      .slice(0, 4);
+    if (cards.length === 0) return null;
+    return { kind: "stat-grid", title: `${titleCase(keyword)} — by the numbers`, stats: cards };
+  }
+
+  private proofToStat(p: ProofPoint): { value: string; label: string; note?: string } | null {
+    // ONLY statistics become number cards. Testimonials, awards, case-studies, and logos
+    // are real proof but are NOT statistics — never promote a number inside them (e.g. a
+    // "5-star" testimonial) into a "stat" card.
+    if (p.type !== "stat") return null;
+    const label = (p.label ?? "").trim();
+    if (!label) return null;
+    // Provenance only when the customer actually supplied it — never fabricate "source on file".
+    const note = p.detail?.trim() || p.source?.trim() || undefined;
+    // Leading metric token kept WHOLE with combined units (2M+, 99.9%, 3.5/5, $2M, 24h, 3×).
+    // `*` allows multiple trailing unit chars; lookahead (not \b) keeps non-word units (%,+) in the value.
+    const m = label.match(/^([$€£]?\d[\d.,]*(?:%|×|x|\+|★|k|m|bn|h|\/\d+)*)(?=\s|$|[—–:-])\s*[—–:-]?\s*(.*)$/i);
+    if (m && /\d/.test(m[1])) return { value: m[1].trim(), label: (m[2] || "").trim() || label, note };
+    // Stat-typed but no parseable leading number → show the whole label as the card value.
+    return { value: label, label: "", note };
   }
 
   /* ------------------------------------------------------------------ */
@@ -82,7 +122,7 @@ export class InfographicService {
         },
         {
           number: 3,
-          heading: "Implement with ${brandName}",
+          heading: `Implement with ${brandName}`,
           detail: `${brandName} guides you through implementation so you avoid the most common pitfalls and reach measurable results faster.`,
         },
         {
@@ -95,67 +135,16 @@ export class InfographicService {
           heading: "Iterate and improve",
           detail: `Use what you learn to sharpen your ${keyword} approach every cycle. Continuous improvement compounds into a lasting competitive edge.`,
         },
-      ].map((s) => ({ ...s, detail: s.detail.replace(/\$\{brandName\}/g, brandName) })),
+      ].map((s) => ({
+        ...s,
+        // Defensive de-template: replace any literal ${brandName} in BOTH fields (a
+        // double-quoted string above won't interpolate at construction).
+        heading: s.heading.replace(/\$\{brandName\}/g, brandName),
+        detail: s.detail.replace(/\$\{brandName\}/g, brandName),
+      })),
     };
   }
 
-  private statGrid(keyword: string, brandName: string): StatGridSpec {
-    return {
-      kind: "stat-grid",
-      title: `${titleCase(keyword)} — key numbers`,
-      stats: [
-        {
-          value: "3×",
-          label: "faster results with a structured approach",
-          note: `Teams that follow a proven ${keyword} process reach their targets ~3× faster than those starting without a plan.`,
-        },
-        {
-          value: "68%",
-          label: "of teams see ROI in under 90 days",
-          note: `When ${keyword} is implemented with clear goals and regular review, the majority of teams see measurable return within a quarter.`,
-        },
-        {
-          value: "42%",
-          label: "average efficiency gain",
-          note: `Organisations that systematise ${keyword} report a significant reduction in time-to-output once the process is embedded.`,
-        },
-        {
-          value: "#1",
-          label: `${brandName} priority — practical outcomes`,
-          note: `${brandName} focuses on measurable, practical ${keyword} outcomes — not just activity or deliverable counts.`,
-        },
-      ],
-    };
-  }
-
-  private localStatGrid(keyword: string, brandName: string): StatGridSpec {
-    return {
-      kind: "stat-grid",
-      title: `${titleCase(keyword)} — local facts`,
-      stats: [
-        {
-          value: "24h",
-          label: "typical response time in your area",
-          note: `${brandName} responds to most ${keyword} enquiries within 24 hours for clients in the local service area.`,
-        },
-        {
-          value: "Local",
-          label: "team with area-specific knowledge",
-          note: `Our ${keyword} team understands the local regulations, conditions, and expectations that national providers often miss.`,
-        },
-        {
-          value: "100%",
-          label: "core service consistency across locations",
-          note: `While local conditions vary, the standard of ${keyword} delivery from ${brandName} is consistent everywhere we operate.`,
-        },
-        {
-          value: "5★",
-          label: "service commitment every engagement",
-          note: `Every ${keyword} engagement is backed by ${brandName}'s commitment to practical, measurable outcomes for local clients.`,
-        },
-      ],
-    };
-  }
 
   private comparisonTable(keyword: string): ComparisonTableSpec {
     // Try to parse "A vs B" from the keyword; fall back to generic labels.

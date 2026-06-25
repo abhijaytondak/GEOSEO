@@ -3,6 +3,7 @@ import type { GeneratedPage } from "@geoseo/types";
 import { DocStore } from "../db/db";
 import { fetchWithTimeout } from "../common/http";
 import { assertSafeUrl } from "../common/ssrf";
+import { escapeHtml, jsonLdScript } from "../common/escape";
 import { SettingsStore } from "./settings.service";
 
 /** Record of a page pushed to an external CMS (additive side-store cx_cms_publish). */
@@ -17,8 +18,8 @@ export interface CmsPublishResult {
 
 type CmsState = { byPage: Record<string, CmsPublishResult> };
 
-const esc = (s: string) =>
-  s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+// Output escaping is centralized in common/escape (text+attr safe, & < > " ').
+const esc = escapeHtml;
 
 /** Inline emphasis: **bold** → <strong> (after escaping, so tags can't be injected). */
 function inlineHtml(s: string): string {
@@ -132,7 +133,7 @@ export function renderStandaloneHtml(page: GeneratedPage): string {
     `<meta name="viewport" content="width=device-width, initial-scale=1" />`,
     `<title>${esc(page.metaTitle || page.title)}</title>`,
     page.metaDescription ? `<meta name="description" content="${esc(page.metaDescription)}" />` : "",
-    `<script type="application/ld+json">${JSON.stringify(ld)}</script>`,
+    `<script type="application/ld+json">${jsonLdScript(ld)}</script>`,
     `<style>body{font:16px/1.6 system-ui,sans-serif;max-width:48rem;margin:0 auto;padding:2rem 1.25rem;color:#16181d}h1{line-height:1.15}img{max-width:100%;height:auto}</style>`,
     `</head><body>`,
     `<main><h1>${esc(page.title)}</h1>`,

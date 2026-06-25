@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Reveal } from "@/components/motion/reveal";
 import { cn } from "@/lib/utils";
 import {
+  Hero,
   Problem,
   HowItWorks,
   ProductSection,
@@ -11,7 +12,7 @@ import {
   ProofBand,
   CtaBand,
 } from "@/components/marketing/sections";
-import { BentoHero, BentoPlatform } from "@/components/marketing/bento";
+import { BentoShowcase, BentoPlatform } from "@/components/marketing/bento";
 import { Faq } from "@/components/marketing/faq";
 import { FAQS, SITE_URL, BRAND, TAGLINE } from "@/components/marketing/data";
 
@@ -93,7 +94,8 @@ export default function MarketingHome() {
   return (
     <>
       <StructuredData />
-      <BentoHero />
+      <Hero />
+      <BentoShowcase />
       <Problem />
       <BentoPlatform />
       <HowItWorks />

@@ -1,5 +1,6 @@
 import { Injectable, Logger, OnModuleInit, Inject } from "@nestjs/common";
 import { DEFAULT_TENANT_ID } from "../common/tenant";
+import { DocStore } from "../db/db";
 import { PageEngineStore } from "./page-engine.service";
 import { sendEmail } from "../common/email";
 
@@ -19,31 +20,45 @@ const BOOT_DELAY_MS = 60_000;
 @Injectable()
 export class DigestService implements OnModuleInit {
   private readonly log = new Logger(DigestService.name);
-  private lastSentMonth = -1; // -1 means "never sent this process lifetime"
+  private db = new DocStore<{ lastSentKey: string }>("cx_digest");
+  // Per-tenant "YYYY-M" of the last auto-sent digest. Persisted (one cx_digest row per
+  // tenant) so a restart on the 1st can't re-send a digest already sent this month.
+  private lastSent = new Map<string, string>();
 
   constructor(@Inject(PageEngineStore) private readonly pages: PageEngineStore) {}
 
-  onModuleInit() {
+  async onModuleInit() {
+    // Preload each tenant's cursor (PageEngineStore hydrates tenants before this runs).
+    for (const t of this.pages.tenantIds()) {
+      const s = await this.db.loadForTenant(t);
+      if (s?.lastSentKey) this.lastSent.set(t, s.lastSentKey);
+    }
     setTimeout(() => {
       this.maybeSend();
       setInterval(() => this.maybeSend(), POLL_MS);
     }, BOOT_DELAY_MS);
   }
 
-  /** Can be called manually from tests or an admin endpoint. */
+  /** Manual trigger (admin endpoint / tests) — sends the default workspace's digest. */
   async sendNow(): Promise<{ sent: boolean; to: string }> {
-    return this.send();
+    return this.send(DEFAULT_TENANT_ID);
   }
 
   private maybeSend() {
     const now = new Date();
-    if (now.getUTCDate() === 1 && now.getUTCMonth() !== this.lastSentMonth) {
-      this.lastSentMonth = now.getUTCMonth();
-      void this.send();
+    if (now.getUTCDate() !== 1) return;
+    // Year-month key (not just month number) so the same month across different years is
+    // distinct. Fan out: one digest per hydrated tenant, each deduped by its own cursor.
+    const key = `${now.getUTCFullYear()}-${now.getUTCMonth()}`;
+    for (const t of this.pages.tenantIds()) {
+      if (this.lastSent.get(t) === key) continue;
+      this.lastSent.set(t, key);
+      this.db.saveForTenant(t, { lastSentKey: key });
+      void this.send(t);
     }
   }
 
-  private async send(): Promise<{ sent: boolean; to: string }> {
+  private async send(tenantId: string): Promise<{ sent: boolean; to: string }> {
     const to = process.env.NOTIFY_EMAIL ?? "";
     const key = process.env.RESEND_API_KEY ?? "";
     if (!to || !key) {
@@ -52,7 +67,6 @@ export class DigestService implements OnModuleInit {
     }
 
     try {
-      const tenantId = DEFAULT_TENANT_ID;
       const allPages = this.pages.listPages(tenantId);
       const published = allPages.filter((p) => p.status === "published");
       const allLeads = this.pages.listLeads(tenantId);

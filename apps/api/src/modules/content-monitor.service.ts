@@ -1,7 +1,6 @@
 import { Injectable, Logger, OnModuleInit, Inject } from "@nestjs/common";
 import type { SeoDataProvider } from "@geoseo/types";
 import { SEO_PROVIDER } from "../seo/seo.module";
-import { DEFAULT_TENANT_ID } from "../common/tenant";
 import { PageEngineStore } from "./page-engine.service";
 import { AlertsStore } from "./alerts.service";
 
@@ -19,9 +18,10 @@ const BOOT_DELAY_MS = 45_000;
  * `needs-refresh` status that the "Needs Attention" panel already surfaces —
  * no new data model needed.
  *
- * Because this runs in-process (no external scheduler) it is single-tenant
- * (DEFAULT_TENANT_ID) for now.  Multi-tenant iteration comes once Clerk
- * workspace IDs flow through the tenant resolver.
+ * Fans out over every hydrated tenant (PageEngineStore.tenantIds()). The tracked-rank
+ * source (SeoDataProvider) is still global — it has no tenant param yet — so the same
+ * tracked list is matched against each tenant's published slugs; for a single tenant this
+ * is identical to before. Per-tenant rank data lands once SeoDataProvider is tenant-aware.
  */
 @Injectable()
 export class ContentMonitorService implements OnModuleInit {
@@ -50,41 +50,42 @@ export class ContentMonitorService implements OnModuleInit {
   }
 
   private async runScan(): Promise<{ flagged: number; checked: number }> {
-    const tenantId = DEFAULT_TENANT_ID;
     const threshold = this.alerts.getThresholds().rankDrop;
 
     const tracked = await this.seo.getTrackedPages();
     if (!tracked.length) return { flagged: 0, checked: 0 };
 
-    const published = this.pages
-      .listPages(tenantId)
-      .filter((p) => p.status === "published");
-
-    // Build a slug→page lookup for O(1) matching.
-    const slugMap = new Map(published.map((p) => [p.slug.replace(/^\//, ""), p]));
-
     let flagged = 0;
-    for (const tp of tracked) {
-      if (tp.currentRank <= 0 || tp.prevRank <= 0) continue;
-      const drop = tp.currentRank - tp.prevRank; // positive = worse rank
-      if (drop < threshold) continue;
+    // Fan out over every tenant. The tracked-rank list is global (SeoDataProvider has no
+    // tenant param yet), so it's matched against each tenant's published slugs — for a
+    // single tenant this is exactly the previous behavior.
+    for (const tenantId of this.pages.tenantIds()) {
+      const published = this.pages.listPages(tenantId).filter((p) => p.status === "published");
+      if (!published.length) continue;
 
-      // Match tracked page path to a published page slug (strip leading /).
-      const key = tp.path.replace(/^\//, "");
-      const page = slugMap.get(key);
-      if (!page) continue;
+      // slug→page lookup for O(1) matching within this tenant.
+      const slugMap = new Map(published.map((p) => [p.slug.replace(/^\//, ""), p]));
 
-      const didFlag = this.pages.markNeedsRefresh(
-        tenantId,
-        page.id,
-        `Rank dropped ${drop} positions (now #${tp.currentRank}, was #${tp.prevRank})`,
-      );
-      if (didFlag) flagged++;
+      for (const tp of tracked) {
+        if (tp.currentRank <= 0 || tp.prevRank <= 0) continue;
+        const drop = tp.currentRank - tp.prevRank; // positive = worse rank
+        if (drop < threshold) continue;
+
+        const page = slugMap.get(tp.path.replace(/^\//, ""));
+        if (!page) continue;
+
+        const didFlag = this.pages.markNeedsRefresh(
+          tenantId,
+          page.id,
+          `Rank dropped ${drop} positions (now #${tp.currentRank}, was #${tp.prevRank})`,
+        );
+        if (didFlag) flagged++;
+      }
     }
 
     if (flagged) {
       this.log.log(
-        `[content-monitor] flagged ${flagged}/${tracked.length} page${flagged > 1 ? "s" : ""} for refresh (threshold: ${threshold} positions)`,
+        `[content-monitor] flagged ${flagged} page${flagged > 1 ? "s" : ""} for refresh (threshold: ${threshold} positions)`,
       );
     }
 

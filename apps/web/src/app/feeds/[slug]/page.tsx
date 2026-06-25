@@ -8,11 +8,15 @@ import { api } from "@/lib/api-client";
 import { LeadForm } from "@/components/feeds/lead-form";
 import { FeedTracker } from "@/components/feeds/feed-tracker";
 import { BrandHero } from "@/components/feeds/brand-hero";
+import { jsonLdSafe } from "@/lib/utils";
 import { Infographic } from "@/components/feeds/infographic";
 import { RichText } from "@/components/feeds/rich-text";
 import { themeStyle } from "@/lib/feed-theme";
 
 export const dynamic = "force-dynamic";
+
+/** Demo deployments serve sample feed content — noindex so crawlers never see a demo identity. */
+const DEMO = process.env.NEXT_PUBLIC_GEOSEO_MODE === "demo";
 
 type Params = { params: Promise<{ slug: string }> };
 
@@ -29,6 +33,7 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
     title: page.metaTitle,
     description: page.metaDescription,
     alternates: { canonical },
+    ...(DEMO ? { robots: { index: false, follow: false } } : {}),
     openGraph: {
       title: page.metaTitle,
       description: page.metaDescription,
@@ -69,7 +74,7 @@ export default async function FeedPage({ params }: Params) {
       {/* visitor journey tracking — fires a page_view so the lead-journey timeline is real */}
       <FeedTracker slug={page.slug} pageId={page.id} title={page.title} />
       {/* schema for traditional + AI crawlers */}
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: page.schemaJson }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdSafe(page.schemaJson) }} />
 
       {/* minimal public chrome */}
       <header className="border-b border-border bg-card/80 backdrop-blur">

@@ -3,6 +3,7 @@ import { ApiTags } from "@nestjs/swagger";
 import type { IntegrationStatus, TeamMember, WorkspaceIntegration, WorkspaceSettings } from "@geoseo/types";
 import { validateBody } from "../common/validation";
 import { Roles } from "../common/roles.decorator";
+import { redactIntegrations } from "../common/redact";
 import {
   WorkspaceSettingsSchema,
   TeamMemberCreateSchema,
@@ -54,24 +55,32 @@ export class SettingsController {
     }
   }
 
+  /**
+   * Client-facing settings: overlay env-detected integration status, then REDACT secret
+   * credential values (audit 2026-06-24 — secrets are write-only, never returned).
+   */
+  private presentSettings(): WorkspaceSettings {
+    const settings = this.settings.get();
+    const integrations = redactIntegrations(
+      settings.integrations.map((integration) => {
+        const live = this.liveStatus(integration.id);
+        return live ? { ...integration, status: live } : integration;
+      }),
+    );
+    return { ...settings, integrations };
+  }
+
   @Get()
   get() {
-    const settings = this.settings.get();
-    // Overlay env-detected truth on seam-backed integrations (audit: Settings must not
-    // claim a provider is connected when its seam reports unconfigured).
-    const integrations = settings.integrations.map((integration) => {
-      const live = this.liveStatus(integration.id);
-      return live ? { ...integration, status: live } : integration;
-    });
-    return { settings: { ...settings, integrations } };
+    return { settings: this.presentSettings() };
   }
 
   @Roles("admin")
   @Put()
   update(@Body(validateBody(WorkspaceSettingsSchema)) body: Partial<WorkspaceSettings>) {
-    const settings = this.settings.update(body);
+    this.settings.update(body);
     this.audit.record("update", "settings", "workspace");
-    return { settings, job: this.jobs.create("settings-sync") };
+    return { settings: this.presentSettings(), job: this.jobs.create("settings-sync") };
   }
 
   @Post("integrations/wordpress/test")
@@ -85,8 +94,10 @@ export class SettingsController {
   @Roles("admin")
   @Patch("integrations/:id")
   updateIntegration(@Param("id") id: string, @Body(validateBody(IntegrationWriteSchema)) body: Partial<WorkspaceIntegration>) {
-    const integration = this.settings.updateIntegration(id, body);
+    this.settings.updateIntegration(id, body);
     this.audit.record("integration", "settings", id);
+    // Return the redacted integration — never echo the secret back.
+    const integration = redactIntegrations([this.settings.get().integrations.find((i) => i.id === id)!])[0];
     return { integration, job: this.jobs.create("settings-sync") };
   }
 
@@ -95,7 +106,7 @@ export class SettingsController {
   addTeamMember(@Body(validateBody(TeamMemberCreateSchema)) body: Omit<TeamMember, "id">) {
     const member = this.settings.addTeamMember(body);
     this.audit.record("create", "settings", member.id);
-    return { member, settings: this.settings.get() };
+    return { member, settings: this.presentSettings() };
   }
 
   @Roles("admin")
@@ -103,7 +114,7 @@ export class SettingsController {
   updateTeamMember(@Param("id") id: string, @Body(validateBody(TeamMemberPatchSchema)) body: Partial<Omit<TeamMember, "id">>) {
     const member = this.settings.updateTeamMember(id, body);
     this.audit.record("update", "settings", id);
-    return { member, settings: this.settings.get() };
+    return { member, settings: this.presentSettings() };
   }
 
   @Roles("admin")
@@ -111,6 +122,6 @@ export class SettingsController {
   removeTeamMember(@Param("id") id: string) {
     const result = this.settings.removeTeamMember(id);
     this.audit.record("delete", "settings", id);
-    return { ...result, settings: this.settings.get() };
+    return { ...result, settings: this.presentSettings() };
   }
 }
