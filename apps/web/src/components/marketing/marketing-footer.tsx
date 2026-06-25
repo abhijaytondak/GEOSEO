@@ -19,10 +19,10 @@ const COLUMNS: Col[] = [
   {
     title: "Company",
     links: [
+      { label: "Pricing", href: "/pricing" },
       { label: "How it works", href: "/#how-it-works" },
       { label: "Why GEOSEO", href: "/#why" },
-      { label: "FAQ", href: "/#faq" },
-      { label: "Free audit", href: "/#audit" },
+      { label: "Book a demo", href: "/demo" },
       { label: "Sign in", href: "/home" },
     ],
   },

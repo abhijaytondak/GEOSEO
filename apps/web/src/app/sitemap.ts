@@ -22,6 +22,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const base = domain ? `https://${domain}` : "";
   const marketing: MetadataRoute.Sitemap = [
     { url: `${SITE_URL}/`, changeFrequency: "weekly", priority: 1 },
+    { url: `${SITE_URL}/pricing`, changeFrequency: "monthly", priority: 0.9 },
+    { url: `${SITE_URL}/demo`, changeFrequency: "monthly", priority: 0.8 },
     ...ALL_FEATURE_PAGES.map((f) => ({
       url: `${SITE_URL}${featureHref(f)}`,
       changeFrequency: "monthly" as const,

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, Sparkles, Check, TrendingUp, Bot } from "lucide-react";
+import { ArrowRight, Sparkles, TrendingUp, Bot } from "lucide-react";
 import { Reveal } from "@/components/motion/reveal";
 import { cn } from "@/lib/utils";
 import { ENGINES } from "./data";
@@ -150,31 +150,14 @@ export function BentoPlatform() {
         </Reveal>
         <div className="mt-14 grid auto-rows-fr gap-3.5 sm:grid-cols-2 lg:grid-cols-3">
           {PLATFORM.map((p, i) => (
-            <Reveal key={p.slug} delay={(i % 3) * 0.06} className={cn(i === 0 && "sm:col-span-2")}>
-              <Link href={featureHref(p)} className={cn("group relative flex h-full flex-col overflow-hidden rounded-3xl border border-border bg-card p-6 shadow-card transition-all duration-300 hover:-translate-y-1 hover:border-brand/30 hover:shadow-float", i === 0 && "sm:flex-row sm:items-center sm:gap-6")}>
-                {i === 0 && <Glow className="right-[-6%] top-[-20%] h-48 w-48 bg-brand/10" />}
-                <div className={cn(i === 0 && "sm:flex-1")}>
-                  <span className="grid size-12 place-items-center rounded-2xl bg-gradient-to-br from-brand to-info text-white shadow-[0_8px_22px_-8px_rgba(108,76,241,0.65)] transition-transform duration-300 group-hover:scale-110">
-                    <p.icon className="size-6" />
-                  </span>
-                  <h3 className={cn("mt-4 font-semibold text-foreground", i === 0 ? "text-xl" : "text-lg")}>{p.label}</h3>
-                  <p className="mt-2 text-[15px] leading-relaxed text-muted-foreground">{p.tagline}</p>
-                  <span className="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-brand">Learn more <ArrowRight className="size-4 transition-transform group-hover:translate-x-1" /></span>
-                </div>
-                {i === 0 && (
-                  <div className="mt-5 w-full sm:mt-0 sm:w-72">
-                    <div className="rounded-2xl border border-border bg-surface-sunken p-3.5">
-                      <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Memory strength</div>
-                      <div className="mt-1 flex items-end gap-2"><span className={cn(DISPLAY, "text-3xl text-foreground tabular-nums")}>92%</span><span className="mb-1 text-xs text-positive">Excellent</span></div>
-                      <div className="mt-2.5 h-2 overflow-hidden rounded-full bg-muted"><div className="h-full rounded-full bg-gradient-to-r from-brand to-info" style={{ width: "92%" }} /></div>
-                      <div className="mt-3 space-y-1.5">
-                        {["Brand & value prop", "Products & personas", "Proof points"].map((r) => (
-                          <div key={r} className="flex items-center gap-2 text-xs text-foreground"><span className="grid size-4 place-items-center rounded-full bg-positive/12 text-positive"><Check className="size-2.5" /></span>{r}</div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                )}
+            <Reveal key={p.slug} delay={(i % 3) * 0.06}>
+              <Link href={featureHref(p)} className="group relative flex h-full flex-col overflow-hidden rounded-3xl border border-border bg-card p-6 shadow-card transition-all duration-300 hover:-translate-y-1 hover:border-brand/30 hover:shadow-float">
+                <span className="grid size-12 place-items-center rounded-2xl bg-gradient-to-br from-brand to-info text-white shadow-[0_8px_22px_-8px_rgba(108,76,241,0.65)] transition-transform duration-300 group-hover:scale-110">
+                  <p.icon className="size-6" />
+                </span>
+                <h3 className="mt-4 text-lg font-semibold text-foreground">{p.label}</h3>
+                <p className="mt-2 flex-1 text-[15px] leading-relaxed text-muted-foreground">{p.tagline}</p>
+                <span className="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-brand">Learn more <ArrowRight className="size-4 transition-transform group-hover:translate-x-1" /></span>
               </Link>
             </Reveal>
           ))}
