@@ -3,6 +3,7 @@ import { pageEngineApi } from "@/lib/page-engine-client";
 import { api } from "@/lib/api-client";
 import { SITE_URL } from "@/components/marketing/data";
 import { ALL_FEATURE_PAGES, featureHref } from "@/components/marketing/platform-data";
+import { CONTENT, PUBLISHED_SLUGS } from "@/components/resources/content";
 
 export const dynamic = "force-dynamic";
 
@@ -24,10 +25,17 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${SITE_URL}/`, changeFrequency: "weekly", priority: 1 },
     { url: `${SITE_URL}/pricing`, changeFrequency: "monthly", priority: 0.9 },
     { url: `${SITE_URL}/demo`, changeFrequency: "monthly", priority: 0.8 },
+    { url: `${SITE_URL}/resources`, changeFrequency: "weekly", priority: 0.8 },
     ...ALL_FEATURE_PAGES.map((f) => ({
       url: `${SITE_URL}${featureHref(f)}`,
       changeFrequency: "monthly" as const,
       priority: 0.9,
+    })),
+    ...PUBLISHED_SLUGS.map((slug) => ({
+      url: `${SITE_URL}/resources/${slug}`,
+      lastModified: CONTENT[slug].updated,
+      changeFrequency: "monthly" as const,
+      priority: 0.7,
     })),
   ];
   return [

@@ -13,7 +13,7 @@ const COLUMNS: Col[] = [
     title: "Solutions",
     links: [
       ...SOLUTIONS.map((s) => ({ label: s.label, href: featureHref(s) })),
-      { label: "Content hub", href: "/feeds" },
+      { label: "Resources", href: "/resources" },
     ],
   },
   {
