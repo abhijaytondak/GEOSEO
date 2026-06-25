@@ -20,6 +20,7 @@ import {
   Target,
   DollarSign,
   FileDown,
+  Inbox,
 } from "lucide-react";
 import { api } from "@/lib/api-client";
 import type {
@@ -396,22 +397,22 @@ export function AnalyticsWorkspace({
           <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
             {leadStats.map((s) => (
               <div key={s.label} className="rounded-2xl border border-border bg-card p-4 shadow-card">
-                <div className="flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                <div className="flex items-center gap-1 text-micro font-semibold uppercase tracking-wider text-muted-foreground">
                   {s.label}
                   <InfoHint>{s.def}</InfoHint>
                 </div>
-                <div className="tnum mt-1.5 text-2xl font-semibold text-foreground">{s.value}</div>
+                <div className="tnum mt-1.5 text-kpi text-foreground">{s.value}</div>
               </div>
             ))}
           </div>
           <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-2">
             <Panel title="By status" description="Where leads sit in the funnel">
               {leadsByStatus.length === 0 ? (
-                <div className="py-8 text-center text-[13px] text-muted-foreground">No leads captured yet.</div>
+                <EmptyState icon={Inbox} title="No leads captured yet" description="Once visitors submit the lead form on a published page, the funnel breakdown appears here." className="py-10" />
               ) : (
                 <ul className="space-y-2">
                   {leadsByStatus.map(([status, count]) => (
-                    <li key={status} className="flex items-center justify-between rounded-xl border border-border p-3 text-[13px]">
+                    <li key={status} className="flex items-center justify-between rounded-xl border border-border p-3 text-label">
                       <span className="capitalize text-foreground">{status.replace(/-/g, " ")}</span>
                       <span className="tnum font-semibold text-muted-foreground">{count}</span>
                     </li>
@@ -421,11 +422,11 @@ export function AnalyticsWorkspace({
             </Panel>
             <Panel title="Top source pages" description="Pages capturing the most leads">
               {leadsByPage.length === 0 ? (
-                <div className="py-8 text-center text-[13px] text-muted-foreground">No leads captured yet.</div>
+                <EmptyState icon={Target} title="No leads captured yet" description="When pages start converting, your top lead-capturing pages rank here." className="py-10" />
               ) : (
                 <ul className="space-y-2">
                   {leadsByPage.map(([title, count]) => (
-                    <li key={title} className="flex items-center gap-3 rounded-xl border border-border p-3 text-[13px]">
+                    <li key={title} className="flex items-center gap-3 rounded-xl border border-border p-3 text-label">
                       <Target className="size-4 shrink-0 text-brand" />
                       <span className="min-w-0 flex-1 truncate text-foreground">{title}</span>
                       <span className="tnum font-semibold text-muted-foreground">{count}</span>
@@ -435,7 +436,7 @@ export function AnalyticsWorkspace({
               )}
             </Panel>
           </div>
-          <Link href="/leads" className="inline-flex items-center gap-1 text-[12.5px] font-semibold text-brand hover:underline">
+          <Link href="/leads" className="inline-flex items-center gap-1 text-label font-semibold text-brand hover:underline">
             Open the leads inbox <ArrowRight className="size-3.5" />
           </Link>
         </div>
@@ -455,32 +456,32 @@ export function AnalyticsWorkspace({
           )}
           <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
             <div className="rounded-2xl border border-border bg-card p-4 shadow-card">
-              <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Domain health</div>
-              <div className="tnum mt-1.5 text-2xl font-semibold text-foreground">
+              <div className="text-micro font-semibold uppercase tracking-wider text-muted-foreground">Domain health</div>
+              <div className="tnum mt-1.5 text-kpi text-foreground">
                 {authority.health.score}
-                <span className="ml-1 text-sm font-medium text-muted-foreground">/ 100 · {authority.health.grade}</span>
+                <span className="ml-1 text-label font-medium text-muted-foreground">/ 100 · {authority.health.grade}</span>
               </div>
             </div>
             <div className="rounded-2xl border border-border bg-card p-4 shadow-card">
-              <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Backlink quality</div>
-              <div className="tnum mt-1.5 text-2xl font-semibold text-foreground">
+              <div className="text-micro font-semibold uppercase tracking-wider text-muted-foreground">Backlink quality</div>
+              <div className="tnum mt-1.5 text-kpi text-foreground">
                 {authority.backlinkQuality.score}
-                <span className="ml-1 text-sm font-medium text-muted-foreground">/ 100 · {authority.backlinkQuality.grade}</span>
+                <span className="ml-1 text-label font-medium text-muted-foreground">/ 100 · {authority.backlinkQuality.grade}</span>
               </div>
             </div>
             <div className="rounded-2xl border border-border bg-card p-4 shadow-card">
-              <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Avg live DA</div>
-              <div className="tnum mt-1.5 text-2xl font-semibold text-foreground">{authority.backlinkQuality.avgLiveAuthority}</div>
+              <div className="text-micro font-semibold uppercase tracking-wider text-muted-foreground">Avg live DA</div>
+              <div className="tnum mt-1.5 text-kpi text-foreground">{authority.backlinkQuality.avgLiveAuthority}</div>
             </div>
             <div className="rounded-2xl border border-border bg-card p-4 shadow-card">
-              <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Backlinks acquired</div>
-              <div className="tnum mt-1.5 text-2xl font-semibold text-foreground">
+              <div className="text-micro font-semibold uppercase tracking-wider text-muted-foreground">Backlinks acquired</div>
+              <div className="tnum mt-1.5 text-kpi text-foreground">
                 {authority.health.backlinksAcquired}
-                <span className="ml-1 text-sm font-medium text-muted-foreground">/ {authority.health.backlinksOpportunities}</span>
+                <span className="ml-1 text-label font-medium text-muted-foreground">/ {authority.health.backlinksOpportunities}</span>
               </div>
             </div>
           </div>
-          <div className="flex items-center gap-2.5 rounded-xl border border-border bg-card px-4 py-2.5 text-[13px] shadow-card">
+          <div className="flex items-center gap-2.5 rounded-xl border border-border bg-card px-4 py-2.5 text-label shadow-card">
             <span
               className={cn(
                 "flex size-7 shrink-0 items-center justify-center rounded-lg",
@@ -500,7 +501,7 @@ export function AnalyticsWorkspace({
             <ul className="space-y-3">
               {authority.health.factors.map((f) => (
                 <li key={f.label}>
-                  <div className="mb-1.5 flex items-center justify-between text-[12.5px]">
+                  <div className="mb-1.5 flex items-center justify-between text-label">
                     <span className="flex items-center gap-1 font-medium text-foreground">
                       {f.label}
                       {f.explanation && <InfoHint>{f.explanation}</InfoHint>}
@@ -514,7 +515,7 @@ export function AnalyticsWorkspace({
               ))}
             </ul>
           </Panel>
-          <Link href="/authority" className="inline-flex items-center gap-1 text-[12.5px] font-semibold text-brand hover:underline">
+          <Link href="/authority" className="inline-flex items-center gap-1 text-label font-semibold text-brand hover:underline">
             Open the Authority workspace <ArrowRight className="size-3.5" />
           </Link>
         </div>
