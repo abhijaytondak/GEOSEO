@@ -608,21 +608,21 @@ export const api = {
   triggerDigest: () =>
     send<{ sent: boolean; to: string; message: string }>("POST", "/monitoring/digest", {}),
 
-  // lead notification rules
+  // lead notification rules — backend is @Controller("lead-notification-rules") with @Patch(":id")
   getNotificationRules: () =>
-    get<{ rules: LeadNotificationRule[] }>("/leads/notifications/rules", () => ({ rules: [] })).then(
+    get<{ rules: LeadNotificationRule[] }>("/lead-notification-rules", () => ({ rules: [] })).then(
       (d) => d.rules,
     ),
   createNotificationRule: (data: Omit<LeadNotificationRule, "id" | "workspaceId">) =>
-    send<{ rule: LeadNotificationRule }>("POST", "/leads/notifications/rules", data).then(
+    send<{ rule: LeadNotificationRule }>("POST", "/lead-notification-rules", data).then(
       (d) => d.rule,
     ),
   updateNotificationRule: (id: string, data: Partial<Omit<LeadNotificationRule, "id" | "workspaceId">>) =>
-    send<{ rule: LeadNotificationRule }>("PUT", `/leads/notifications/${encodeURIComponent(id)}`, data).then(
+    send<{ rule: LeadNotificationRule }>("PATCH", `/lead-notification-rules/${encodeURIComponent(id)}`, data).then(
       (d) => d.rule,
     ),
   deleteNotificationRule: (id: string) =>
-    send<{ id: string; deleted: boolean }>("DELETE", `/leads/notifications/${encodeURIComponent(id)}`),
+    send<{ id: string; deleted: boolean }>("DELETE", `/lead-notification-rules/${encodeURIComponent(id)}`),
 
   // brand asset image management
   deleteBrandAsset: (id: string) =>

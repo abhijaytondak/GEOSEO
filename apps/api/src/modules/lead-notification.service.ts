@@ -87,7 +87,8 @@ export class LeadNotificationStore {
       if (!r.enabled) return false;
       if (r.minScore != null && total < r.minScore) return false;
       if (r.statuses?.length && !r.statuses.includes(lead.status)) return false;
-      if (r.pages?.length && lead.pageId && !r.pages.includes(lead.pageId)) return false;
+      // A page-scoped rule must NOT match a lead with no pageId (or one outside the list).
+      if (r.pages?.length && (!lead.pageId || !r.pages.includes(lead.pageId))) return false;
       return true;
     });
 
@@ -96,10 +97,15 @@ export class LeadNotificationStore {
       s.seq += 1;
       const msg = `${lead.name || lead.email} (score ${total}) from ${lead.pageTitle ?? "a page"} — via "${r.name}".`;
 
-      // Attempt real delivery for each channel that has a destination configured.
-      let actualStatus: "sent" | "suppressed" = "sent";
+      // Truthful delivery tracking: a channel only counts as delivered when it has a real
+      // destination AND the send succeeds. "in_app" always delivers (it IS this log entry).
+      // status is "sent" iff ≥1 channel delivered, else "suppressed" — never "sent" with no
+      // destination (audit 2026-06-24).
+      let deliveredAny = false;
       for (const channel of r.channels) {
-        if (channel === "email") {
+        if (channel === "in_app") {
+          deliveredAny = true;
+        } else if (channel === "email") {
           // NOTIFY_EMAIL env var — the workspace owner's email (or comma-separated list).
           const recipients = (process.env.NOTIFY_EMAIL ?? "").split(",").map((e) => e.trim()).filter(Boolean);
           if (recipients.length) {
@@ -113,13 +119,11 @@ export class LeadNotificationStore {
               ruleName: r.name,
             });
             const ok = await sendEmail({ to: recipients, subject: `New lead: ${lead.name || lead.email} (score ${total})`, html });
-            if (!ok) {
-              actualStatus = "suppressed";
-              this.log.warn(`Email delivery failed for lead ${lead.id}, rule ${r.id}`);
-            }
+            if (ok) deliveredAny = true;
+            else this.log.warn(`Email delivery failed for lead ${lead.id}, rule ${r.id}`);
           }
         } else if (channel === "slack") {
-          // NOTIFY_SLACK_WEBHOOK env var — Incoming Webhook URL.
+          // NOTIFY_SLACK_WEBHOOK env var — Incoming Webhook URL (operator-configured).
           const webhook = process.env.NOTIFY_SLACK_WEBHOOK;
           if (webhook) {
             try {
@@ -131,19 +135,24 @@ export class LeadNotificationStore {
                   text: `*New lead (score ${total})*\n${lead.name || lead.email}${lead.company ? ` · ${lead.company}` : ""}\nPage: ${lead.pageTitle ?? "unknown"} · Rule: _${r.name}_`,
                 }),
               }, 8_000);
-              if (!res.ok) actualStatus = "suppressed";
+              if (res.ok) deliveredAny = true;
             } catch {
-              actualStatus = "suppressed";
+              /* delivery failed → not counted */
             }
           }
         } else if (channel === "webhook") {
-          // POST to the rule's configured URL; "in_app" is a no-op (shown in UI).
+          // POST to the rule's TENANT-SUPPLIED URL. SSRF defense: validate the URL
+          // (blocks localhost/private/link-local/cloud-metadata) AND do NOT follow redirects,
+          // so a safe public URL can't 30x-redirect us into an internal address.
           const url = r.webhookUrl;
           if (url) {
             try {
+              const { assertSafeUrl } = await import("../common/ssrf");
+              const safeUrl = await assertSafeUrl(url);
               const { fetchWithTimeout } = await import("../common/http");
-              const res = await fetchWithTimeout(url, {
+              const res = await fetchWithTimeout(safeUrl, {
                 method: "POST",
+                redirect: "manual", // a 30x → opaqueredirect (res.ok false) → not followed, not delivered
                 headers: { "content-type": "application/json", "x-geoseo-event": "lead.alert" },
                 body: JSON.stringify({
                   event: "lead.alert",
@@ -159,13 +168,14 @@ export class LeadNotificationStore {
                   sentAt: nowIso(),
                 }),
               }, 10_000);
-              if (!res.ok) actualStatus = "suppressed";
+              if (res.ok) deliveredAny = true;
             } catch {
-              actualStatus = "suppressed";
+              /* unsafe URL or request failed → not counted */
             }
           }
         }
       }
+      const actualStatus: "sent" | "suppressed" = deliveredAny ? "sent" : "suppressed";
 
       const entry: LeadNotification = {
         id: `ln-${s.seq}`,

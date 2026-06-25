@@ -703,6 +703,7 @@ export class PageEngineStore implements OnModuleInit {
     const s = this.st(tenantId);
     const opp = this.getOpportunity(tenantId, opportunityId);
     if (!opp) return undefined;
+    const nowIso = new Date().toISOString();
     this.seq += 1;
     const slug = `/${opp.query.replace(/\s+/g, "-").toLowerCase()}`;
     const ai = content ?? (await draftPageContent(opp.query, opp.recommendedPageType, await this.brandHint(tenantId)));
@@ -752,8 +753,10 @@ export class PageEngineStore implements OnModuleInit {
         { label: "Readability grade 8–10", pass: true },
         { label: "No banned claims", pass: true },
       ],
-      createdAt: this.now,
-      updatedAt: this.now,
+      // Real wall-clock timestamps (not the fixed `this.now`) so the per-calendar-month
+      // billing limit and "created" displays are accurate for runtime-generated pages.
+      createdAt: nowIso,
+      updatedAt: nowIso,
     };
     page.wordCount = countWords(page);
     // Brand hero: attach a theme-aware placeholder synchronously so the page is returned

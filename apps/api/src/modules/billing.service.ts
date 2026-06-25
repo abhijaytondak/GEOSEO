@@ -65,12 +65,15 @@ export const PLAN_LIMITS = {
   Scale:  { pages: 999, keywords: 999, teamMembers: 999, cmsIntegrations: 999 },
 } as const;
 
+/** Map a Stripe subscription's PlanId (lowercase) to the Title-Case PLAN_LIMITS key. */
+const PLAN_TIER: Record<PlanId, keyof typeof PLAN_LIMITS> = { launch: "Launch", grow: "Grow", scale: "Scale" };
+
 export const PLANS: PlanEntitlements[] = [
   {
     id: "launch",
     label: "Launch",
     priceMonthlyUsd: 0,
-    pagesPerMonth: 5,
+    pagesPerMonth: 10,
     leadsPerMonth: 50,
     teamSeats: 1,
     features: ["Managed /feeds publishing", "Basic analytics", "1 workspace"],
@@ -155,8 +158,25 @@ export class BillingStore {
   }
 
   /**
-   * Check whether a tenant is within their plan limit for the given resource.
-   * Reads the billing plan from WorkspaceSettings (Title-Case keys).
+   * The authoritative plan tier for limit enforcement. When billing is configured, this is
+   * the real Stripe subscription's plan (only an active/trialing subscription grants its
+   * tier; anything else → free Launch), so a stale or manually-edited WorkspaceSettings
+   * value can neither grant nor bypass entitlements. When billing is unconfigured
+   * (demo/local), fall back to the settings plan.
+   */
+  private async activePlanTier(tenantId: string): Promise<keyof typeof PLAN_LIMITS> {
+    if (this.configured) {
+      const sub = (await this.state(tenantId)).subscription;
+      if (sub.status === "active" || sub.status === "trialing") return PLAN_TIER[sub.plan];
+      return "Launch";
+    }
+    return this.settingsStore.get().billing.plan ?? "Launch";
+  }
+
+  /**
+   * Check whether a tenant is within their plan limit for the given resource. The plan is
+   * the real Stripe subscription when billing is configured (see `activePlanTier`), and
+   * `current` is the count for the relevant window (per-calendar-month for pages/keywords).
    * Returns `{ allowed, limit, plan }` — never throws.
    */
   async checkLimit(
@@ -164,11 +184,44 @@ export class BillingStore {
     resource: keyof typeof PLAN_LIMITS.Launch,
     current: number,
   ): Promise<{ allowed: boolean; limit: number; plan: string }> {
-    const settings = this.settingsStore.get();
-    const plan = settings.billing.plan; // "Launch" | "Grow" | "Scale"
+    const plan = await this.activePlanTier(tenantId);
     const limits = PLAN_LIMITS[plan] ?? PLAN_LIMITS.Launch;
     const limit = limits[resource];
     return { allowed: current < limit, limit, plan };
+  }
+
+  /** App origins the post-checkout/portal redirect may target. From env so prod is pinned. */
+  private allowedOrigins(): string[] {
+    return [process.env.NEXT_PUBLIC_APP_URL, process.env.WEB_ORIGIN, process.env.APP_URL]
+      .filter((u): u is string => Boolean(u))
+      .map((u) => {
+        try {
+          return new URL(u).origin;
+        } catch {
+          return null;
+        }
+      })
+      .filter((o): o is string => Boolean(o));
+  }
+
+  /**
+   * A Stripe success/cancel/return URL is user-supplied, so an arbitrary value would let
+   * Stripe redirect the user off-origin after payment (open-redirect / phishing). Accept
+   * only http(s) URLs whose origin is in the configured allowlist; otherwise fall back to
+   * the app's own origin + `fallbackPath`. When no allowlist is configured (local dev), it
+   * stays permissive. (Audit 2026-06-24.)
+   */
+  private safeReturnUrl(candidate: string, fallbackPath: string): string {
+    const allowed = this.allowedOrigins();
+    const base = (allowed[0] ?? "http://localhost:3001").replace(/\/+$/, "");
+    try {
+      const u = new URL(candidate, base);
+      if (u.protocol !== "https:" && u.protocol !== "http:") throw new Error("scheme");
+      if (allowed.length && !allowed.includes(u.origin)) throw new Error("origin");
+      return u.toString();
+    } catch {
+      return base + fallbackPath;
+    }
   }
 
   /** Stripe-form-encode a flat params object (Stripe uses application/x-www-form-urlencoded). */
@@ -231,8 +284,8 @@ export class BillingStore {
       mode: "subscription",
       "line_items[0][price]": price,
       "line_items[0][quantity]": "1",
-      success_url: opts.successUrl,
-      cancel_url: opts.cancelUrl,
+      success_url: this.safeReturnUrl(opts.successUrl, "/billing?status=success"),
+      cancel_url: this.safeReturnUrl(opts.cancelUrl, "/billing?status=cancelled"),
       customer_email: opts.email,
       "metadata[workspaceId]": tenantId,
       "subscription_data[metadata][workspaceId]": tenantId,
@@ -255,7 +308,7 @@ export class BillingStore {
     }
     const session = await this.stripe<{ url?: string }>("/billing_portal/sessions", {
       customer: sub.customerId,
-      return_url: returnUrl,
+      return_url: this.safeReturnUrl(returnUrl, "/billing"),
     });
     return session?.url
       ? { url: session.url, setupRequired: false }
@@ -314,12 +367,16 @@ function mapStripeStatus(s: string): SubscriptionStatus {
       return "active";
     case "past_due":
     case "unpaid":
+    case "incomplete":
+    case "paused":
       return "past_due";
     case "canceled":
     case "incomplete_expired":
       return "canceled";
     default:
-      return "active";
+      // Conservative: an unknown/new Stripe status must NOT grant entitlements
+      // (activePlanTier only grants on active/trialing) — fail closed (audit 2026-06-24).
+      return "past_due";
   }
 }
 
