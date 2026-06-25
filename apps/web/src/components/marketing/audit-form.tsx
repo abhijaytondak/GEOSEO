@@ -35,21 +35,30 @@ export function AuditForm({ tone = "light" }: { tone?: "light" | "dark" }) {
     }
     setError(null);
     setState("sending");
-    const result = await submitAuditLead(
-      {
-        email: email.trim(),
-        company: v.domain,
-        websiteUrl: v.url,
-        sourceUrl: typeof window !== "undefined" ? window.location.href : "",
-        visitorId: getVisitorId(),
-      },
+    const sourceUrl = typeof window !== "undefined" ? window.location.href : "";
+
+    // Primary, always-available capture: the marketing /api/lead sink (works on the
+    // demo deploy even without the NestJS API hosted) — this is the success signal.
+    const captured = await fetch("/api/lead", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ email: email.trim(), company: v.domain, website: v.url, message: `Free AI-visibility audit requested for ${v.url}`, sourceUrl }),
+    })
+      .then((r) => r.ok)
+      .catch(() => false);
+
+    // Best-effort: feed the product backend (scoring/journey) + analytics when the
+    // API is hosted. Fire-and-forget so it never blocks or double-counts the UX.
+    void submitAuditLead(
+      { email: email.trim(), company: v.domain, websiteUrl: v.url, sourceUrl, visitorId: getVisitorId() },
       {
         captureLead: (input) => pageEngineApi.captureLead(input),
         linkLeadVisitor: (leadId, visitorId) => pageEngineApi.linkLeadVisitor(leadId, visitorId),
         trackAuditStarted: (domain) => trackOnboarding({ event: "website_analysis_started", domain }),
       },
     );
-    if (result.ok) {
+
+    if (captured) {
       setState("done");
     } else {
       setError("We couldn't submit your request. Please try again in a moment.");
