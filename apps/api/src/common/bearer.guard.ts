@@ -42,7 +42,17 @@ export class BearerGuard implements CanActivate {
     //    derives it from the user's verified Clerk session); external requests can't.
     const devToken = process.env.DEV_API_TOKEN;
     if (devToken && token.length === devToken.length && timingSafeEqual(sha256(token), sha256(devToken))) {
-      req.auth = { trusted: true };
+      // The dev token authenticates the BFF as a trusted service. The BFF has already
+      // verified the user's Clerk session and forwards their org role + id as trusted
+      // headers — RolesGuard reads `req.auth.role`, so admins/marketers are no longer
+      // collapsed to viewer once auth is on (audit 2026-06-24). These headers are honored
+      // ONLY on this dev-token path; an external request without the token can't reach here.
+      const h = req.headers as Record<string, string | undefined>;
+      req.auth = {
+        trusted: true,
+        role: typeof h["x-workspace-role"] === "string" ? h["x-workspace-role"] : undefined,
+        userId: typeof h["x-workspace-user"] === "string" ? h["x-workspace-user"] : undefined,
+      };
       return true;
     }
 
