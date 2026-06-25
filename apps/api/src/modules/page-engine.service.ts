@@ -581,6 +581,7 @@ export class PageEngineStore implements OnModuleInit {
       const def = this.st(DEFAULT_TENANT_ID);
       // eslint-disable-next-line no-console
       console.log(`[page-engine] persistence ready (Supabase) · tenants=${this.tenants.size} · ws-default pages=${def.pages.length} leads=${def.leads.length}`);
+      await this.purgeFabricatedInfographics();
     } catch (e) {
       const msg = (e as Error).message;
       // Fail closed (No-Dummy-Data §6.4, P0-7): production/staging must NOT silently run
@@ -738,7 +739,12 @@ export class PageEngineStore implements OnModuleInit {
       cta: spec.cta,
       schemaJson: buildSchemaJson(opp.recommendedPageType, { title, description: metaDescription, faqs }),
       infographic: buildInfographic(opp.recommendedPageType, opp.query, sections),
-      infographics: this.infographicService.generate(opp.query, opp.recommendedPageType, company ?? title),
+      infographics: this.infographicService.generate(
+        opp.query,
+        opp.recommendedPageType,
+        company ?? title,
+        (await this.library.get(tenantId)).proofPoints,
+      ),
       targetKeywords: [opp.query],
       wordCount: 0,
       brandMemoryVersion: 1,
@@ -1075,6 +1081,42 @@ export class PageEngineStore implements OnModuleInit {
     return [...this.tenants.keys()];
   }
 
+  /**
+   * One-time deterministic cleanup of pages persisted before the fabricated-stat fix.
+   * The old generator emitted invented stat-grids ("68% of teams see ROI", "3× faster",
+   * "42% efficiency", local "24h/5★") titled `… — key numbers` / `… — local facts`. The
+   * honest generator titles its proof-driven grid `… — by the numbers`, so the old titles
+   * are a precise, customer-uncontrollable marker. For each affected page we regenerate
+   * `infographics` from the current generator (proof-point-driven; omits the grid when the
+   * brand has no real proof). No LLM required. Idempotent — cleaned pages no longer match.
+   */
+  private async purgeFabricatedInfographics(): Promise<void> {
+    const isFabricated = (g: { kind: string; title?: string }) =>
+      g.kind === "stat-grid" && (/(—|-)\s*key numbers$/i.test(g.title ?? "") || /(—|-)\s*local facts$/i.test(g.title ?? ""));
+    let migrated = 0;
+    for (const [tenantId, s] of this.tenants) {
+      const affected = s.pages.filter((p) => (p.infographics ?? []).some(isFabricated));
+      if (!affected.length) continue;
+      const proof = (await this.library.get(tenantId)).proofPoints;
+      const company = this.brand.current()?.company?.trim();
+      for (const p of affected) {
+        p.infographics = this.infographicService.generate(
+          p.targetKeywords?.[0] ?? p.title,
+          p.pageType,
+          company ?? p.title,
+          proof,
+        );
+        p.updatedAt = new Date().toISOString();
+        this.save(tenantId, T.pages, p.id, p);
+        migrated++;
+      }
+    }
+    if (migrated) {
+      // eslint-disable-next-line no-console
+      console.log(`[page-engine] purged fabricated infographics from ${migrated} page(s)`);
+    }
+  }
+
   /* published pages (PUBLIC surfaces). Published pages are public by nature and a visitor
    * doesn't know the owning workspace, so these search across ALL tenants (A5). */
   listPublishedPages() {
@@ -1222,7 +1264,7 @@ export class PageEngineStore implements OnModuleInit {
       if (ai.faqs?.length) p.faqs = ai.faqs;
       p.schemaJson = buildSchemaJson(p.pageType, { title: p.title, description: p.metaDescription, faqs: p.faqs });
       p.infographic = buildInfographic(p.pageType, query, p.sections);
-      p.infographics = this.infographicService.generate(query, p.pageType, this.brand.current()?.company?.trim() ?? p.title);
+      p.infographics = this.infographicService.generate(query, p.pageType, this.brand.current()?.company?.trim() ?? p.title, (await this.library.get(tenantId)).proofPoints);
       p.wordCount = countWords(p);
     }
     if (p.status === "needs-refresh") p.status = "published";
@@ -1256,7 +1298,7 @@ export class PageEngineStore implements OnModuleInit {
       if (ai.faqs?.length) p.faqs = ai.faqs;
       p.schemaJson = buildSchemaJson(p.pageType, { title: p.title, description: p.metaDescription, faqs: p.faqs });
       p.infographic = buildInfographic(p.pageType, query, p.sections);
-      p.infographics = this.infographicService.generate(query, p.pageType, this.brand.current()?.company?.trim() ?? p.title);
+      p.infographics = this.infographicService.generate(query, p.pageType, this.brand.current()?.company?.trim() ?? p.title, (await this.library.get(tenantId)).proofPoints);
       p.wordCount = countWords(p);
     }
     p.updatedAt = this.now;
@@ -1347,7 +1389,7 @@ export class PageEngineStore implements OnModuleInit {
       if (ai.faqs?.length) p.faqs = ai.faqs;
       p.schemaJson = buildSchemaJson(p.pageType, { title: p.title, description: p.metaDescription, faqs: p.faqs });
       p.infographic = buildInfographic(p.pageType, query, p.sections);
-      p.infographics = this.infographicService.generate(query, p.pageType, this.brand.current()?.company?.trim() ?? p.title);
+      p.infographics = this.infographicService.generate(query, p.pageType, this.brand.current()?.company?.trim() ?? p.title, (await this.library.get(tenantId)).proofPoints);
       p.wordCount = countWords(p);
     }
     // Restore to published if it was published before; otherwise leave as approved/draft.
