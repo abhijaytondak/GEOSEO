@@ -2,6 +2,7 @@ import { BadRequestException, Body, Controller, Delete, Get, Inject, Param, Patc
 import { ApiTags } from "@nestjs/swagger";
 import type { IntegrationStatus, TeamMember, WorkspaceIntegration, WorkspaceSettings } from "@geoseo/types";
 import { validateBody } from "../common/validation";
+import { Roles } from "../common/roles.decorator";
 import {
   WorkspaceSettingsSchema,
   TeamMemberCreateSchema,
@@ -65,6 +66,7 @@ export class SettingsController {
     return { settings: { ...settings, integrations } };
   }
 
+  @Roles("admin")
   @Put()
   update(@Body(validateBody(WorkspaceSettingsSchema)) body: Partial<WorkspaceSettings>) {
     const settings = this.settings.update(body);
@@ -80,6 +82,7 @@ export class SettingsController {
     return this.cms.testWordPress(body.siteUrl, body.username, body.appPassword);
   }
 
+  @Roles("admin")
   @Patch("integrations/:id")
   updateIntegration(@Param("id") id: string, @Body(validateBody(IntegrationWriteSchema)) body: Partial<WorkspaceIntegration>) {
     const integration = this.settings.updateIntegration(id, body);
@@ -87,6 +90,7 @@ export class SettingsController {
     return { integration, job: this.jobs.create("settings-sync") };
   }
 
+  @Roles("admin")
   @Post("team")
   addTeamMember(@Body(validateBody(TeamMemberCreateSchema)) body: Omit<TeamMember, "id">) {
     const member = this.settings.addTeamMember(body);
@@ -94,6 +98,7 @@ export class SettingsController {
     return { member, settings: this.settings.get() };
   }
 
+  @Roles("admin")
   @Patch("team/:id")
   updateTeamMember(@Param("id") id: string, @Body(validateBody(TeamMemberPatchSchema)) body: Partial<Omit<TeamMember, "id">>) {
     const member = this.settings.updateTeamMember(id, body);
@@ -101,6 +106,7 @@ export class SettingsController {
     return { member, settings: this.settings.get() };
   }
 
+  @Roles("admin")
   @Delete("team/:id")
   removeTeamMember(@Param("id") id: string) {
     const result = this.settings.removeTeamMember(id);
