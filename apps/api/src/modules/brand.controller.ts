@@ -12,6 +12,7 @@ import {
 import { ApiTags } from "@nestjs/swagger";
 import type { BrandProfile } from "@geoseo/types";
 import { BrandMemoryStore } from "./brand.service";
+import { Roles } from "../common/roles.decorator";
 import { safeFetchText } from "../common/ssrf";
 import { htmlToText } from "./brand-library.extract";
 import { extractBrandLibrary } from "../llm/brand-extract";
@@ -109,6 +110,7 @@ export class BrandController {
     return { profile, completeness: completeness(profile), context: compiledContext(profile) };
   }
 
+  @Roles("admin")
   @Put()
   async update(@Body() body: Record<string, unknown>) {
     const profile = validate(body);
@@ -122,6 +124,7 @@ export class BrandController {
     return { versions: await this.store.getVersions() };
   }
 
+  @Roles("admin")
   @Post("revert/:id")
   async revert(@Param("id") id: string) {
     const version = await this.store.revert(id);

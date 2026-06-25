@@ -422,6 +422,7 @@ export class LeadsController {
     return l;
   }
 
+  @Roles("admin")
   @Delete(":id")
   remove(@Req() req: TenantRequest, @Param("id") id: string) {
     if (!this.store.removeLead(resolveTenantId(req), id)) throw new NotFoundException(`Lead ${id} not found`);
@@ -489,23 +490,27 @@ export class PublishingController {
     return { integrations: this.settings.get().integrations };
   }
 
+  @Roles("admin")
   @Post("integrations")
   upsert(@Body(validateBody(IntegrationWriteSchema)) body: { id?: string; status?: string; label?: string; description?: string }) {
     if (!body?.id) throw new BadRequestException("id is required");
     return this.settings.updateIntegration(body.id, body as never);
   }
 
+  @Roles("admin")
   @Post("test")
   test() {
     const path = this.settings.get().profile.defaultPublishPath ?? "/feeds";
     return { ok: true, destination: "managed-subdirectory", path };
   }
 
+  @Roles("admin")
   @Post("sitemap/sync")
   sitemap() {
     return { synced: true, urls: this.store.listPublishedPages().length, sitemap: "/sitemap.xml" };
   }
 
+  @Roles("admin")
   @Post("llms/sync")
   llms() {
     return { synced: true, entries: this.store.listPublishedPages().length, llmsTxt: "/llms.txt" };
