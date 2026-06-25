@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import { DocStore } from "../db/db";
-import { fetchWithTimeout } from "../common/http";
+import { safeFetchText } from "../common/ssrf";
 
 export type AuditStatus = "pass" | "warn" | "fail";
 
@@ -23,33 +23,6 @@ export interface ConversionAudit {
 }
 
 type AuditState = { last: ConversionAudit | null };
-
-/** Block SSRF targets: only http/https, no localhost / private / link-local / metadata IPs. */
-function isSafeUrl(raw: string): { ok: boolean; reason?: string } {
-  let u: URL;
-  try {
-    u = new URL(/^https?:\/\//.test(raw) ? raw : `https://${raw}`);
-  } catch {
-    return { ok: false, reason: "Invalid URL" };
-  }
-  if (u.protocol !== "http:" && u.protocol !== "https:") return { ok: false, reason: "Only http/https allowed" };
-  const host = u.hostname.toLowerCase();
-  if (
-    host === "localhost" ||
-    host === "0.0.0.0" ||
-    host === "::1" ||
-    host.endsWith(".local") ||
-    /^127\./.test(host) ||
-    /^10\./.test(host) ||
-    /^192\.168\./.test(host) ||
-    /^169\.254\./.test(host) ||
-    /^172\.(1[6-9]|2\d|3[01])\./.test(host) ||
-    host === "169.254.169.254"
-  ) {
-    return { ok: false, reason: "Private / local hosts are not allowed" };
-  }
-  return { ok: true };
-}
 
 function gradeFor(score: number): ConversionAudit["grade"] {
   return score >= 85 ? "A" : score >= 70 ? "B" : score >= 50 ? "C" : "D";
@@ -87,32 +60,23 @@ export class ConversionAuditStore {
   }
 
   async run(tenantId: string, rawUrl: string, now: string): Promise<ConversionAudit> {
-    const safe = isSafeUrl(rawUrl);
     const url = /^https?:\/\//.test(rawUrl) ? rawUrl : `https://${rawUrl}`;
-    if (!safe.ok) {
-      return this.commit(tenantId, { url, score: 0, grade: "D", findings: [], crawled: false, auditedAt: now, error: safe.reason });
-    }
 
     let html = "";
     let crawled = false;
     let error: string | undefined;
     try {
-      const res = await fetchWithTimeout(
-        url,
-        {
-          redirect: "follow",
-          headers: { "user-agent": "GEOSEO-bot/1.0 (+conversion-audit)" },
-        },
-        8000,
-      );
-      if (res.ok) {
-        html = (await res.text()).slice(0, 800_000);
-        crawled = true;
-      } else {
-        error = `Site returned HTTP ${res.status}`;
-      }
-    } catch {
-      error = "Couldn't reach the site (timeout or network error).";
+      // Shared SSRF-safe fetcher: validates the URL AND every redirect hop (re-resolves
+      // each Location against assertSafeUrl, blocking localhost/private/link-local/metadata),
+      // and streams under a byte cap instead of read-then-slice. Closes the redirect/DNS
+      // SSRF + oversized-response holes in the old homemade isSafeUrl + redirect:"follow".
+      const result = await safeFetchText(url, { maxBytes: 800_000, timeoutMs: 8000 });
+      html = result.html;
+      crawled = html.length > 0;
+      if (!crawled) error = "Couldn't reach the site (empty response or unsafe redirect).";
+    } catch (e) {
+      // assertSafeUrl throws on an unsafe target (incl. an unsafe redirect hop); surface it.
+      error = e instanceof Error ? e.message : "Couldn't reach the site (timeout or network error).";
     }
 
     const findings = crawled ? evaluate(html) : [];
