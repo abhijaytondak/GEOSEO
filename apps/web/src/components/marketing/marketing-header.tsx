@@ -26,7 +26,7 @@ const MENUS: { id: string; label: string; items: FeaturePageData[] }[] = [
 ];
 const LINKS: { id: string; label: string; href: string }[] = [
   { id: "pricing", label: "Pricing", href: "/pricing" },
-  { id: "resources", label: "Resources", href: "/feeds" },
+  { id: "resources", label: "Resources", href: "/resources" },
   { id: "faq", label: "FAQ", href: "/#faq" },
 ];
 

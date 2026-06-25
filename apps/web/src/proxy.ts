@@ -20,6 +20,7 @@ const isPublicPage = createRouteMatcher([
   "/product",
   "/use-cases",
   "/demo",
+  "/resources(.*)",
   "/platform(.*)",
   "/solutions/:slug",
   "/feeds(.*)",
