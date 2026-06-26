@@ -33,6 +33,8 @@ export function clamp(text: string, max: number): string {
 export const clampTitle = (s: string) => clamp(s, META_TITLE_MAX);
 export const clampDescription = (s: string) => clamp(s, META_DESC_MAX);
 
+import { scoreCitability } from "./citability";
+
 export interface SeoCheck {
   label: string;
   pass: boolean;
@@ -79,6 +81,8 @@ export function computeSeoChecks(page: {
     { label: "Keyword in a section heading", pass: keywordInHeading },
     { label: `Sufficient depth (≥ ${minWords} words)`, pass: page.wordCount >= minWords },
     { label: "Answer-first FAQs (2+)", pass: page.faqs.filter((f) => f.q && f.a && f.a.length >= 40).length >= 2 },
+    // AEO: passages are extractable/citable by AI answer engines (citability grade ≥ C / 50+).
+    { label: "Citable for AI answer engines", pass: scoreCitability(page).score >= 50 },
     { label: "Crawlable without auth", pass: true },
   ];
 }
