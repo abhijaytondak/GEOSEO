@@ -31,9 +31,10 @@ in `docs/` (see bottom).
   won't persist there**. Clerk pk/sk passed as build+runtime env. Redeploy: `vercel deploy --prod --yes` from repo
   root (Clerk keys via `--build-env`/`-e` from `apps/web/.env.local`). For a fully-working deploy, host `apps/api`
   (Railway/Render) and set `API_INTERNAL_URL` on the Vercel project.
-- **Live full-stack link (local-backed):** **https://nectar-polo-parameter.ngrok-free.dev** — reserved ngrok tunnel →
-  local web `:3001` (which proxies `/api/v1` → local API `:4000`, real Supabase data, production mode). Fully live
-  while the local web+API+tunnel run. Ephemeral/machine-bound — use Railway for durable.
+- **Live deploy:** API on **Render** (`geoseo-api`, demo mode) + web on **Vercel** (`https://geoseo-tau.vercel.app`,
+  demo mode) via the BFF. A reserved ngrok tunnel (`nectar-polo-parameter.ngrok-free.dev` → local `:3001`) can expose
+  a local full stack on demand but is off unless `ngrok http 3001 --domain=…` is running. To take it production, see
+  `docs/PRODUCTION_LAUNCH.md`.
 - **Durable API host:** `railway.json` (root, Nixpacks, `pnpm --filter @geoseo/api start`, healthcheck `/api/v1/health`)
   is ready. One human step: `railway login`, then set env from `apps/api/.env` + `railway up`, then point Vercel's
   `API_INTERNAL_URL` at the Railway URL. Full steps in **`docs/DEPLOY.md`**.
@@ -69,13 +70,72 @@ in `docs/` (see bottom).
   mock server + fallback. **GSC/Analytics** (monitoring) still mock/heuristic — need keys; GSC moot until pages publish
   on an owned domain.
 
-## ▶ Pick up here — current state & handoff (updated 2026-06-17)
+## ▶ Pick up here — current state & handoff (updated 2026-06-26)
 
 > **MULTI-ACCOUNT REPO.** Several Claude Code accounts **and** a Codex agent edit this repo concurrently.
-> Read this whole block first, then run `git status` — there is usually uncommitted in-flight work from
-> another agent on disk. **Do not commit/clobber files you didn't author.**
+> Read this block first, then run `git status` — there is often uncommitted in-flight work from another
+> agent on disk. **Do not commit/clobber files you didn't author.** When committing, use explicit
+> pathspecs (`git commit -- <files>`) so the shared index can't sweep another lane's staged work in.
 
-### Session 2026-06-17 (latest — work is on branch `nav-workflow-optimization` / PR #1, **NOT merged to `main`**)
+### Session 2026-06-26 (latest — ALL merged to `main`; CI green)
+
+**`main` is the source of truth** — everything below is merged and CI-passing. The marketing lane
+(separate account) also merged its landing site (PRs #13/#14/#15). Two PRs are intentionally **open/held**
+(see "Open PRs"). Read `docs/PRODUCTION_LAUNCH.md` for the demo→live runbook.
+
+**Runtime / deploy:** API on Render (`geoseo-api`, demo mode, Supabase live) behind the Vercel BFF;
+web on Vercel `https://geoseo-tau.vercel.app` (demo mode). Live API health = `mode:demo, authRequired:false,
+dbReachable:true`. Local: `apps/api` on `:4000`, `apps/web` on `:3001` (see "How to run").
+
+**Content/image LLM = local Ollama** (operator's machine): `apps/api/.env` has `DEEPSEEK_BASE_URL=
+http://localhost:11434/v1`, `DEEPSEEK_MODEL=llama3.1:8b` (page content), and `IMAGE_GEN_*` → `x/z-image-turbo`
+(hero images). Verified generating real content + images. On Render there's no Ollama, so without a hosted
+`DEEPSEEK_API_KEY` the content path uses the deterministic template fallback (structurally complete, generic prose).
+
+**What shipped this session (all on `main`):**
+- **Page-engine SEO/GEO/AEO overhaul** — rich JSON-LD `@graph` (`buildSchemaJson` in `llm/page-type-spec.ts`:
+  Organization+WebSite+primary node w/ canonical url/author/dates/wordCount/keywords + BreadcrumbList +
+  FAQPage + `speakable`); meta clamping + **real computed `seoChecks`** (`common/seo.ts`, recomputed on every
+  edit/regenerate via `recomputeSeoArtifacts`); stronger non-fabricating drafting prompt + output validation
+  (`llm/deepseek.ts`).
+- **Citability / AEO scorer** (`common/citability.ts`, adapted from MIT geo-seo-claude rubric) — 0–100 per-passage
+  score across 5 weighted dims; `GET /pages/:id/citability`; surfaced as a **drawer panel** (`components/pages/
+  citability-panel.tsx`) + **at-a-glance card chip** (persisted `citabilityScore`/`citabilityGrade` on `GeneratedPage`,
+  backfilled on boot).
+- **Feed-page AEO** — `DirectAnswer` "Quick answer"+key-facts block at the top, and `RelatedPages` topic-cluster
+  internal links at the foot (`components/feeds/`).
+- **Keyword finder overhaul** (`page-engine.service.discover`, `keyword-research.service.ts`) — deterministic seed
+  expansion (modifier matrix → `expansion` tier, never empty), topic clustering into pillars, server-side opportunity
+  `score` (sorted finest-first), AEO question detection → FAQ routing, dedup, auto-seed from Brand Memory; explorer
+  UI surfaces score/AEO badge/CPC/pillar sort.
+- **Security (audit 2026-06-24)** — fixed lead-notification route/verb, outbound-webhook SSRF (+`redirect:manual`),
+  truthful delivery status; `@Roles` deny-by-default + explicit admin route matrix; integration-secret redaction on
+  read (`common/redact.ts`); conversion-audit → shared `safeFetchText`; **BFF verified-Clerk-role propagation**
+  (`x-workspace-role`); fabricated-stat purge.
+- **Performance (audit 2026-06-26)** — BFF passes non-JSON responses (llms.txt/sitemap/report no longer 502) +
+  route-class cache headers + `x-request-id`/`x-bff-ms` timing; EnvelopeInterceptor skips wrapping non-JSON routes;
+  **list summary projection** (`/pages` 323KB→37KB, `/public/pages`→20KB) with drawer lazy-fetch of full content
+  via `GET /pages/:id`; strips base64 `data:` images from lists.
+- **Incident containment** — `assertHostedAuthInvariant` (`common/mode.ts`): a hosted+DB deployment refuses to boot
+  with auth disabled (this is **PR #20**, still open — see below). CI lint/typecheck/build is green.
+
+**Open PRs (do NOT merge without the operator step they depend on):**
+- **#20 `fix/prod-auth-boot-invariant`** — the boot invariant. ⚠️ Merging triggers Render auto-deploy; since the live
+  API runs demo+auth-off, the invariant would **refuse to boot → live API offline**. Merge ONLY after production
+  auth env is set on Render (see `docs/PRODUCTION_LAUNCH.md`).
+- **#29 `fix/no-mock-honest-states`** — removes the web runtime mock fallback (real data or honest empty/error).
+  Merge once the API is hosted/production so the public app shows real data, not "can't load".
+
+**Biggest remaining blockers are INFRA, not code (operator/dashboards):** host API always-on (kills Render
+cold-start, perf-audit #2), **Clerk production instance** (pk_live/sk_live — current deploy uses a `pk_test` dev
+instance that's domain-restricted), and optionally `DEEPSEEK_API_KEY`/`DATAFORSEO_*` keys for real content/data.
+Full ordered steps + the verified config in `docs/PRODUCTION_LAUNCH.md`.
+
+**Larger code follow-ups (flagged, not done):** move DDL/full-table hydration out of API boot; normalize high-growth
+JSONB entities (pages/leads/jobs/audit) to indexed tables; `/jobs`+`/opportunities` projection; cursor pagination;
+tenant-scope the still-global stores (Brand/Settings/Alerts) once auth lands; `data:` images → object storage.
+
+### Session 2026-06-17 (work is on branch `nav-workflow-optimization` / PR #1, **NOT merged to `main`**)
 
 **Runtime right now:** API on `:4000` (tsx, `GEOSEO_MODE=demo`, Supabase live), web on `:3001`, public tunnel
 `https://nectar-polo-parameter.ngrok-free.dev`. Vercel prod `https://geoseo-tau.vercel.app` (demo/mock mode, open).
@@ -580,6 +640,8 @@ Vercel demo runs the real backend (with these seams active) instead of the mock 
 - Secrets live in `apps/api/.env` (operator keeps them in-repo intentionally; do not rotate without asking).
 
 ## Deeper docs
-`docs/UPGRADE-PLAN.md` (**sellable-product execution brief — the current roadmap**) ·
-`docs/DECISIONS.md` (latest decisions) · `docs/HANDOFF.md` (Codex's pre-Clerk handoff — partly stale) ·
-`docs/ROADMAP.md` (S0→S14 sequence) · `docs/PRD-*.md` (specs) · `docs/API-SPEC.md` · `docs/FLOWS.md`.
+`docs/PRODUCTION_LAUNCH.md` (**demo→live runbook — Clerk prod keys, Render/Vercel env, the ordered steps;
+read this to take the product live**) · `docs/DEPLOY.md` (Render/Railway hosting) ·
+`docs/UPGRADE-PLAN.md` (sellable-product execution brief) · `docs/DECISIONS.md` (latest decisions) ·
+`docs/HANDOFF.md` (Codex's pre-Clerk handoff — stale) · `docs/ROADMAP.md` (S0→S14) · `docs/PRD-*.md` (specs) ·
+`docs/API-SPEC.md` · `docs/FLOWS.md`.
