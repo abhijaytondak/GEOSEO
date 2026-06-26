@@ -3,7 +3,8 @@ import { dbEnabled, ensureTable, loadAllWithIds, removeRow, upsert } from "../db
 import { resolveMode } from "../common/mode";
 import { DEFAULT_TENANT_ID } from "../common/tenant";
 import { draftPageContent, type DraftContent } from "../llm/deepseek";
-import { specFor, buildSchemaJson } from "../llm/page-type-spec";
+import { specFor, buildSchemaJson, type SchemaContext } from "../llm/page-type-spec";
+import { clampTitle, clampDescription, computeSeoChecks } from "../common/seo";
 import { buildInfographic } from "../llm/infographic";
 import { classifyIntents, type ClassifiedIntent } from "../llm/intent";
 import { BrandMemoryStore } from "./brand.service";
@@ -497,6 +498,56 @@ export class PageEngineStore implements OnModuleInit {
     return host ? `https://${host}/feeds${slug}` : `/feeds${slug}`;
   }
 
+  /** The workspace's own site root (https://domain), or "" when no domain is configured. */
+  private siteRoot(): string {
+    const host = (process.env.PUBLIC_SITE_HOST || this.brand.current()?.domain || "")
+      .trim()
+      .replace(/^https?:\/\//, "")
+      .replace(/\/+$/, "");
+    return host ? `https://${host}` : "";
+  }
+
+  /** Recompute every derived SEO artifact in the correct order: clamp meta → wordCount →
+   *  rich JSON-LD graph → real seoChecks. Used after generate/edit/regenerate so the schema
+   *  and checks always reflect the current content (no stale wordCount, no hardcoded pass). */
+  private recomputeSeoArtifacts(p: GeneratedPage): void {
+    p.metaTitle = clampTitle(p.metaTitle);
+    p.metaDescription = clampDescription(p.metaDescription);
+    p.wordCount = countWords(p);
+    p.schemaJson = buildSchemaJson(p.pageType, this.schemaContextFor(p));
+    p.seoChecks = computeSeoChecks(p);
+  }
+
+  /** Build the rich SEO/GEO/AEO JSON-LD context for a page from Brand Memory + its timestamps. */
+  private schemaContextFor(p: {
+    title: string;
+    metaDescription: string;
+    slug: string;
+    faqs: { q: string; a: string }[];
+    targetKeywords: string[];
+    wordCount: number;
+    createdAt?: string;
+    updatedAt?: string;
+  }): SchemaContext {
+    const brand = this.brand.current();
+    const root = this.siteRoot();
+    const url = this.publishedUrlFor(p.slug);
+    return {
+      title: p.title,
+      description: p.metaDescription,
+      faqs: p.faqs,
+      url: url.startsWith("http") ? url : undefined, // only emit absolute canonical urls
+      company: brand?.company?.trim() || undefined,
+      companyUrl: root || undefined,
+      author: brand?.company?.trim() || undefined,
+      datePublished: p.createdAt,
+      dateModified: p.updatedAt,
+      keywords: p.targetKeywords,
+      wordCount: p.wordCount,
+      lang: "en",
+    };
+  }
+
   private snapshot(tenantId: string, p: GeneratedPage, changeSummary: string, authorType: PageVersion["authorType"]) {
     this.vseq += 1;
     const s = this.st(tenantId);
@@ -710,12 +761,15 @@ export class PageEngineStore implements OnModuleInit {
     const ai = content ?? (await draftPageContent(opp.query, opp.recommendedPageType, await this.brandHint(tenantId)));
     const title = opp.query.replace(/\b\w/g, (c) => c.toUpperCase());
     const company = this.brand.current()?.company?.trim();
-    const metaTitle = ai?.metaTitle ?? (company ? `${title} | ${company}` : title);
+    // Meta discipline (SEO): clamp to Google's snippet budgets on a word boundary, so an
+    // over-long LLM/template title or description isn't truncated mid-word in the SERP.
+    const metaTitle = clampTitle(ai?.metaTitle ?? (company ? `${title} | ${company}` : title));
     // Page-type spec drives structure for BOTH the AI and template paths, so a
     // Blog/Service/Comparison page is distinct either way (PRD Phase 1).
     const spec = specFor(opp.recommendedPageType);
-    const metaDescription =
-      ai?.metaDescription ?? `A ${spec.label.toLowerCase()} targeting "${opp.query}", drafted from Brand Memory.`;
+    const metaDescription = clampDescription(
+      ai?.metaDescription ?? `A ${spec.label.toLowerCase()} targeting "${opp.query}", drafted from Brand Memory.`,
+    );
     // Use type-specific section builder for the template path; LLM path uses ai.sections.
     const sections = ai?.sections?.length
       ? ai.sections
@@ -737,7 +791,7 @@ export class PageEngineStore implements OnModuleInit {
       sections,
       faqs,
       cta: spec.cta,
-      schemaJson: buildSchemaJson(opp.recommendedPageType, { title, description: metaDescription, faqs }),
+      schemaJson: "", // set below, once wordCount + timestamps are known (rich SEO/GEO/AEO graph)
       infographic: buildInfographic(opp.recommendedPageType, opp.query, sections),
       infographics: this.infographicService.generate(
         opp.query,
@@ -748,12 +802,7 @@ export class PageEngineStore implements OnModuleInit {
       targetKeywords: [opp.query],
       wordCount: 0,
       brandMemoryVersion: 1,
-      seoChecks: [
-        { label: "Single H1", pass: true },
-        { label: "Meta title 50–60 chars", pass: metaTitle.length >= 50 && metaTitle.length <= 60 },
-        { label: "Valid JSON-LD", pass: true },
-        { label: "Crawlable without auth", pass: true },
-      ],
+      seoChecks: [], // computed below, after wordCount
       qualityChecks: [
         { label: "Original (similarity < 15%)", pass: true },
         { label: "Readability grade 8–10", pass: true },
@@ -765,6 +814,10 @@ export class PageEngineStore implements OnModuleInit {
       updatedAt: nowIso,
     };
     page.wordCount = countWords(page);
+    // Build the rich SEO/GEO/AEO JSON-LD graph + compute REAL seo checks now that wordCount
+    // and timestamps are known (the schema carries url/author/dates/wordCount/keywords/speakable).
+    page.schemaJson = buildSchemaJson(page.pageType, this.schemaContextFor(page));
+    page.seoChecks = computeSeoChecks(page);
     // Brand hero: attach a theme-aware placeholder synchronously so the page is returned
     // without blocking on image generation. When IMAGE_GEN is configured, the real brand
     // raster is generated in the background (~minute on local diffusion) and swapped in.
@@ -1040,8 +1093,10 @@ export class PageEngineStore implements OnModuleInit {
     if (edit.sections !== undefined) p.sections = clone(edit.sections);
     if (edit.faqs !== undefined) p.faqs = clone(edit.faqs);
     if (edit.cta !== undefined) p.cta = clone(edit.cta);
-    p.wordCount = countWords(p);
-    p.updatedAt = this.now;
+    p.updatedAt = new Date().toISOString();
+    // Clamp meta → recompute wordCount → rich SEO/GEO/AEO schema → real seoChecks, so the
+    // SEO panel + JSON-LD reflect the edit (not a stale generate-time snapshot).
+    this.recomputeSeoArtifacts(p);
     // editing a published page flags it for re-publish
     if (p.status === "published") p.status = "needs-refresh";
     this.snapshot(tenantId, p, "Manual edit", "human");
@@ -1262,10 +1317,11 @@ export class PageEngineStore implements OnModuleInit {
       if (ai.heroCopy) p.heroCopy = ai.heroCopy;
       if (ai.sections?.length) p.sections = ai.sections;
       if (ai.faqs?.length) p.faqs = ai.faqs;
-      p.schemaJson = buildSchemaJson(p.pageType, { title: p.title, description: p.metaDescription, faqs: p.faqs });
+      p.updatedAt = new Date().toISOString();
       p.infographic = buildInfographic(p.pageType, query, p.sections);
       p.infographics = this.infographicService.generate(query, p.pageType, this.brand.current()?.company?.trim() ?? p.title, (await this.library.get(tenantId)).proofPoints);
-      p.wordCount = countWords(p);
+      // Clamp meta → recompute wordCount → rich SEO/GEO/AEO schema → real seoChecks.
+      this.recomputeSeoArtifacts(p);
     }
     if (p.status === "needs-refresh") p.status = "published";
     p.lastRefreshedAt = this.now;
@@ -1296,10 +1352,11 @@ export class PageEngineStore implements OnModuleInit {
       if (ai.heroCopy) p.heroCopy = ai.heroCopy;
       if (ai.sections?.length) p.sections = ai.sections;
       if (ai.faqs?.length) p.faqs = ai.faqs;
-      p.schemaJson = buildSchemaJson(p.pageType, { title: p.title, description: p.metaDescription, faqs: p.faqs });
+      p.updatedAt = new Date().toISOString();
       p.infographic = buildInfographic(p.pageType, query, p.sections);
       p.infographics = this.infographicService.generate(query, p.pageType, this.brand.current()?.company?.trim() ?? p.title, (await this.library.get(tenantId)).proofPoints);
-      p.wordCount = countWords(p);
+      // Clamp meta → recompute wordCount → rich SEO/GEO/AEO schema → real seoChecks.
+      this.recomputeSeoArtifacts(p);
     }
     p.updatedAt = this.now;
     this.snapshot(tenantId, p, ai ? `Rewrite for keywords: ${clean.slice(0, 5).join(", ")}` : "Rewrite (LLM unavailable)", "ai");
@@ -1387,10 +1444,11 @@ export class PageEngineStore implements OnModuleInit {
       if (ai.heroCopy) p.heroCopy = ai.heroCopy;
       if (ai.sections?.length) p.sections = ai.sections;
       if (ai.faqs?.length) p.faqs = ai.faqs;
-      p.schemaJson = buildSchemaJson(p.pageType, { title: p.title, description: p.metaDescription, faqs: p.faqs });
+      p.updatedAt = new Date().toISOString();
       p.infographic = buildInfographic(p.pageType, query, p.sections);
       p.infographics = this.infographicService.generate(query, p.pageType, this.brand.current()?.company?.trim() ?? p.title, (await this.library.get(tenantId)).proofPoints);
-      p.wordCount = countWords(p);
+      // Clamp meta → recompute wordCount → rich SEO/GEO/AEO schema → real seoChecks.
+      this.recomputeSeoArtifacts(p);
     }
     // Restore to published if it was published before; otherwise leave as approved/draft.
     p.status = prevStatus === "published" || prevStatus === "needs-refresh" ? "published" : prevStatus;

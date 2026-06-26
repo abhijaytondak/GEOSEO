@@ -54,6 +54,7 @@ import { draftWithPuter } from "@/lib/puter-ai";
 import { PageComposer, type ComposerType } from "@/components/pages/page-composer";
 import { RichText } from "@/components/feeds/rich-text";
 import { KeywordReview } from "@/components/pages/keyword-review";
+import { CitabilityPanel } from "@/components/pages/citability-panel";
 
 type BadgeVariant = "brand" | "positive" | "negative" | "warning" | "info" | "muted";
 
@@ -911,6 +912,9 @@ export function PagesView({
                     </>
                   )}
                 </section>
+
+                {/* citability / AEO score — how citable the page is by AI answer engines */}
+                <CitabilityPanel pageId={current.id} updatedAt={current.updatedAt} />
 
                 {/* infographics badge (PRD Phase 3) */}
                 {(current.infographics?.length ?? 0) > 0 && (
