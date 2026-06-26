@@ -46,8 +46,14 @@ export interface KeywordOpportunity {
   difficulty: number;
   /** 0–100 commercial value. */
   commercialValue: number;
+  /** Estimated cost-per-click (USD) — real buyer-value signal when available. */
+  cpc?: number;
   /** 0–100 model confidence in the recommendation. */
   confidence: number;
+  /** 0–100 blended opportunity score (volume reach × value × winnability) — the default sort. */
+  score?: number;
+  /** True for question / "People Also Ask"-style queries — prime AEO (answer-engine) targets. */
+  question?: boolean;
   recommendedPageType: PageType;
   competitorUrls: string[];
   /** One-line "why this is recommended" evidence (PRD acceptance criteria). */

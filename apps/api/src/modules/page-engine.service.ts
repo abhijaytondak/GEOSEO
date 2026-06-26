@@ -320,6 +320,56 @@ function stageFromIntent(intent: SearchIntent): FunnelStage {
   return "consideration"; // commercial / comparison / navigational / local
 }
 
+/** A question / "People Also Ask"-style query — a prime AEO (answer-engine) target. */
+function isQuestionKeyword(keyword: string): boolean {
+  return /^(how|what|why|when|where|who|which|can|do(es)?|is|are|should|will)\b/i.test(keyword.trim()) || keyword.includes("?");
+}
+
+const KW_STOPWORDS = new Set([
+  "the", "a", "an", "to", "for", "of", "in", "on", "and", "or", "vs", "with", "best", "top", "how", "what",
+  "why", "is", "are", "near", "me", "your", "you", "guide", "tips", "cost", "pricing", "buy", "hire",
+]);
+
+/** Significant tokens of a keyword (lowercased, stopwords + short tokens removed) for clustering. */
+function keywordTokens(keyword: string): string[] {
+  return keyword
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, " ")
+    .split(/\s+/)
+    .filter((t) => t.length > 2 && !KW_STOPWORDS.has(t));
+}
+
+/**
+ * Deterministic topic clustering (offline). Groups keywords into pillars by shared significant
+ * tokens — each cluster's label is its most common head token. Turns a flat keyword list into
+ * pillar + supporting-content structure (the backbone of topical authority).
+ */
+function clusterKeywords(keywords: string[]): Map<string, { id: string; label: string }> {
+  const tokensFor = new Map(keywords.map((k) => [k, keywordTokens(k)]));
+  const freq = new Map<string, number>();
+  for (const toks of tokensFor.values()) for (const t of new Set(toks)) freq.set(t, (freq.get(t) ?? 0) + 1);
+  const result = new Map<string, { id: string; label: string }>();
+  for (const [kw, toks] of tokensFor) {
+    const head = toks
+      .slice()
+      .sort((a, b) => (freq.get(b)! - freq.get(a)!) || b.length - a.length || a.localeCompare(b))[0];
+    const label = head ? head.replace(/\b\w/g, (c) => c.toUpperCase()) : "General";
+    result.set(kw, { id: `c-${head ?? "general"}`, label });
+  }
+  return result;
+}
+
+/**
+ * Blended 0–100 opportunity score: volume reach (log-scaled) × commercial value × winnability
+ * (low difficulty). "Finest keywords first" — persisted + sorted server-side (was UI-only).
+ */
+function opportunityScore(o: { volume: number; difficulty: number; commercialValue: number }): number {
+  const reach = Math.min(1, Math.log10(Math.max(10, o.volume)) / 4); // ~0 at 10/mo → 1 at 10k/mo
+  const value = o.commercialValue / 100;
+  const winnability = (100 - o.difficulty) / 100;
+  return clampN((reach * 0.35 + value * 0.35 + winnability * 0.3) * 100, 1, 99);
+}
+
 /** Progress record for a background "Initiate" batch page-generation run. */
 export interface PageBatchJob {
   id: string;
@@ -1246,13 +1296,50 @@ export class PageEngineStore implements OnModuleInit {
 
   /* research: real DataForSEO keyword ideas when configured, else deterministic seed discovery */
   async discover(tenantId: string, input: DiscoverInput): Promise<KeywordOpportunity[]> {
-    const seeds = (input.seeds ?? []).map((s) => s.trim()).filter(Boolean).slice(0, 6);
-    const ideas = await this.research.researchKeywords(seeds, { limit: 24 });
+    let seeds = (input.seeds ?? []).map((s) => s.trim()).filter(Boolean).slice(0, 8);
+    // Auto-seed from Brand Memory when the user gave none (keywords → topics → company).
+    // Clean to keyword-like phrases: decode HTML entities, drop taglines/sentences (keep ≤4 words).
+    if (seeds.length === 0) {
+      const b = this.brand.current();
+      const decode = (s: string) =>
+        s.replace(/&#x27;|&#39;|&apos;/g, "'").replace(/&amp;/g, "&").replace(/&quot;/g, '"');
+      const keywordLike = (s: string) => {
+        const t = decode(s).trim().replace(/\s+/g, " ");
+        const words = t.split(" ").length;
+        return words >= 1 && words <= 4 && !/[.!?]/.test(t) ? t : "";
+      };
+      seeds = [...(b?.keywords ?? []), ...(b?.topics ?? []), ...(b?.company ? [b.company] : [])]
+        .map(keywordLike)
+        .filter(Boolean)
+        .slice(0, 8);
+    }
+    const brandLoc = this.brand.current();
+    const ideas = await this.research.researchKeywords(seeds, {
+      limit: 40,
+      industry: brandLoc?.industry,
+      audience: brandLoc?.audience,
+    });
     // LLM intent refinement (intent + research-vs-ready-to-buy stage); regex fallback.
     const classified = ideas.length ? await classifyIntents(ideas.map((i) => i.keyword)) : null;
-    const created: KeywordOpportunity[] = ideas.length
-      ? ideas.map((idea) => this.oppFromIdea(tenantId, idea, input.intent, classified?.[idea.keyword.trim().toLowerCase()]))
-      : seeds.map((seed) => this.oppFromSeed(tenantId, seed, input.intent));
+    // Topic clustering across the whole set so each opportunity gets a real pillar.
+    const clusters = clusterKeywords(ideas.length ? ideas.map((i) => i.keyword) : seeds);
+
+    let created: KeywordOpportunity[] = ideas.length
+      ? ideas.map((idea) => this.oppFromIdea(tenantId, idea, input.intent, classified?.[idea.keyword.trim().toLowerCase()], clusters.get(idea.keyword)))
+      : seeds.map((seed) => this.oppFromSeed(tenantId, seed, input.intent, clusters.get(seed)));
+
+    // Dedup within the batch (different seeds can yield the same query) keeping the best score.
+    const byQuery = new Map<string, KeywordOpportunity>();
+    for (const o of created) {
+      const existing = byQuery.get(o.query);
+      if (!existing || (o.score ?? 0) > (existing.score ?? 0)) byQuery.set(o.query, o);
+    }
+    // Drop queries we've already discovered before (not just published) — no clutter.
+    const known = new Set(this.st(tenantId).opportunities.map((o) => o.query.toLowerCase()));
+    created = [...byQuery.values()]
+      .filter((o) => !known.has(o.query.toLowerCase()))
+      .sort((a, b) => (b.score ?? 0) - (a.score ?? 0)); // finest keywords first
+
     const s = this.st(tenantId);
     for (const opp of created) s.opportunities.unshift(opp);
     created.forEach((o) => this.save(tenantId, T.opps, o.id, o));
@@ -1265,32 +1352,39 @@ export class PageEngineStore implements OnModuleInit {
     idea: KeywordIdea,
     intentOverride?: SearchIntent,
     classified?: ClassifiedIntent,
+    cluster?: { id: string; label: string },
   ): KeywordOpportunity {
     this.seq += 1;
     const intent = intentOverride ?? classified?.intent ?? classifyKwIntent(idea.keyword);
     const funnelStage = classified?.stage ?? stageFromIntent(intent);
+    const question = isQuestionKeyword(idea.keyword);
     const commercialValue = clampN((idea.cpc > 0 ? Math.min(idea.cpc * 8, 55) : idea.competition * 55) + 25, 1, 99);
     const confidence = clampN(60 + (idea.searchVolume > 100 ? 15 : 0) + (idea.difficulty < 40 ? 15 : 0), 1, 99);
+    const score = opportunityScore({ volume: idea.searchVolume, difficulty: idea.difficulty, commercialValue });
     const src = this.research.source;
-    const label = src === "dataforseo" ? "Discovered (DataForSEO)" : src === "ai-search" ? "AI search demand" : "Discovered";
+    const srcLabel =
+      src === "dataforseo" ? "DataForSEO" : src === "ai-search" ? "AI-search demand" : src === "autocomplete" ? "Google Autocomplete" : "Long-tail expansion";
+    // Question/AEO keywords → FAQ; otherwise the intent map (comparison/guide/landing/…).
+    const recommendedPageType = question ? "faq" : PAGE_TYPE_BY_INTENT[intent] ?? "landing";
     const evidence =
       src === "dataforseo"
         ? `DataForSEO: ${idea.searchVolume.toLocaleString()} searches/mo · difficulty ${idea.difficulty} · CPC $${idea.cpc.toFixed(2)}.`
-        : src === "ai-search"
-          ? `AI-search buyer query · est. ${idea.searchVolume.toLocaleString()} searches/mo · difficulty ${idea.difficulty}.`
-          : `Keyword idea · est. ${idea.searchVolume.toLocaleString()} searches/mo · difficulty ${idea.difficulty}.`;
+        : `${srcLabel} · est. ${idea.searchVolume.toLocaleString()} searches/mo · difficulty ${idea.difficulty}${question ? " · question (AEO)" : ""}.`;
     return {
       id: `kw-disc-${this.seq}`,
       query: idea.keyword.toLowerCase(),
-      clusterId: "c-discovered",
-      clusterLabel: label,
+      clusterId: cluster?.id ?? "c-discovered",
+      clusterLabel: cluster?.label ?? srcLabel,
       intent,
       funnelStage,
       volume: idea.searchVolume,
       difficulty: idea.difficulty,
       commercialValue,
+      cpc: idea.cpc > 0 ? idea.cpc : undefined,
       confidence,
-      recommendedPageType: PAGE_TYPE_BY_INTENT[intent] ?? "landing",
+      score,
+      question,
+      recommendedPageType,
       competitorUrls: [],
       evidence,
       status: "new",
@@ -1299,25 +1393,30 @@ export class PageEngineStore implements OnModuleInit {
     };
   }
 
-  /** Deterministic fallback when no research provider is configured (current behavior). */
-  private oppFromSeed(tenantId: string, seed: string, intentOverride?: SearchIntent): KeywordOpportunity {
+  /** Deterministic fallback (only reached if even seed expansion yields nothing). */
+  private oppFromSeed(tenantId: string, seed: string, intentOverride?: SearchIntent, cluster?: { id: string; label: string }): KeywordOpportunity {
     this.seq += 1;
     const intents: SearchIntent[] = ["commercial", "informational", "comparison"];
-    const types: PageType[] = ["landing", "guide", "comparison"];
     const h = [...seed].reduce((a, c) => a + c.charCodeAt(0), 0);
     const intent = intentOverride ?? intents[h % intents.length];
+    const question = isQuestionKeyword(seed);
+    const volume = 300 + (h % 9) * 600;
+    const difficulty = 25 + (h % 50);
+    const commercialValue = 55 + (h % 40);
     return {
       id: `kw-disc-${this.seq}`,
       query: seed.toLowerCase(),
-      clusterId: "c-discovered",
-      clusterLabel: "Discovered",
+      clusterId: cluster?.id ?? "c-discovered",
+      clusterLabel: cluster?.label ?? "Discovered",
       intent,
       funnelStage: stageFromIntent(intent),
-      volume: 300 + (h % 9) * 600,
-      difficulty: 25 + (h % 50),
-      commercialValue: 55 + (h % 40),
+      volume,
+      difficulty,
+      commercialValue,
       confidence: 70 + (h % 25),
-      recommendedPageType: types[h % types.length],
+      score: opportunityScore({ volume, difficulty, commercialValue }),
+      question,
+      recommendedPageType: question ? "faq" : PAGE_TYPE_BY_INTENT[intent] ?? "landing",
       competitorUrls: [],
       evidence: `Seed-derived opportunity for "${seed}" — validate volume with the research provider.`,
       status: "new",
