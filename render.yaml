@@ -23,12 +23,27 @@ services:
       - key: NODE_VERSION
         value: "22"
       # --- Mode: demo = open + sales-safe + persistence on (simplest hosted deploy).
-      #     To go production (auth on), set GEOSEO_MODE=production, API_AUTH_REQUIRED=true,
-      #     and add DEV_API_TOKEN (then mirror it on the Vercel web). ---
+      #     To GO PRODUCTION (auth enforced):
+      #       1. GEOSEO_MODE=production + API_AUTH_REQUIRED=true
+      #       2. fill DEV_API_TOKEN below (same value on the Vercel web) — the BFF service token
+      #       3. fill CLERK_SECRET_KEY below (sk_live_… from a Clerk PRODUCTION instance)
+      #       4. mirror on Vercel: NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_live_…, CLERK_SECRET_KEY,
+      #          DEV_API_TOKEN, GEOSEO_REQUIRE_AUTH=true, NEXT_PUBLIC_GEOSEO_MODE=production
+      #     (Until then demo mode is safe: open beta, no real auth.) ---
       - key: GEOSEO_MODE
         value: demo
+      - key: API_AUTH_REQUIRED
+        value: "false"
       - key: WEB_ORIGIN
         value: https://geoseo-tau.vercel.app
+      # --- Production auth (fill when flipping GEOSEO_MODE=production) ---
+      # DEV_API_TOKEN: shared secret the Vercel BFF sends as Bearer; the API trusts it and reads
+      # the verified Clerk role the BFF forwards. Generate a 64-char hex secret (same on Vercel).
+      - key: DEV_API_TOKEN
+        sync: false
+      # CLERK_SECRET_KEY: sk_live_… — lets the API verify Clerk session JWTs directly.
+      - key: CLERK_SECRET_KEY
+        sync: false
       # --- LLM (content/page generation) ---
       - key: LLM_PROVIDER
         value: deepseek
