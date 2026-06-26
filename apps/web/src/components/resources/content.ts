@@ -396,7 +396,7 @@ if (process.env.NEXT_PHASE === "phase-production-build" || process.env.NODE_ENV 
   const b = [...INDEX_SLUGS].sort().join("\n");
   if (a !== b) {
     throw new Error(
-      "resource-index.ts is out of sync with content.ts — regenerate via scratchpad/gen-resource-index.mts",
+      "resource-index.ts is out of sync with content.ts — regenerate: pnpm --filter @geoseo/web gen:resource-index",
     );
   }
 }
