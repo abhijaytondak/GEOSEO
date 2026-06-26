@@ -45,17 +45,20 @@ const STATUS_VARIANT: Record<OpportunityStatus, BadgeVariant> = {
   deferred: "warning",
 };
 
-type SortKey = "impact" | "volume" | "difficulty" | "commercialValue" | "confidence";
+type SortKey = "score" | "pillar" | "volume" | "difficulty" | "commercialValue" | "confidence";
 const SORTS: { key: SortKey; label: string }[] = [
-  { key: "impact", label: "Impact" },
+  { key: "score", label: "Score" },
+  { key: "pillar", label: "Topic pillar" },
   { key: "volume", label: "Volume" },
   { key: "difficulty", label: "Difficulty" },
   { key: "commercialValue", label: "Value" },
   { key: "confidence", label: "Confidence" },
 ];
 
-// blended impact: value × volume reach ÷ difficulty
-function impact(o: KeywordOpportunity): number {
+// Prefer the server-computed opportunity score; fall back to a UI blend for legacy opps
+// (value × volume reach ÷ difficulty) so older rows still rank sensibly.
+function score(o: KeywordOpportunity): number {
+  if (typeof o.score === "number") return o.score;
   const reach = Math.min(100, Math.log10(Math.max(10, o.volume)) * 22);
   return Math.round(o.commercialValue * 0.5 + reach * 0.3 + (100 - o.difficulty) * 0.2);
 }
@@ -80,7 +83,7 @@ export function OpportunitiesExplorer({ initial }: { initial: KeywordOpportunity
   const [query, setQuery] = useState("");
   const [intent, setIntent] = useState<SearchIntent | "all">("all");
   const [status, setStatus] = useState<OpportunityStatus | "all">("all");
-  const [sort, setSort] = useState<SortKey>("impact");
+  const [sort, setSort] = useState<SortKey>("score");
   const [expanded, setExpanded] = useState<string | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [busy, setBusy] = useState<string | null>(null);
@@ -93,7 +96,12 @@ export function OpportunitiesExplorer({ initial }: { initial: KeywordOpportunity
       .filter((o) => (intent === "all" ? true : o.intent === intent))
       .filter((o) => (status === "all" ? true : o.status === status))
       .filter((o) => (q ? o.query.toLowerCase().includes(q) || o.clusterLabel.toLowerCase().includes(q) : true))
-      .sort((a, b) => (sort === "impact" ? impact(b) - impact(a) : b[sort] - a[sort]));
+      .sort((a, b) => {
+        if (sort === "score") return score(b) - score(a);
+        // "pillar" groups by cluster label, then best score within each pillar.
+        if (sort === "pillar") return a.clusterLabel.localeCompare(b.clusterLabel) || score(b) - score(a);
+        return (b[sort] as number) - (a[sort] as number);
+      });
   }, [opps, query, intent, status, sort]);
 
   function patch(id: string, next: Partial<KeywordOpportunity>) {
@@ -278,7 +286,7 @@ export function OpportunitiesExplorer({ initial }: { initial: KeywordOpportunity
                 <th className="px-3 py-3">Vol</th>
                 <th className="px-3 py-3">KD</th>
                 <th className="px-3 py-3">Value</th>
-                <th className="px-3 py-3">Impact</th>
+                <th className="px-3 py-3">Score</th>
                 <th className="px-3 py-3">Status</th>
                 <th className="px-5 py-3 text-right">Actions</th>
               </tr>
@@ -296,15 +304,23 @@ export function OpportunitiesExplorer({ initial }: { initial: KeywordOpportunity
                       <button onClick={() => setExpanded(expanded === o.id ? null : o.id)} className="flex items-start gap-1.5 rounded-md text-left focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50">
                         {expanded === o.id ? <ChevronDown className="mt-0.5 size-3.5 text-muted-foreground" /> : <ChevronRight className="mt-0.5 size-3.5 text-muted-foreground" />}
                         <span className="min-w-0">
-                          <span className="flex items-center gap-1.5 text-body font-semibold text-foreground">
+                          <span className="flex flex-wrap items-center gap-1.5 text-body font-semibold text-foreground">
                             {o.query}
+                            {o.question && (
+                              <Badge variant="brand" title="Question / answer-engine target (AEO)">
+                                <Sparkles className="size-3" /> AEO
+                              </Badge>
+                            )}
                             {o.duplicate && (
                               <Badge variant="warning" title="May cannibalize an existing page">
                                 <AlertTriangle className="size-3" /> dup
                               </Badge>
                             )}
                           </span>
-                          <span className="text-micro text-muted-foreground">{o.clusterLabel} · {o.recommendedPageType}</span>
+                          <span className="text-micro text-muted-foreground">
+                            {o.clusterLabel} · {o.recommendedPageType}
+                            {typeof o.cpc === "number" && o.cpc > 0 ? ` · $${o.cpc.toFixed(2)} CPC` : ""}
+                          </span>
                         </span>
                       </button>
                     </td>
@@ -319,7 +335,7 @@ export function OpportunitiesExplorer({ initial }: { initial: KeywordOpportunity
                     <td className="px-3 py-3 tabular-nums text-label text-muted-foreground">{compact(o.volume)}</td>
                     <td className="px-3 py-3 tabular-nums text-label text-muted-foreground">{o.difficulty}</td>
                     <td className="px-3 py-3 tabular-nums text-label text-muted-foreground">{o.commercialValue}</td>
-                    <td className="px-3 py-3 tabular-nums text-label font-semibold text-foreground">{impact(o)}</td>
+                    <td className="px-3 py-3 tabular-nums text-label font-semibold text-foreground">{score(o)}</td>
                     <td className="px-3 py-3"><Badge variant={STATUS_VARIANT[o.status]} className="capitalize">{o.status}</Badge></td>
                     <td className="px-5 py-3">
                       <div className="flex items-center justify-end gap-1.5">
