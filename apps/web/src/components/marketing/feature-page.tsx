@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, Clock } from "lucide-react";
+import { ArrowRight, Clock, Check } from "lucide-react";
 import { Reveal } from "@/components/motion/reveal";
 import { cn } from "@/lib/utils";
 import { AuditForm } from "./audit-form";
@@ -25,6 +25,9 @@ function Glow({ className }: { className?: string }) {
 export function FeaturePage({ data }: { data: FeaturePageData }) {
   const related = data.related.map(resolveRelated).filter(Boolean) as FeaturePageData[];
   const ctaHref = "/#audit";
+  // Hero credibility chips — first 3 items from the page's checklist block (if any).
+  const checklist = data.sections.find((s) => s.kind === "checklist");
+  const heroChips = checklist ? checklist.items.slice(0, 3) : [];
 
   return (
     <>
@@ -55,11 +58,22 @@ export function FeaturePage({ data }: { data: FeaturePageData }) {
               <Link href={ctaHref} className="ease-expo inline-flex h-12 items-center gap-2 rounded-full bg-brand px-6 text-base font-semibold text-brand-foreground shadow-raised transition-all duration-200 hover:-translate-y-0.5 hover:brightness-110">
                 {data.comingSoon ? "Join the waitlist" : "Get your free audit"} <ArrowRight className="size-5" />
               </Link>
-              <Link href="/feeds" className="inline-flex h-12 items-center rounded-full border border-border bg-card px-6 text-base font-medium text-foreground transition-colors hover:bg-muted">
-                See it in action
+              <Link href="/resources" className="inline-flex h-12 items-center rounded-full border border-border bg-card px-6 text-base font-medium text-foreground transition-colors hover:bg-muted">
+                Explore the guides
               </Link>
             </div>
           </Reveal>
+          {heroChips.length > 0 && (
+            <Reveal delay={0.2}>
+              <ul className="mt-8 flex flex-wrap items-center justify-center gap-2.5">
+                {heroChips.map((c) => (
+                  <li key={c} className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card/70 px-3.5 py-1.5 text-sm font-medium text-foreground shadow-xs backdrop-blur-sm">
+                    <Check className="size-3.5 shrink-0 text-brand" aria-hidden /> {c}
+                  </li>
+                ))}
+              </ul>
+            </Reveal>
+          )}
         </div>
       </section>
 

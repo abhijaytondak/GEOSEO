@@ -13,6 +13,7 @@ import {
   CtaBand,
 } from "@/components/marketing/sections";
 import { BentoShowcase, BentoPlatform } from "@/components/marketing/bento";
+import { Testimonials } from "@/components/marketing/testimonials";
 import { Faq } from "@/components/marketing/faq";
 import { FAQS, SITE_URL, BRAND, TAGLINE } from "@/components/marketing/data";
 
@@ -103,6 +104,7 @@ export default function MarketingHome() {
       <SolutionsRow />
       <MetricsBand />
       <Comparison />
+      <Testimonials />
       <ProofBand />
 
       {/* FAQ */}
