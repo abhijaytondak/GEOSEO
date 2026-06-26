@@ -180,6 +180,23 @@ export function PagesView({
     };
   }, [openId]);
 
+  // The /pages list returns SUMMARIES (heavy content stripped for payload — perf audit).
+  // When the drawer opens a summary (no sections), lazy-fetch the full page and merge it in,
+  // so the content preview / sections editor / KeywordReview / infographics have real data.
+  useEffect(() => {
+    if (!openId) return;
+    const p = pages.find((x) => x.id === openId);
+    if (!p || p.sections.length > 0) return; // already full (e.g. just generated) → skip
+    let cancelled = false;
+    pageEngineApi.getPage(openId).then((full) => {
+      if (!cancelled && full) setPages((arr) => arr.map((x) => (x.id === full.id ? full : x)));
+    });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentionally only on open
+  }, [openId]);
+
   function openPage(id: string) {
     setEditing(false);
     setOpenId(id);
