@@ -32,6 +32,7 @@ import { validateBody, v } from "../common/validation";
 import { BlueprintUpdateSchema, PageEditSchema, IntegrationWriteSchema, LeadStatusUpdateSchema } from "../common/schemas";
 import { isDisposableEmail, refererAllowed } from "../common/public-ingest";
 import { resolveMode } from "../common/mode";
+import { citabilityReport } from "../common/citability";
 
 // Public lead capture: required well-formed email, length caps, + a `website`
 // honeypot (real visitors never fill it). Unknown keys are stripped.
@@ -242,6 +243,15 @@ export class PagesController {
     const p = this.store.getPage(resolveTenantId(req), id);
     if (!p) throw new NotFoundException(`Page ${id} not found`);
     return p;
+  }
+
+  /** Citability / AEO report — score, grade, and per-dimension findings (how citable the
+   *  page is by AI answer engines). Computed deterministically from the page content. */
+  @Get(":id/citability")
+  citability(@Req() req: TenantRequest, @Param("id") id: string) {
+    const p = this.store.getPage(resolveTenantId(req), id);
+    if (!p) throw new NotFoundException(`Page ${id} not found`);
+    return { citability: citabilityReport(p) };
   }
 
   @Post(":id/approve")

@@ -32,6 +32,21 @@ export interface CitabilityResult {
   suggestions: string[];
 }
 
+/** Tri-state per-dimension finding for the editor UI (pass/warn/fail + how to fix). */
+export interface CitabilityFinding {
+  id: string;
+  label: string;
+  status: "pass" | "warn" | "fail";
+  /** "12 / 30" — points earned vs the dimension ceiling. */
+  detail: string;
+  recommendation: string;
+}
+
+export interface CitabilityReport extends CitabilityResult {
+  /** Per-dimension findings (answer-block, self-containment, readability, stats, uniqueness). */
+  findings: CitabilityFinding[];
+}
+
 const STOP_PRONOUNS = /\b(it|this|that|these|those|they|them|he|she|him|her|his|its|their)\b/gi;
 const DEFINITION = /\b(is|are|refers to|means|defined as|describes)\b/i;
 const TRANSITIONS = /\b(however|therefore|for example|in addition|because|as a result|in contrast|specifically|notably|moreover)\b/i;
@@ -138,4 +153,45 @@ export function scoreCitability(page: {
   const suggestions = gaps.sort((a, b) => b.gap - a.gap).slice(0, 3).filter((g) => g.gap > 2).map((g) => g.msg);
 
   return { score, grade: grade(score), passages: passages.length, suggestions };
+}
+
+/**
+ * Full editor-facing report: the page score + grade plus a tri-state finding per dimension
+ * (pass ≥ 80% of ceiling, warn ≥ 40%, else fail) with a concrete fix. Powers the Pages UI panel.
+ */
+export function citabilityReport(page: {
+  sections: { heading: string; body: string }[];
+  faqs: { q: string; a: string }[];
+  heroCopy: string;
+}): CitabilityReport {
+  const base = scoreCitability(page);
+  const passages = [
+    ...page.sections.map((s) => scorePassage(s.body)),
+    ...page.faqs.map((f) => scorePassage(f.a)),
+  ].filter((p) => p.words >= 20);
+
+  const avg = (sel: (b: PassageScore["breakdown"]) => number) =>
+    passages.length ? passages.reduce((a, p) => a + sel(p.breakdown), 0) / passages.length : 0;
+
+  const dims: { id: string; label: string; ceiling: number; got: number; fix: string }[] = [
+    { id: "answer-block", label: "Answer-first blocks", ceiling: 30, got: avg((b) => b.answerBlock), fix: "Open each section/FAQ with a direct, self-contained answer (a definition or crisp claim) in the first sentence — AI engines quote it verbatim." },
+    { id: "self-containment", label: "Self-contained passages", ceiling: 25, got: avg((b) => b.selfContainment), fix: "Target 130–170 words per passage, cut pronouns (“it/this/they”), and name concrete entities so each block stands alone." },
+    { id: "readability", label: "Structural readability", ceiling: 20, got: avg((b) => b.readability), fix: "Use 10–20-word sentences and add a bullet or numbered list for scannable structure." },
+    { id: "statistical-density", label: "Factual density", ceiling: 15, got: avg((b) => b.statisticalDensity), fix: "Add brand-grounded specifics — figures, dates, named sources (never fabricated)." },
+    { id: "uniqueness", label: "Distinctive signals", ceiling: 10, got: avg((b) => b.uniqueness), fix: "Include a differentiator: original data, a case study, or a named tool/process." },
+  ];
+
+  const findings: CitabilityFinding[] = dims.map((d) => {
+    const ratio = d.ceiling ? d.got / d.ceiling : 0;
+    const status: CitabilityFinding["status"] = ratio >= 0.8 ? "pass" : ratio >= 0.4 ? "warn" : "fail";
+    return {
+      id: d.id,
+      label: d.label,
+      status,
+      detail: `${Math.round(d.got)} / ${d.ceiling}`,
+      recommendation: d.fix,
+    };
+  });
+
+  return { ...base, findings };
 }

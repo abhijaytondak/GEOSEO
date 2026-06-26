@@ -71,6 +71,22 @@ export interface RefreshRec {
   reason: string;
 }
 
+/** Citability / AEO report for a generated page (mirrors apps/api common/citability). */
+export interface CitabilityFinding {
+  id: string;
+  label: string;
+  status: "pass" | "warn" | "fail";
+  detail: string;
+  recommendation: string;
+}
+export interface CitabilityReport {
+  score: number;
+  grade: "A" | "B" | "C" | "D" | "F";
+  passages: number;
+  suggestions: string[];
+  findings: CitabilityFinding[];
+}
+
 function base(): string {
   if (typeof window === "undefined") {
     return `${process.env.API_INTERNAL_URL ?? "http://localhost:4000"}/api/v1`;
@@ -308,6 +324,11 @@ export const pageEngineApi = {
     get<{ versions: PageVersion[] }>(`/pages/${id}/versions`, () => ({ versions: [] })).then(
       (d) => d.versions,
     ),
+  /** Citability / AEO report for a page (score, grade, per-dimension findings). */
+  getCitability: (id: string) =>
+    get<{ citability: CitabilityReport }>(`/pages/${id}/citability`, () => ({
+      citability: { score: 0, grade: "F" as const, passages: 0, suggestions: [], findings: [] },
+    })).then((d) => d.citability),
   rollbackPage: (id: string, versionId: string) =>
     send<GeneratedPage>("POST", `/pages/${id}/rollback/${versionId}`),
 
