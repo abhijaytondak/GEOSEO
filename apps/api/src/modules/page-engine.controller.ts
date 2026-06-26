@@ -16,7 +16,7 @@ import {
   Req,
   UnprocessableEntityException,
 } from "@nestjs/common";
-import type { LeadStatus, PageBlueprint, PageEdit } from "@geoseo/types";
+import type { LeadStatus, PageBlueprint, PageEdit, GeneratedPage } from "@geoseo/types";
 import { ApiTags } from "@nestjs/swagger";
 import { PageEngineStore } from "./page-engine.service";
 import { BillingStore } from "./billing.service";
@@ -33,6 +33,30 @@ import { BlueprintUpdateSchema, PageEditSchema, IntegrationWriteSchema, LeadStat
 import { isDisposableEmail, refererAllowed } from "../common/public-ingest";
 import { resolveMode } from "../common/mode";
 import { citabilityReport } from "../common/citability";
+
+/**
+ * List projection (perf audit 2026-06-26): list endpoints drop the heavy content fields
+ * (sections / faqs / schemaJson / infographic[s]) that made /pages ~135KB and /public/pages
+ * ~47KB — none of the card/sitemap/llms/related consumers read them. Heavy fields are
+ * emptied (not removed) so the GeneratedPage shape stays valid; full content is fetched on
+ * demand via GET /pages/:id (app drawer) and GET /public/pages/:slug (public feed page).
+ */
+function toPageSummary(p: GeneratedPage): GeneratedPage {
+  // Drop base64 `data:` hero/og images (generated rasters are ~250KB each — they dominate the
+  // list payload). Real http(s) image URLs are tiny and kept. The card falls back to its
+  // gradient; the full image is restored when the drawer lazy-fetches GET /pages/:id.
+  const stripDataUri = (u?: string) => (u && u.startsWith("data:") ? undefined : u);
+  return {
+    ...p,
+    sections: [],
+    faqs: [],
+    infographics: [],
+    infographic: undefined,
+    schemaJson: "",
+    heroImageUrl: stripDataUri(p.heroImageUrl),
+    ogImageUrl: stripDataUri(p.ogImageUrl),
+  };
+}
 
 // Public lead capture: required well-formed email, length caps, + a `website`
 // honeypot (real visitors never fill it). Unknown keys are stripped.
@@ -166,7 +190,8 @@ export class PagesController {
 
   @Get()
   list(@Req() req: TenantRequest) {
-    return { pages: this.store.listPages(resolveTenantId(req)) };
+    // Summary projection — the drawer lazy-fetches full content via GET /pages/:id.
+    return { pages: this.store.listPages(resolveTenantId(req)).map(toPageSummary) };
   }
 
   /** Pages created in the current calendar month (UTC) — the billing window for the page limit. */
@@ -540,7 +565,8 @@ export class PublicController {
   @Public()
   @Get("pages")
   pages() {
-    return { pages: this.store.listPublishedPages() };
+    // Summary projection — full page content is served per-slug by GET /public/pages/:slug.
+    return { pages: this.store.listPublishedPages().map(toPageSummary) };
   }
 
   @Public()

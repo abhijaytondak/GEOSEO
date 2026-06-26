@@ -153,6 +153,13 @@ export const pageEngineApi = {
     get<{ pages: GeneratedPage[] }>("/pages", async () => ({ pages: await pageEngine.getPages() })).then(
       (d) => d.pages,
     ),
+  /** Full page (incl. heavy content). The list returns summaries; the detail drawer
+   *  lazy-fetches the full body via this (perf audit 2026-06-26). */
+  getPage: (id: string) =>
+    get<GeneratedPage>(`/pages/${id}`, async () => {
+      const all = await pageEngine.getPages();
+      return all.find((p) => p.id === id) as GeneratedPage;
+    }),
   getLeads: () =>
     get<{ leads: Lead[] }>("/leads", async () => ({ leads: await pageEngine.getLeads() })).then(
       (d) => d.leads,
