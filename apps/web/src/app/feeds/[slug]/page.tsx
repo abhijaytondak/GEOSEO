@@ -8,6 +8,7 @@ import { api } from "@/lib/api-client";
 import { LeadForm } from "@/components/feeds/lead-form";
 import { FeedTracker } from "@/components/feeds/feed-tracker";
 import { BrandHero } from "@/components/feeds/brand-hero";
+import { DirectAnswer } from "@/components/feeds/direct-answer";
 import { jsonLdSafe } from "@/lib/utils";
 import { Infographic } from "@/components/feeds/infographic";
 import { RichText } from "@/components/feeds/rich-text";
@@ -98,6 +99,9 @@ export default async function FeedPage({ params }: Params) {
           </div>
           <h1 className="text-[34px] font-bold leading-tight tracking-[-0.02em] text-foreground" style={{ fontFamily: "var(--font-heading, inherit)" }}>{page.title}</h1>
           <p className="mt-3 mb-6 text-[17px] leading-relaxed text-foreground/80">{page.heroCopy}</p>
+
+          {/* AEO: direct-answer block + key facts at the top — what LLM answer engines cite */}
+          <DirectAnswer page={page} />
 
           {/* branded hero — generated image if present, else a theme-matched SVG (no stock) */}
           <BrandHero
