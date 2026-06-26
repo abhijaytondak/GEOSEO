@@ -47,11 +47,11 @@ SEO + quality rules:
 - Keyword placement: use "${query}" naturally within the first 100 words and in at least one section heading.
 - Depth: write ${bodyLen} per section. Real mechanisms, concrete examples, specific numbers — no vague filler, no repetition.
 - Semantic coverage: naturally include related terms and entities a search engine expects for this topic (LSI keywords, subtopics, named concepts).
-- Answer-first: open each section with a direct, self-contained, quotable answer to its implied question. AI engines extract and cite these — make them standalone.
-- E-E-A-T signals: demonstrate experience and expertise through specific processes, real outcomes, and authoritative details. Cite plausible benchmarks where appropriate.
-- Structure: where it aids comprehension, embed lists or numbered steps inside the body (use "- " bullets or "1. " steps on their own lines).
-- FAQs: each answer is a complete, standalone 2-3 sentence response that directly answers the question.
-- Accuracy: never invent statistics, customers, or claims not grounded in the brand context.
+- Answer-first (AEO): open each section with a direct, self-contained, quotable 1-2 sentence answer to its implied question, THEN expand. AI answer engines extract that opening verbatim — it must stand alone without the heading or surrounding text.
+- E-E-A-T signals: demonstrate experience and expertise through specific processes, real mechanisms, and concrete how-to detail. Do NOT invent statistics or benchmarks — use a number ONLY if it is grounded in the brand context; otherwise describe the outcome qualitatively.
+- Structure: where it aids comprehension, embed lists or numbered steps inside the body (use "- " bullets or "1. " steps on their own lines) — scannable structure is favored by both Google and AI engines.
+- FAQs: each answer is a complete, standalone 2-3 sentence response that directly answers the question (no "as mentioned above"); write the questions the way a user would type or speak them.
+- Accuracy (hard rule): never invent statistics, percentages, customer names, awards, or claims not present in the brand context. Fabricated specifics fail the page. When unsure, stay qualitative.
 
 Section arc (adapt wording to brand + query; keep arc and order):
 ${spec.sectionPlan.map((s, i) => `${i + 1}. ${s}`).join("\n")}
@@ -91,7 +91,14 @@ Return JSON exactly matching:
     const content = data.choices?.[0]?.message?.content;
     if (!content) return null;
     const parsed = JSON.parse(content) as DraftContent;
-    if (!parsed.metaTitle || !Array.isArray(parsed.sections)) return null;
+    // Validate the shape before trusting it — a malformed/thin draft falls back to the
+    // deterministic template rather than shipping an empty or broken page.
+    const okSections =
+      Array.isArray(parsed.sections) &&
+      parsed.sections.length > 0 &&
+      parsed.sections.every((s) => s && typeof s.heading === "string" && typeof s.body === "string" && s.body.trim().length >= 40);
+    if (!parsed.metaTitle || typeof parsed.heroCopy !== "string" || !parsed.heroCopy.trim() || !okSections) return null;
+    if (!Array.isArray(parsed.faqs)) parsed.faqs = [];
     return parsed;
   } catch {
     return null;
