@@ -3,7 +3,9 @@ import { api } from "@/lib/api-client";
 import { BRAND, TAGLINE, SITE_URL } from "@/components/marketing/data";
 import { ALL_FEATURE_PAGES, featureHref } from "@/components/marketing/platform-data";
 
-export const dynamic = "force-dynamic";
+// ISR so this AI-crawler guidance becomes a Vercel cache HIT (it was a force-dynamic
+// MISS). In demo mode the route returns before any fetch → fully cacheable.
+export const revalidate = 300;
 
 /** Demo deployments have no real tenant — expose the GEOSEO product identity + marketing
  *  pages, never the demo workspace's brand or sample feed URLs (audit critical #1). */
@@ -24,7 +26,12 @@ export async function GET() {
       `- [${BRAND}](${SITE_URL}/): ${TAGLINE}`,
       ...ALL_FEATURE_PAGES.map((f) => `- [${f.label}](${SITE_URL}${featureHref(f)}): ${f.tagline}`),
     ];
-    return new Response(lines.join("\n"), { headers: { "content-type": "text/plain; charset=utf-8" } });
+    return new Response(lines.join("\n"), {
+      headers: {
+        "content-type": "text/plain; charset=utf-8",
+        "cache-control": "public, s-maxage=300, stale-while-revalidate=3600",
+      },
+    });
   }
 
   const [pages, brand] = await Promise.all([
@@ -50,6 +57,9 @@ export async function GET() {
   ];
 
   return new Response(lines.join("\n"), {
-    headers: { "content-type": "text/plain; charset=utf-8" },
+    headers: {
+      "content-type": "text/plain; charset=utf-8",
+      "cache-control": "public, s-maxage=300, stale-while-revalidate=3600",
+    },
   });
 }

@@ -1,5 +1,6 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import { ClerkProvider } from "@clerk/nextjs";
 import { Sidebar } from "@/components/shell/sidebar";
 import { Topbar } from "@/components/shell/topbar";
 import { CommandPalette } from "@/components/shell/command-palette";
@@ -42,17 +43,22 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     .then((s) => s.profile?.workspaceName)
     .catch(() => undefined);
 
+  // ClerkProvider is scoped to the gated product app (and the auth routes) so the
+  // public marketing/feeds pages never load Clerk client JS. The topbar's Clerk
+  // components (UserButton/SignInButton/Show) sit inside this provider.
   return (
-    <AppFeedbackProvider>
-      <div className="flex h-dvh overflow-hidden bg-background">
-        <Sidebar className="hidden lg:flex" />
-        <div className="flex min-w-0 flex-1 flex-col">
-          <Topbar workspaceName={workspaceName} />
-          <DegradedBanner />
-          <main className="flex-1 overflow-y-auto">{children}</main>
+    <ClerkProvider>
+      <AppFeedbackProvider>
+        <div className="flex h-dvh overflow-hidden bg-background">
+          <Sidebar className="hidden lg:flex" />
+          <div className="flex min-w-0 flex-1 flex-col">
+            <Topbar workspaceName={workspaceName} />
+            <DegradedBanner />
+            <main className="flex-1 overflow-y-auto">{children}</main>
+          </div>
         </div>
-      </div>
-      <CommandPalette />
-    </AppFeedbackProvider>
+        <CommandPalette />
+      </AppFeedbackProvider>
+    </ClerkProvider>
   );
 }

@@ -1,4 +1,5 @@
 import type { Article } from "./content-types";
+import { PUBLISHED_SLUGS as INDEX_SLUGS } from "./resource-index";
 import { BATCH_FUNDAMENTALS } from "./content-fundamentals";
 import { BATCH_TACTICS } from "./content-tactics";
 import { BATCH_ENGINES } from "./content-engines";
@@ -385,3 +386,17 @@ export function getArticle(slug: string): Article | undefined {
 }
 
 export const PUBLISHED_SLUGS = Object.keys(CONTENT);
+
+// Build/dev-time drift guard (no-op in the serving runtime): the body-free
+// resource-index.ts (consumed by the /resources hub + sitemap so article bodies never
+// enter their module graph) MUST list the same slugs as the authored CONTENT. If this
+// throws during `next build`, regenerate it: pnpm --filter @geoseo/web gen:resource-index.
+if (process.env.NEXT_PHASE === "phase-production-build" || process.env.NODE_ENV === "development") {
+  const a = [...PUBLISHED_SLUGS].sort().join("\n");
+  const b = [...INDEX_SLUGS].sort().join("\n");
+  if (a !== b) {
+    throw new Error(
+      "resource-index.ts is out of sync with content.ts — regenerate via scratchpad/gen-resource-index.mts",
+    );
+  }
+}

@@ -5,7 +5,9 @@ import { Reveal } from "@/components/motion/reveal";
 import { cn } from "@/lib/utils";
 import { SITE_URL, BRAND } from "@/components/marketing/data";
 import { CLUSTERS, getTopic } from "@/components/resources/topics";
-import { CONTENT, PUBLISHED_SLUGS } from "@/components/resources/content";
+// Body-free metadata index — keeps the authored article bodies out of the hub's module
+// graph (the /resources/[slug] route is the only thing that imports the full CONTENT).
+import { RESOURCE_INDEX, PUBLISHED_SLUGS } from "@/components/resources/resource-index";
 
 const DISPLAY = "[font-family:var(--font-display)] font-semibold tracking-tight";
 const GRAD = "bg-gradient-to-r from-brand to-info bg-clip-text text-transparent";
@@ -57,16 +59,18 @@ export default function ResourcesHub() {
                 <p className="mt-1.5 text-muted-foreground">{c.blurb}</p>
               </div>
               <div className="grid gap-3 sm:grid-cols-2">
-                {items.map((t, i) => {
-                  const a = CONTENT[t!.slug];
+                {items.map((t) => {
+                  const a = RESOURCE_INDEX[t!.slug];
                   return (
-                    <Reveal key={t!.slug} delay={(i % 2) * 0.05}>
-                      <Link href={`/resources/${t!.slug}`} className="ease-expo group flex h-full flex-col rounded-2xl border border-border bg-card p-5 shadow-card transition-all duration-200 hover:-translate-y-0.5 hover:border-brand/30 hover:shadow-raised">
-                        <h3 className="text-lg font-semibold text-foreground">{t!.title}</h3>
-                        <p className="mt-1.5 flex-1 text-sm leading-relaxed text-muted-foreground">{a.metaDescription}</p>
-                        <span className="mt-3 inline-flex items-center gap-1 text-sm font-semibold text-brand">Read <ArrowRight className="size-4 transition-transform group-hover:translate-x-1" /></span>
-                      </Link>
-                    </Reveal>
+                    <Link
+                      key={t!.slug}
+                      href={`/resources/${t!.slug}`}
+                      className="reveal-scroll ease-expo group flex h-full flex-col rounded-2xl border border-border bg-card p-5 shadow-card transition-all duration-200 hover:-translate-y-0.5 hover:border-brand/30 hover:shadow-raised"
+                    >
+                      <h3 className="text-lg font-semibold text-foreground">{t!.title}</h3>
+                      <p className="mt-1.5 flex-1 text-sm leading-relaxed text-muted-foreground">{a.metaDescription}</p>
+                      <span className="mt-3 inline-flex items-center gap-1 text-sm font-semibold text-brand">Read <ArrowRight className="size-4 transition-transform group-hover:translate-x-1" /></span>
+                    </Link>
                   );
                 })}
               </div>
