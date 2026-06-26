@@ -70,24 +70,27 @@ function ScoreRing({ score, grade, size = 132 }: { score: number; grade: Grade; 
 }
 
 export function CitabilityPanel({ pageId, updatedAt }: { pageId: string; updatedAt?: string }) {
-  const [report, setReport] = useState<CitabilityReport | null>(null);
-  const [state, setState] = useState<"loading" | "ready" | "error">("loading");
+  // Result is tagged with the request key it was fetched for; `state`/`report` are DERIVED.
+  // This keeps all setState calls inside the async callbacks (no synchronous setState in the
+  // effect — react-hooks/set-state-in-effect), and re-fetches on pageId/updatedAt/retry.
+  const [result, setResult] = useState<{ key: string; report?: CitabilityReport; error?: boolean } | null>(null);
+  const [reload, setReload] = useState(0);
+  const reqKey = `${pageId}::${updatedAt ?? ""}::${reload}`;
 
   useEffect(() => {
     let live = true;
-    setState("loading");
     pageEngineApi
       .getCitability(pageId)
-      .then((r) => {
-        if (!live) return;
-        setReport(r);
-        setState("ready");
-      })
-      .catch(() => live && setState("error"));
+      .then((r) => live && setResult({ key: reqKey, report: r }))
+      .catch(() => live && setResult({ key: reqKey, error: true }));
     return () => {
       live = false;
     };
-  }, [pageId, updatedAt]);
+  }, [reqKey, pageId]);
+
+  const settled = result?.key === reqKey;
+  const state: "loading" | "ready" | "error" = !settled ? "loading" : result?.error ? "error" : "ready";
+  const report = settled && !result?.error ? result?.report ?? null : null;
 
   return (
     <section aria-labelledby="citability-heading">
@@ -117,16 +120,7 @@ export function CitabilityPanel({ pageId, updatedAt }: { pageId: string; updated
           <ErrorState
             title="Couldn't score citability"
             description="The AEO analysis couldn't be loaded for this page."
-            onRetry={() => {
-              setState("loading");
-              pageEngineApi
-                .getCitability(pageId)
-                .then((r) => {
-                  setReport(r);
-                  setState("ready");
-                })
-                .catch(() => setState("error"));
-            }}
+            onRetry={() => setReload((n) => n + 1)}
           />
         )}
 
