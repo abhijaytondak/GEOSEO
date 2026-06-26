@@ -90,8 +90,8 @@ export class OpportunitiesController {
   @Post("discover")
   async discover(@Req() req: TenantRequest, @Body() body: { seeds?: string[]; intent?: string }) {
     const t = resolveTenantId(req);
+    // Empty seeds are allowed — discover() auto-seeds from Brand Memory (topics/keywords/company).
     const seeds = Array.isArray(body?.seeds) ? body.seeds.filter((s) => typeof s === "string") : [];
-    if (seeds.length === 0) throw new BadRequestException("seeds[] is required");
     const created = await this.store.discover(t, { seeds, intent: body.intent as never });
     return { created, opportunities: this.store.listOpportunities(t), source: this.store.researchSource() };
   }
@@ -100,8 +100,8 @@ export class OpportunitiesController {
    *  Use this from the UI: LLM-backed discovery exceeds the web BFF request budget. */
   @Post("discover-async")
   startDiscover(@Req() req: TenantRequest, @Body() body: { seeds?: string[]; intent?: string }) {
+    // Empty seeds are allowed — discover() auto-seeds from Brand Memory.
     const seeds = Array.isArray(body?.seeds) ? body.seeds.filter((s) => typeof s === "string") : [];
-    if (seeds.length === 0) throw new BadRequestException("seeds[] is required");
     return this.store.startDiscover(resolveTenantId(req), { seeds, intent: body.intent as never });
   }
 

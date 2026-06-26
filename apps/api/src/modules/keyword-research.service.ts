@@ -14,7 +14,36 @@ export interface KeywordIdea {
 }
 
 /** Which provider actually produced the last result set. */
-export type ResearchSource = "dataforseo" | "ai-search" | "autocomplete" | "mock";
+export type ResearchSource = "dataforseo" | "ai-search" | "autocomplete" | "expansion" | "mock";
+
+/**
+ * Deterministic long-tail seed expansion (offline, no key). Turns each seed into the
+ * modifier matrix real buyers search — informational ("how to", "what is", guides),
+ * commercial ("best", "top", "software", "services"), comparison ("vs", "alternatives"),
+ * and transactional ("pricing", "cost", "near me", "hire"). Plus the bare seed. This is
+ * what gives the keyless finder genuine breadth instead of one keyword per seed.
+ */
+const SEED_MODIFIERS: string[] = [
+  "{s}",
+  // informational / AEO question forms
+  "how to {s}", "what is {s}", "{s} guide", "{s} examples", "{s} tips", "{s} checklist", "{s} best practices",
+  // commercial
+  "best {s}", "top {s}", "{s} software", "{s} tools", "{s} services", "{s} solutions", "{s} platform", "affordable {s}",
+  // comparison
+  "{s} vs alternatives", "{s} alternatives", "{s} comparison",
+  // transactional
+  "{s} pricing", "{s} cost", "buy {s}", "{s} near me", "hire {s} agency",
+];
+
+export function expandSeeds(seeds: string[], perSeed = 16): string[] {
+  const out = new Set<string>();
+  for (const raw of seeds) {
+    const s = raw.trim().toLowerCase();
+    if (!s) continue;
+    for (const tpl of SEED_MODIFIERS.slice(0, perSeed)) out.add(tpl.replace("{s}", s).trim());
+  }
+  return [...out];
+}
 
 interface DfsItem {
   keyword?: string;
@@ -109,6 +138,14 @@ export class KeywordResearchService {
       }
     }
 
+    // Final tier: deterministic long-tail expansion (offline, no network). Guarantees a rich
+    // set of buyer-intent variants instead of one keyword per seed — never returns empty.
+    const expanded = expandSeeds(terms);
+    if (expanded.length) {
+      this.last = "expansion";
+      return expanded.map((kw) => ({ keyword: kw, ...this.estimateMetrics(kw) })).slice(0, limit);
+    }
+
     this.last = "mock";
     return [];
   }
@@ -173,7 +210,7 @@ export class KeywordResearchService {
   /** Google Autocomplete — free, keyless. Real suggestions; metrics are deterministic estimates. */
   private async viaAutocomplete(terms: string[], limit: number): Promise<KeywordIdea[]> {
     const out = new Map<string, KeywordIdea>();
-    for (const term of terms.slice(0, 6)) {
+    for (const term of terms.slice(0, 10)) {
       try {
         const res = await fetchWithTimeout(
           `https://suggestqueries.google.com/complete/search?client=firefox&hl=en&q=${encodeURIComponent(term)}`,
