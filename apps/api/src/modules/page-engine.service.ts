@@ -5,6 +5,7 @@ import { DEFAULT_TENANT_ID } from "../common/tenant";
 import { draftPageContent, type DraftContent } from "../llm/deepseek";
 import { specFor, buildSchemaJson, type SchemaContext } from "../llm/page-type-spec";
 import { clampTitle, clampDescription, computeSeoChecks } from "../common/seo";
+import { scoreCitability } from "../common/citability";
 import { buildInfographic } from "../llm/infographic";
 import { classifyIntents, type ClassifiedIntent } from "../llm/intent";
 import { BrandMemoryStore } from "./brand.service";
@@ -516,6 +517,9 @@ export class PageEngineStore implements OnModuleInit {
     p.wordCount = countWords(p);
     p.schemaJson = buildSchemaJson(p.pageType, this.schemaContextFor(p));
     p.seoChecks = computeSeoChecks(p);
+    const cit = scoreCitability(p);
+    p.citabilityScore = cit.score;
+    p.citabilityGrade = cit.grade;
   }
 
   /** Build the rich SEO/GEO/AEO JSON-LD context for a page from Brand Memory + its timestamps. */
@@ -633,6 +637,7 @@ export class PageEngineStore implements OnModuleInit {
       // eslint-disable-next-line no-console
       console.log(`[page-engine] persistence ready (Supabase) · tenants=${this.tenants.size} · ws-default pages=${def.pages.length} leads=${def.leads.length}`);
       await this.purgeFabricatedInfographics();
+      this.backfillCitability();
     } catch (e) {
       const msg = (e as Error).message;
       // Fail closed (No-Dummy-Data §6.4, P0-7): production/staging must NOT silently run
@@ -818,6 +823,9 @@ export class PageEngineStore implements OnModuleInit {
     // and timestamps are known (the schema carries url/author/dates/wordCount/keywords/speakable).
     page.schemaJson = buildSchemaJson(page.pageType, this.schemaContextFor(page));
     page.seoChecks = computeSeoChecks(page);
+    const citability = scoreCitability(page);
+    page.citabilityScore = citability.score;
+    page.citabilityGrade = citability.grade;
     // Brand hero: attach a theme-aware placeholder synchronously so the page is returned
     // without blocking on image generation. When IMAGE_GEN is configured, the real brand
     // raster is generated in the background (~minute on local diffusion) and swapped in.
@@ -1145,6 +1153,26 @@ export class PageEngineStore implements OnModuleInit {
    * `infographics` from the current generator (proof-point-driven; omits the grid when the
    * brand has no real proof). No LLM required. Idempotent — cleaned pages no longer match.
    */
+  /** One-time backfill: compute citabilityScore/Grade for pages persisted before the field
+   *  existed, so the at-a-glance AEO chip shows uniformly. Deterministic, no LLM. Idempotent. */
+  private backfillCitability(): void {
+    let n = 0;
+    for (const [tenantId, s] of this.tenants) {
+      for (const p of s.pages) {
+        if (typeof p.citabilityScore === "number") continue;
+        const cit = scoreCitability(p);
+        p.citabilityScore = cit.score;
+        p.citabilityGrade = cit.grade;
+        this.save(tenantId, T.pages, p.id, p);
+        n++;
+      }
+    }
+    if (n) {
+      // eslint-disable-next-line no-console
+      console.log(`[page-engine] backfilled citability score for ${n} page(s)`);
+    }
+  }
+
   private async purgeFabricatedInfographics(): Promise<void> {
     const isFabricated = (g: { kind: string; title?: string }) =>
       g.kind === "stat-grid" && (/(—|-)\s*key numbers$/i.test(g.title ?? "") || /(—|-)\s*local facts$/i.test(g.title ?? ""));

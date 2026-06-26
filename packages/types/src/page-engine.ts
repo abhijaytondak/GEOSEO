@@ -226,6 +226,10 @@ export interface GeneratedPage {
   seoChecks: SeoCheck[];
   /** Content QA: similarity / readability / policy (PRD §7.4). */
   qualityChecks?: SeoCheck[];
+  /** Citability / AEO score (0–100) + grade — how citable the page is by AI answer engines.
+   *  Computed deterministically alongside seoChecks; surfaced at-a-glance on page cards. */
+  citabilityScore?: number;
+  citabilityGrade?: "A" | "B" | "C" | "D" | "F";
   publishedUrl?: string;
   publishedAt?: ISODate;
   lastRefreshedAt?: ISODate;

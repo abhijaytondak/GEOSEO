@@ -87,6 +87,15 @@ const FIDELITY_GRADE: Record<ThemeFidelity["grade"], { label: string; variant: B
   "needs-review": { label: "Needs review", variant: "negative", dot: "bg-negative" },
 };
 
+/** Citability/AEO grade → at-a-glance tone (text + dot) for the page-card chip. */
+const AEO_GRADE: Record<"A" | "B" | "C" | "D" | "F", { text: string; dot: string }> = {
+  A: { text: "text-positive", dot: "bg-positive" },
+  B: { text: "text-info", dot: "bg-info" },
+  C: { text: "text-warning", dot: "bg-warning" },
+  D: { text: "text-negative", dot: "bg-negative" },
+  F: { text: "text-negative", dot: "bg-negative" },
+};
+
 export function PagesView({
   pages: initialPages,
   opportunities,
@@ -667,6 +676,18 @@ export function PagesView({
                       <span className={cn("shrink-0 tabular-nums", s.total > 0 && s.pass === s.total ? "text-positive" : "text-warning")}>
                         SEO {s.pass}/{s.total}
                       </span>
+                      {typeof p.citabilityScore === "number" && p.citabilityGrade && (
+                        <>
+                          <span>·</span>
+                          <span
+                            className={cn("flex shrink-0 items-center gap-1", AEO_GRADE[p.citabilityGrade].text)}
+                            title={`Citability / AEO score ${p.citabilityScore}/100 (grade ${p.citabilityGrade}) — how citable this page is by AI answer engines`}
+                          >
+                            <span className={cn("size-1.5 rounded-full", AEO_GRADE[p.citabilityGrade].dot)} />
+                            <span className="tabular-nums">AEO {p.citabilityScore}</span>
+                          </span>
+                        </>
+                      )}
                     </div>
                   </button>
                   {/* actions */}
