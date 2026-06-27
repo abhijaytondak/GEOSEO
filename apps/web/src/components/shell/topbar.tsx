@@ -1,15 +1,12 @@
 "use client";
 
-import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Search, Calendar, Bell, ChevronDown, Plus } from "lucide-react";
+import { Search, Bell, ChevronDown, Plus } from "lucide-react";
 import { Show, SignInButton, SignUpButton, UserButton } from "@clerk/nextjs";
 import { Button } from "@/components/ui/button";
 import { MobileNav } from "./mobile-nav";
 import { COMMAND_EVENT } from "./command-palette";
 import { useAppFeedback } from "@/components/system/app-feedback";
-
-const ranges = ["Last 30 days", "Last 8 weeks", "Last quarter"];
 
 /** 1–2 letter initials from a workspace name (e.g. "Northwind Labs" → "NL"). */
 function initialsOf(name: string): string {
@@ -20,18 +17,11 @@ function initialsOf(name: string): string {
 
 export function Topbar({ workspaceName }: { workspaceName?: string }) {
   const router = useRouter();
-  const { notify, startJob } = useAppFeedback();
-  const [range, setRange] = useState(0);
+  const { startJob } = useAppFeedback();
   const wsName = workspaceName?.trim() || "Workspace";
 
   function openCommand() {
     window.dispatchEvent(new Event(COMMAND_EVENT));
-  }
-
-  function cycleRange() {
-    const next = (range + 1) % ranges.length;
-    setRange(next);
-    notify({ kind: "info", title: "Dashboard range updated", message: ranges[next] });
   }
 
   async function newCampaign() {
@@ -70,16 +60,6 @@ export function Topbar({ workspaceName }: { workspaceName?: string }) {
       </button>
 
       <div className="ml-auto flex items-center gap-2">
-        {/* date range */}
-        <button
-          className="hidden h-9 items-center gap-2 rounded-lg border border-border bg-card px-3 py-1.5 text-[13px] font-medium transition-colors hover:bg-muted sm:flex"
-          onClick={cycleRange}
-        >
-          <Calendar className="size-4 text-muted-foreground" />
-          {ranges[range]}
-          <ChevronDown className="size-3.5 text-muted-foreground" />
-        </button>
-
         {/* notifications */}
         <button
           className="relative flex size-9 items-center justify-center rounded-lg border border-border bg-card transition-colors hover:bg-muted"

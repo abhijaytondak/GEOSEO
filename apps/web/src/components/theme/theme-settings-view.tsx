@@ -12,7 +12,9 @@ import {
   Tablet,
   Smartphone,
   Sparkles,
+  ArrowRight,
 } from "lucide-react";
+import Link from "next/link";
 import type { SiteThemeProfile, SiteThemeSummary, ThemeFidelity } from "@geoseo/types";
 import { api } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
@@ -231,12 +233,19 @@ export function ThemeSettingsView() {
             <>
               <RescanInline url={scanUrl} setUrl={setScanUrl} onScan={scan} scanning={scanning} />
               <Button variant="outline" size="sm" onClick={startEdit}>
-                <Pencil className="size-3.5" /> Edit tokens
+                <Pencil className="size-3.5" /> Edit colors &amp; fonts
               </Button>
-              <Button variant="brand" size="sm" onClick={confirmTheme} disabled={confirming || active.status === "confirmed"} loading={confirming}>
-                {!confirming && <Check className="size-3.5" />}
-                {active.status === "confirmed" ? "Confirmed" : "Accept theme"}
-              </Button>
+              {active.status === "confirmed" ? (
+                // Confirmed → don't dead-end. Point the user at the payoff: a page in their theme.
+                <Button variant="brand" size="sm" render={<Link href="/research" />}>
+                  <Sparkles className="size-3.5" /> Generate a themed page <ArrowRight className="size-3.5" />
+                </Button>
+              ) : (
+                <Button variant="brand" size="sm" onClick={confirmTheme} disabled={confirming} loading={confirming}>
+                  {!confirming && <Check className="size-3.5" />}
+                  Accept theme
+                </Button>
+              )}
             </>
           )}
         </div>
