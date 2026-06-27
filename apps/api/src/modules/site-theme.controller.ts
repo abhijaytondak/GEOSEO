@@ -1,7 +1,7 @@
 import { Body, Controller, Get, Inject, Param, Post, Put, Req } from "@nestjs/common";
 import { ApiTags } from "@nestjs/swagger";
 import type { SiteThemeProfile } from "@geoseo/types";
-import { SiteThemeStore, computeThemeFidelity } from "./site-theme.service";
+import { SiteThemeStore, computeThemeFidelity, summarizeThemeProfile } from "./site-theme.service";
 import { JobsStore } from "./jobs.service";
 import { AuditStore } from "./audit.service";
 import { validateBody, v } from "../common/validation";
@@ -45,9 +45,14 @@ export class SiteThemeController {
     @Inject(AuditStore) private readonly audit: AuditStore,
   ) {}
 
+  /** List theme profiles as lightweight SUMMARIES — heavy `assets.sampleImages` and any
+   *  base64 data: asset URIs are dropped so the list stays small (was ~66KB — perf audit
+   *  P1). Full assets remain available via `GET /site-theme/:id`. List consumers (feeds,
+   *  brand cards, theme editor) only use colors/typography/layout/status, never sampleImages. */
   @Get()
   async list(@Req() req: TenantRequest) {
-    return { profiles: await this.themes.list(resolveTenantId(req)) };
+    const profiles = await this.themes.list(resolveTenantId(req));
+    return { profiles: profiles.map(summarizeThemeProfile) };
   }
 
   /** SSRF-guarded site scan → heuristic draft theme profile (PRD §7.1, §19). */
