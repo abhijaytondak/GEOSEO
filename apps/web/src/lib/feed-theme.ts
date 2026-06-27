@@ -31,7 +31,8 @@ const toHex = (n: number) => Math.max(0, Math.min(255, Math.round(n))).toString(
 const mix = (a: Rgb, b: Rgb, t: number) =>
   `#${toHex(a.r + (b.r - a.r) * t)}${toHex(a.g + (b.g - a.g) * t)}${toHex(a.b + (b.b - a.b) * t)}`;
 
-export function themeStyle(t: SiteThemeProfile | null): CSSProperties | undefined {
+// Accepts the full profile OR the lightweight list summary — reads colors/typography/layout.
+export function themeStyle(t: Pick<SiteThemeProfile, "colors" | "typography" | "layout"> | null): CSSProperties | undefined {
   if (!t) return undefined;
   const c = t.colors ?? ({} as SiteThemeProfile["colors"]);
   const v: Record<string, string> = {};

@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
-import type { SiteThemeProfile, ThemeFidelity } from "@geoseo/types";
+import type { SiteThemeProfile, SiteThemeSummary, ThemeFidelity } from "@geoseo/types";
 import { DocStore } from "../db/db";
 import { safeFetchText } from "../common/ssrf";
 
@@ -15,19 +15,29 @@ const dropDataUri = (url?: string): string | undefined =>
   url && url.startsWith("data:") ? undefined : url;
 
 /**
- * Lightweight projection of a theme profile for LIST responses: keeps the design tokens
- * every consumer needs (colors, typography, layout, components, status, confidence) but
- * strips the heavy `assets.sampleImages` array and any inlined base64 logo/favicon. The
- * full profile (with all assets) is served by `GET /site-theme/:id`. (Perf audit P1 —
- * the unbounded list reached ~66KB.)
+ * Lightweight projection of a theme profile for LIST responses: keeps the design tokens the
+ * feed renderer + brand cards need (colors, typography, layout, status, confidence, dates) but
+ * drops the heavy EDITOR-only fields — `components` (4 ComponentStyle blocks, the single largest
+ * field) and `sourceUrls` — plus the inlined sample images / base64 logo. The full profile (with
+ * components + sourceUrls) is served by `GET /site-theme/:id`, which the theme editor fetches.
+ * (Perf audit P1 — the list reached ~66KB and grows with every accumulated theme scan.)
  */
-export function summarizeThemeProfile(profile: SiteThemeProfile): SiteThemeProfile {
+export function summarizeThemeProfile(profile: SiteThemeProfile): SiteThemeSummary {
+  // Keep colors/typography/layout + meta (feeds + brand cards render these); drop the
+  // editor-only components + sourceUrls and the inlined sample images / base64 assets.
   return {
-    ...profile,
+    id: profile.id,
+    workspaceId: profile.workspaceId,
+    status: profile.status,
+    colors: profile.colors,
+    typography: profile.typography,
+    layout: profile.layout,
+    confidence: profile.confidence,
+    createdAt: profile.createdAt,
+    updatedAt: profile.updatedAt,
     assets: {
       logoUrl: dropDataUri(profile.assets?.logoUrl),
       faviconUrl: dropDataUri(profile.assets?.faviconUrl),
-      sampleImages: [],
     },
   };
 }

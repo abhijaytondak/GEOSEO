@@ -24,6 +24,7 @@ import type {
   AuthorityOverview,
   Backlink,
   SiteThemeProfile,
+  SiteThemeSummary,
   ThemeFidelity,
   SolutionReadiness,
   BacklinkProspect,
@@ -441,8 +442,14 @@ export const api = {
     get<{ audit: AuditEntry[] }>(`/audit/log?limit=${limit}`, () => ({ audit: [] })).then((d) => d.audit),
 
   // site theme profiles (Page Engine theme matching — PRD §7)
+  // The LIST returns lightweight summaries (colors + meta); fetch a full profile (typography,
+  // layout, components, sourceUrls) via getSiteTheme(id) when the editor/brand-kit needs it.
   getSiteThemes: () =>
-    get<{ profiles: SiteThemeProfile[] }>("/site-theme", () => ({ profiles: [] })).then((d) => d.profiles),
+    get<{ profiles: SiteThemeSummary[] }>("/site-theme", () => ({ profiles: [] })).then((d) => d.profiles),
+  getSiteTheme: (id: string) =>
+    get<{ profile: SiteThemeProfile | null }>(`/site-theme/${encodeURIComponent(id)}`, () => ({ profile: null })).then(
+      (d) => d.profile,
+    ),
   scanSiteTheme: (url: string) =>
     send<{ profile: SiteThemeProfile; job: JobRun }>("POST", "/site-theme/scan", { url }),
   updateSiteTheme: (id: string, patch: Partial<SiteThemeProfile>) =>

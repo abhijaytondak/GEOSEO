@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { Orbit } from "lucide-react";
-import type { SiteThemeProfile } from "@geoseo/types";
+import type { SiteThemeSummary } from "@geoseo/types";
 import { pageEngineApi } from "@/lib/page-engine-client";
 import { api } from "@/lib/api-client";
 import { LeadForm } from "@/components/feeds/lead-form";
@@ -53,7 +53,7 @@ export default async function FeedPage({ params }: Params) {
   const [page, memory, themes, published] = await Promise.all([
     pageEngineApi.getPublishedBySlug(slug),
     api.getBrandMemory().catch(() => null),
-    api.getSiteThemes().catch(() => [] as SiteThemeProfile[]),
+    api.getSiteThemes().catch(() => [] as SiteThemeSummary[]),
     pageEngineApi.getPublishedPages().catch(() => []),
   ]);
   if (!page) notFound();

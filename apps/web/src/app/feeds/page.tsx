@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Orbit, ArrowUpRight, FileText, Sparkles } from "lucide-react";
-import type { GeneratedPage, SiteThemeProfile } from "@geoseo/types";
+import type { GeneratedPage, SiteThemeSummary } from "@geoseo/types";
 import { pageEngineApi } from "@/lib/page-engine-client";
 import { api } from "@/lib/api-client";
 import { themeStyle } from "@/lib/feed-theme";
@@ -41,7 +41,7 @@ export default async function AiFeedIndex() {
   const [pub, memory, themes] = await Promise.all([
     pageEngineApi.getPublishedPages().catch(() => ({ pages: [] as GeneratedPage[] })),
     api.getBrandMemory().catch(() => null),
-    api.getSiteThemes().catch(() => [] as SiteThemeProfile[]),
+    api.getSiteThemes().catch(() => [] as SiteThemeSummary[]),
   ]);
   const pages: GeneratedPage[] = Array.isArray(pub) ? pub : (pub?.pages ?? []);
 
