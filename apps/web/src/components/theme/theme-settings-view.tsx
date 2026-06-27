@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Loader2,
   Check,
@@ -13,7 +13,7 @@ import {
   Smartphone,
   Sparkles,
 } from "lucide-react";
-import type { SiteThemeProfile, ThemeFidelity } from "@geoseo/types";
+import type { SiteThemeProfile, SiteThemeSummary, ThemeFidelity } from "@geoseo/types";
 import { api } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -46,8 +46,10 @@ const COLOR_KEYS: { key: keyof SiteThemeProfile["colors"]; label: string }[] = [
 
 export function ThemeSettingsView() {
   const { notify } = useAppFeedback();
-  const [profiles, setProfiles] = useState<SiteThemeProfile[]>([]);
-  const [activeId, setActiveId] = useState<string | null>(null);
+  // The list endpoint returns lightweight summaries; the editor needs the FULL active profile
+  // (typography, layout, components, sourceUrls) so it fetches that by id (perf audit P1).
+  const [summaries, setSummaries] = useState<SiteThemeSummary[]>([]);
+  const [active, setActive] = useState<SiteThemeProfile | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [scanUrl, setScanUrl] = useState("");
   const [scanning, setScanning] = useState(false);
@@ -61,19 +63,24 @@ export function ThemeSettingsView() {
     let cancelled = false;
     api
       .getSiteThemes()
-      .then((list) => {
+      .then(async (list) => {
         if (cancelled) return;
-        setProfiles(list);
-        setActiveId(list[0]?.id ?? null);
-        setLoaded(true);
+        setSummaries(list);
+        const id = list[0]?.id ?? null; // no switcher — the editor shows the most recent profile
+        if (id) {
+          const full = await api.getSiteTheme(id).catch(() => null);
+          if (!cancelled) setActive(full);
+        }
+        if (!cancelled) setLoaded(true);
       })
-      .catch(() => setLoaded(true));
+      .catch(() => {
+        if (!cancelled) setLoaded(true);
+      });
     return () => {
       cancelled = true;
     };
   }, []);
 
-  const active = useMemo(() => profiles.find((p) => p.id === activeId) ?? null, [profiles, activeId]);
   const shown = editing && draft ? draft : active;
 
   async function scan() {
@@ -82,8 +89,8 @@ export function ThemeSettingsView() {
     setScanning(true);
     try {
       const { profile } = await api.scanSiteTheme(url);
-      setProfiles((prev) => [profile, ...prev.filter((p) => p.id !== profile.id)]);
-      setActiveId(profile.id);
+      setSummaries((prev) => [profile, ...prev.filter((p) => p.id !== profile.id)]);
+      setActive(profile); // scan returns the full profile — no detail fetch needed
       setScanUrl("");
       notify({ kind: "success", title: "Theme scanned", message: `Confidence ${profile.confidence}%. Review and confirm.` });
     } catch (err) {
@@ -98,7 +105,8 @@ export function ThemeSettingsView() {
     setConfirming(true);
     try {
       const updated = await api.confirmSiteTheme(active.id);
-      setProfiles((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
+      setActive(updated);
+      setSummaries((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
       notify({ kind: "success", title: "Theme confirmed", message: "Generated pages will use this profile." });
     } catch (err) {
       notify({ kind: "error", title: "Could not confirm", message: err instanceof Error ? err.message : "Try again." });
@@ -118,7 +126,8 @@ export function ThemeSettingsView() {
     setSaving(true);
     try {
       const updated = await api.updateSiteTheme(draft.id, { colors: draft.colors, layout: draft.layout });
-      setProfiles((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
+      setActive(updated);
+      setSummaries((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
       setEditing(false);
       setDraft(null);
       notify({ kind: "success", title: "Theme updated" });
@@ -141,8 +150,8 @@ export function ThemeSettingsView() {
     );
   }
 
-  // Empty state — first-run scan
-  if (!active) {
+  // Empty state — first-run scan (no profile exists yet)
+  if (summaries.length === 0) {
     return (
       <div className="mx-auto max-w-xl rounded-2xl border border-border bg-card p-8 text-center">
         <div className="mx-auto mb-4 flex size-12 items-center justify-center rounded-xl bg-brand/10 text-brand">
@@ -168,6 +177,25 @@ export function ThemeSettingsView() {
             Scan website
           </Button>
         </div>
+      </div>
+    );
+  }
+
+  // A profile exists but its full detail couldn't be fetched (e.g. API hiccup). Don't fall
+  // through to the editor (which renders the full token set) — show a graceful retry.
+  if (!active) {
+    return (
+      <div className="mx-auto max-w-md rounded-2xl border border-border bg-card p-8 text-center">
+        <div className="mx-auto mb-4 flex size-12 items-center justify-center rounded-xl bg-brand/10 text-brand">
+          <Palette className="size-6" />
+        </div>
+        <h2 className="text-title font-semibold text-foreground">Couldn&apos;t load this theme</h2>
+        <p className="mx-auto mt-1.5 max-w-sm text-label text-muted-foreground">
+          We couldn&apos;t fetch the full theme profile. Refresh to try again.
+        </p>
+        <Button variant="outline" size="sm" className="mt-5" onClick={() => window.location.reload()}>
+          <RefreshCw className="size-3.5" /> Refresh
+        </Button>
       </div>
     );
   }

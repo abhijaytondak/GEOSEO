@@ -97,6 +97,8 @@ export function BrandKit() {
       .then((r) => r.json())
       .then((j) => {
         if (!live) return;
+        // The list summary keeps colors + typography (what the brand kit renders), so no
+        // detail fetch is needed here. (Only `components`/`sourceUrls` are stripped — editor-only.)
         const profiles: SiteTheme[] = j?.data?.profiles ?? [];
         setTheme(profiles.find((p) => p.status === "confirmed") ?? profiles[0] ?? null);
       })

@@ -393,6 +393,18 @@ export interface SiteThemeProfile {
   updatedAt: ISODate;
 }
 
+/**
+ * Lightweight site-theme projection for LIST responses (`GET /site-theme`). Carries the design
+ * tokens the public feed renderer + brand cards need (colors, typography, layout, status, dates)
+ * but drops the heavy EDITOR-only fields: `components` (4 ComponentStyle blocks — the single
+ * largest field) and `sourceUrls`, plus the inlined sample images. The theme editor fetches the
+ * full SiteThemeProfile via `GET /site-theme/:id` when it needs those. (Perf audit P1 — keeps
+ * the list small as theme scans accumulate.)
+ */
+export type SiteThemeSummary = Omit<SiteThemeProfile, "components" | "sourceUrls" | "assets"> & {
+  assets: { logoUrl?: string; faviconUrl?: string };
+};
+
 /** How natively a generated page renders to the customer site (theme PRD §13). */
 export interface ThemeFidelity {
   /** 0–100. */
