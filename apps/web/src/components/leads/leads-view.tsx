@@ -353,7 +353,8 @@ export function LeadsView({ leads }: { leads: Lead[] }) {
                   {filtered.map((l) => (
                     <TableRow
                       key={l.id}
-                      className={cn("row-hover border-b border-border", l.spamStatus !== "clean" && "opacity-70")}
+                      onClick={() => openDetail(l)}
+                      className={cn("row-hover cursor-pointer border-b border-border", l.spamStatus !== "clean" && "opacity-70")}
                     >
                       <TableCell className="px-5 py-3">
                         <button
@@ -369,7 +370,7 @@ export function LeadsView({ leads }: { leads: Lead[] }) {
                       <TableCell className="px-3 py-3">
                         <span className={cn("tnum text-label font-semibold", scoreColor(l.score))}>{l.score}</span>
                       </TableCell>
-                      <TableCell className="px-3 py-3">
+                      <TableCell className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
                         <select
                           value={l.status}
                           onChange={(e) => setStatus(l.id, e.target.value as LeadStatus)}
@@ -390,7 +391,7 @@ export function LeadsView({ leads }: { leads: Lead[] }) {
                         <Badge variant={SPAM[l.spamStatus].variant}>{SPAM[l.spamStatus].label}</Badge>
                       </TableCell>
                       <TableCell className="px-5 py-3 text-label text-muted-foreground">{relativeTime(l.createdAt)}</TableCell>
-                      <TableCell className="px-5 py-3">
+                      <TableCell className="px-5 py-3" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center justify-end gap-1.5">
                           <button
                             onClick={() => syncLead(l.id)}
