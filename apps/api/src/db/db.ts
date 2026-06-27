@@ -26,12 +26,20 @@ export async function dbPing(): Promise<{ reachable: boolean; error?: string }> 
   }
 }
 
+/** Tables whose DDL has already run in this process — so `ensureTable` is a no-op after
+ *  the first call. Without this, request paths that call it (e.g. DocStore.loadForTenant on
+ *  the first hit for a tenant) re-issue CREATE TABLE / ALTER TABLE round-trips every time
+ *  (perf audit P1: "no runtime request path should trigger DDL"). The statements are
+ *  idempotent, so caching is purely a latency win. */
+const ensuredTables = new Set<string>();
+
 /** Generic JSONB key-value table: `id text pk, data jsonb, updated_at`. One per entity.
  *  RLS is enabled (no policies) so the table is never reachable via Supabase's
  *  anon/PostgREST API — only this server's privileged `postgres` connection (which
- *  bypasses RLS) can touch it. Both statements are idempotent. */
+ *  bypasses RLS) can touch it. Both statements are idempotent; runs once per process. */
 export async function ensureTable(table: string): Promise<void> {
   if (!sql) return;
+  if (ensuredTables.has(table)) return;
   await sql`
     create table if not exists ${sql(table)} (
       id text primary key,
@@ -40,6 +48,7 @@ export async function ensureTable(table: string): Promise<void> {
     )
   `;
   await sql`alter table ${sql(table)} enable row level security`;
+  ensuredTables.add(table); // only after both DDL statements succeed
 }
 
 export async function loadAll<T>(table: string): Promise<T[]> {

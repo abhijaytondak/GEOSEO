@@ -450,6 +450,11 @@ export class PageEngineStore implements OnModuleInit {
    *  the LLM call exceeds the BFF/host sync request budget). */
   private regenJobs = new Map<string, RegenJob>();
   private rseq = 0;
+  /** Lazily-built slug → owning tenant/page index for PUBLISHED pages. The public feed
+   *  lookups (getPublishedBySlug / tenantForSlug / listPublishedPages) used to scan every
+   *  tenant's pages on each request (O(all pages) — perf audit P1). This makes them O(1).
+   *  Invalidated (→ null) on every page write/drop via save()/drop(); rebuilt on next read. */
+  private publishedIndex: Map<string, { tenantId: string; page: GeneratedPage }> | null = null;
 
   /** Get (lazily create) a tenant's state. */
   private st(tenantId: string): PEState {
@@ -703,6 +708,9 @@ export class PageEngineStore implements OnModuleInit {
 
   /** Fire-and-forget write-through (in-memory stays the runtime source of truth). */
   private save(tenantId: string, table: string, id: string, obj: unknown) {
+    // Invalidate BEFORE the ready guard — the in-memory page mutation already happened
+    // regardless of DB persistence, so the published-slug index must rebuild either way.
+    if (table === T.pages) this.publishedIndex = null;
     if (!this.ready) return;
     const rid = this.rowId(tenantId, id);
     void upsert(table, rid, obj).catch((e) =>
@@ -711,6 +719,7 @@ export class PageEngineStore implements OnModuleInit {
     );
   }
   private drop(tenantId: string, table: string, id: string) {
+    if (table === T.pages) this.publishedIndex = null;
     if (!this.ready) return;
     void removeRow(table, this.rowId(tenantId, id)).catch(() => {});
   }
@@ -1252,26 +1261,34 @@ export class PageEngineStore implements OnModuleInit {
 
   /* published pages (PUBLIC surfaces). Published pages are public by nature and a visitor
    * doesn't know the owning workspace, so these search across ALL tenants (A5). */
+  /** Build (once, lazily) the slug → {tenant, page} index for published pages. First tenant
+   *  in iteration order wins a slug collision — matching the prior `.find` short-circuit. */
+  private publishedBySlugIndex(): Map<string, { tenantId: string; page: GeneratedPage }> {
+    if (this.publishedIndex) return this.publishedIndex;
+    const idx = new Map<string, { tenantId: string; page: GeneratedPage }>();
+    for (const [tenantId, s] of this.tenants) {
+      for (const p of s.pages) {
+        if (p.status === "published" && !idx.has(p.slug)) idx.set(p.slug, { tenantId, page: p });
+      }
+    }
+    this.publishedIndex = idx;
+    return idx;
+  }
   listPublishedPages() {
+    // Full scan (not the slug index): this must include EVERY published page, even if two
+    // tenants share a slug. It backs sitemap/llms.txt, which are cached (ISR), so it's cold.
     const out: GeneratedPage[] = [];
     for (const s of this.tenants.values()) for (const p of s.pages) if (p.status === "published") out.push(p);
     return out;
   }
   getPublishedBySlug(slug: string) {
     const norm = slug.startsWith("/") ? slug : `/${slug}`;
-    for (const s of this.tenants.values()) {
-      const p = s.pages.find((x) => x.slug === norm && x.status === "published");
-      if (p) return p;
-    }
-    return undefined;
+    return this.publishedBySlugIndex().get(norm)?.page;
   }
   /** Tenant that owns a published page slug (for routing public lead ingest to the right workspace). */
   private tenantForSlug(slug: string): string {
     const norm = slug.startsWith("/") ? slug : `/${slug}`;
-    for (const [tenantId, s] of this.tenants) {
-      if (s.pages.some((x) => x.slug === norm && x.status === "published")) return tenantId;
-    }
-    return DEFAULT_TENANT_ID;
+    return this.publishedBySlugIndex().get(norm)?.tenantId ?? DEFAULT_TENANT_ID;
   }
   /** Tenant that owns a page id (any status). */
   private tenantForPageId(id: string): string {
