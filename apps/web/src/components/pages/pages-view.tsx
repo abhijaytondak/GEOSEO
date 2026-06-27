@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import dynamic from "next/dynamic";
 import {
   FileText,
   Eye,
@@ -53,8 +54,18 @@ import { pageEngineApi, type RefreshRec } from "@/lib/page-engine-client";
 import { draftWithPuter } from "@/lib/puter-ai";
 import { PageComposer, type ComposerType } from "@/components/pages/page-composer";
 import { RichText } from "@/components/feeds/rich-text";
-import { KeywordReview } from "@/components/pages/keyword-review";
-import { CitabilityPanel } from "@/components/pages/citability-panel";
+
+// Drawer-only heavy panels — lazy-loaded (ssr:false) so they're NOT in the initial /pages
+// client bundle. The chunk loads the first time a user opens a page drawer (perf audit P1:
+// "drawer/editor chunks load only after interaction").
+const KeywordReview = dynamic(() => import("@/components/pages/keyword-review").then((m) => m.KeywordReview), {
+  ssr: false,
+  loading: () => <div className="h-28 animate-pulse rounded-2xl border border-border bg-surface-sunken" />,
+});
+const CitabilityPanel = dynamic(() => import("@/components/pages/citability-panel").then((m) => m.CitabilityPanel), {
+  ssr: false,
+  loading: () => <div className="h-40 animate-pulse rounded-2xl border border-border bg-surface-sunken" />,
+});
 
 type BadgeVariant = "brand" | "positive" | "negative" | "warning" | "info" | "muted";
 
@@ -98,19 +109,22 @@ const AEO_GRADE: Record<"A" | "B" | "C" | "D" | "F", { text: string; dot: string
 
 export function PagesView({
   pages: initialPages,
-  opportunities,
-  blueprints: initialBlueprints,
+  opportunities = [],
+  blueprints: initialBlueprints = [],
   recommendations = [],
 }: {
   pages: GeneratedPage[];
-  opportunities: KeywordOpportunity[];
-  blueprints: PageBlueprint[];
+  // Secondary data is optional — the route only blocks on `pages` (above-the-fold list);
+  // these are fetched client-side after paint (perf audit P1).
+  opportunities?: KeywordOpportunity[];
+  blueprints?: PageBlueprint[];
   recommendations?: RefreshRec[];
 }) {
   const { notify, confirm } = useAppFeedback();
   const [pages, setPages] = useState(initialPages);
   const [opps, setOpps] = useState(opportunities);
   const [blueprints, setBlueprints] = useState(initialBlueprints);
+  const [recs, setRecs] = useState<RefreshRec[]>(recommendations);
   const [openId, setOpenId] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [seeds, setSeeds] = useState("");
@@ -162,6 +176,28 @@ export function PagesView({
     let cancelled = false;
     api.getThemeFidelity().then((res) => {
       if (!cancelled) setFidelity(res.fidelity);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Secondary data (opportunities / blueprints / refresh recs) is NOT needed for the
+  // above-the-fold page list, so we fetch it client-side AFTER paint — the route's TTFB
+  // then only waits on getPages (perf audit P1). Each surface that uses it (the "Need
+  // ideas?" backlog, the drawer blueprint, the "Needs attention" panel) is behind a
+  // toggle/selection or shown conditionally, so it simply fills in when ready.
+  useEffect(() => {
+    let cancelled = false;
+    Promise.all([
+      pageEngineApi.getOpportunities().catch(() => [] as KeywordOpportunity[]),
+      pageEngineApi.getBlueprints().catch(() => [] as PageBlueprint[]),
+      pageEngineApi.getRefreshRecommendations().catch(() => [] as RefreshRec[]),
+    ]).then(([o, b, r]) => {
+      if (cancelled) return;
+      setOpps((cur) => (cur.length ? cur : o)); // don't clobber opps added via Discover
+      setBlueprints(b);
+      setRecs(r);
     });
     return () => {
       cancelled = true;
@@ -402,7 +438,7 @@ export function PagesView({
   // Sequential (not parallel) to avoid hammering the LLM and to let the user watch progress.
   const [refreshingAll, setRefreshingAll] = useState(false);
   async function regenerateAll() {
-    const pending = recommendations.filter((r) => !refreshedIds.has(r.pageId));
+    const pending = recs.filter((r) => !refreshedIds.has(r.pageId));
     if (!pending.length) return;
     const ok = await confirm({
       title: `Regenerate ${pending.length} page${pending.length > 1 ? "s" : ""}?`,
@@ -570,7 +606,7 @@ export function PagesView({
       </div>
 
       {/* refresh recommendations (monitoring · PRD §7.8 / §9.1) */}
-      {recommendations.filter((r) => !refreshedIds.has(r.pageId)).length > 0 && (
+      {recs.filter((r) => !refreshedIds.has(r.pageId)).length > 0 && (
         <Panel
           title="Needs Attention"
           description="Monitoring flagged these published pages — regenerate to refresh them"
@@ -583,7 +619,7 @@ export function PagesView({
           }
         >
           <div className="divide-y divide-border">
-            {recommendations.filter((r) => !refreshedIds.has(r.pageId)).map((r) => (
+            {recs.filter((r) => !refreshedIds.has(r.pageId)).map((r) => (
               <div key={r.pageId} className="flex items-center gap-3 px-5 py-3">
                 <Badge variant={r.action === "rebuild" ? "negative" : "warning"} className="shrink-0 capitalize">
                   {r.action}
