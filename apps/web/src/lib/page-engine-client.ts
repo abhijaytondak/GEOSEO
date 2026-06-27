@@ -101,9 +101,11 @@ function authHeaders(): Record<string, string> {
   return {};
 }
 
-/** Mock fallback is demo-mode only (PRD §4). Production/staging surfaces errors. */
+/** Mock data is NEVER served at runtime (no-dummy-data directive). The @geoseo/mock fallback is
+ *  allowed only during the production build so prerender can't crash on an absent API; at runtime
+ *  every read returns real API data or an honest empty/error state. Not gated on demo mode. */
 const IS_BUILD = process.env.NEXT_PHASE === "phase-production-build";
-const FALLBACK_ALLOWED = IS_BUILD || (process.env.NEXT_PUBLIC_GEOSEO_MODE ?? "demo").toLowerCase() === "demo";
+const FALLBACK_ALLOWED = IS_BUILD;
 
 async function get<T>(path: string, fallback: () => Promise<T> | T): Promise<T> {
   let res: Response;

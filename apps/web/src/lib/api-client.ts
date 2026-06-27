@@ -86,11 +86,11 @@ function authHeaders(): Record<string, string> {
  *  at runtime where an unreachable API is a real signal. */
 const IS_BUILD = process.env.NEXT_PHASE === "phase-production-build";
 
-/** Web runtime mode (PRD §4). The mock fallback is a DEMO-MODE safety net only:
- *  production/staging must surface real errors (no silent dummy data). Default
- *  `demo` keeps local dev resilient; set NEXT_PUBLIC_GEOSEO_MODE=production to fail closed. */
-const MODE = (process.env.NEXT_PUBLIC_GEOSEO_MODE ?? "demo").toLowerCase();
-const FALLBACK_ALLOWED = IS_BUILD || MODE === "demo";
+/** Mock data is NEVER served at runtime (no-dummy-data directive, audit "Frankenstein dashboard").
+ *  The @geoseo/mock fallback is allowed ONLY during the production build (NEXT_PHASE) so SSG/SSR
+ *  prerender can't crash on an absent API; at runtime every read returns real API data or surfaces
+ *  an honest empty/error state (route error boundary). It is NOT gated on demo mode anymore. */
+const FALLBACK_ALLOWED = IS_BUILD;
 
 function warnFallback(message: string): void {
   if (IS_BUILD) return;
