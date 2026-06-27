@@ -76,6 +76,22 @@ const nav = (href: string, label = "Open"): SearchResultAction => ({
 export class SearchService {
   private readonly log = new Logger(SearchService.name);
 
+  /** Per-tenant cache of the built search index. The index was rebuilt from every store on
+   *  EVERY query (each keystroke in the palette) — O(all tenant objects) per request (perf
+   *  audit P2). A short TTL collapses a burst of searches into one rebuild; results may be up
+   *  to INDEX_TTL_MS stale (acceptable — search finds existing entities, not just-created ones). */
+  private static readonly INDEX_TTL_MS = 30_000;
+  private readonly indexCache = new Map<string, { at: number; index: Indexed[] }>();
+
+  private async cachedIndex(tenantId: string): Promise<Indexed[]> {
+    const hit = this.indexCache.get(tenantId);
+    const now = Date.now();
+    if (hit && now - hit.at < SearchService.INDEX_TTL_MS) return hit.index;
+    const index = await this.index(tenantId);
+    this.indexCache.set(tenantId, { at: now, index });
+    return index;
+  }
+
   constructor(
     @Inject(SEO_PROVIDER) private readonly seo: SeoDataProvider,
     @Inject(PageEngineStore) private readonly pageEngine: PageEngineStore,
@@ -426,7 +442,7 @@ export class SearchService {
       return { results: [], total: 0, facets: [], suggestions: this.suggestions(), interpretedQuery: interp };
     }
 
-    const index = await this.index(tenantId);
+    const index = await this.cachedIndex(tenantId);
     const scored = index
       .filter((it) => (explicitScope ? it.result.type === explicitScope : true))
       .filter((it) => {
