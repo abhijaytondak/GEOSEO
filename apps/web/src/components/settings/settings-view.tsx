@@ -19,9 +19,10 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import type { IntegrationStatus, TeamMember, WorkspaceSettings } from "@geoseo/types";
+import type { TeamMember, WorkspaceSettings } from "@geoseo/types";
 import { api } from "@/lib/api-client";
 import { pageEngineApi } from "@/lib/page-engine-client";
+import { platformApi, type ProviderStatus } from "@/lib/platform-client";
 import { Panel } from "@/components/dashboard/panel";
 import { BrandScorecard } from "@/components/dashboard/brand-scorecard";
 import { LeadNotificationConfig } from "@/components/leads/lead-notification-config";
@@ -48,12 +49,6 @@ const tabs: Array<{ id: Tab; label: string; icon: typeof Save }> = [
   { id: "billing", label: "Billing", icon: CreditCard },
 ];
 
-const statusVariant: Record<IntegrationStatus, "positive" | "warning" | "muted"> = {
-  connected: "positive",
-  "needs-attention": "warning",
-  disabled: "muted",
-};
-
 const inputCls =
   "h-10 w-full rounded-lg border border-border bg-surface-sunken px-3 text-body outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:bg-card";
 
@@ -71,11 +66,33 @@ export function SettingsView({ initial }: { initial: WorkspaceSettings }) {
   });
   const [pageCount, setPageCount] = useState<number | null>(null);
   const [keywordCount, setKeywordCount] = useState<number | null>(null);
+  // Real, server-truth integration status (driven by env keys) — so the "Other Integrations"
+  // panel reflects what's ACTUALLY configured instead of a cosmetic client toggle that lied.
+  const [providerStatus, setProviderStatus] = useState<Record<string, ProviderStatus> | null>(null);
 
   useEffect(() => {
     pageEngineApi.getPages().then((pages) => setPageCount(pages.length)).catch(() => setPageCount(0));
     pageEngineApi.getOpportunities().then((opps) => setKeywordCount(opps.length)).catch(() => setKeywordCount(0));
+    platformApi
+      .getProviderHealth()
+      .then((h) => setProviderStatus(Object.fromEntries(h.providers.map((p) => [p.provider, p]))))
+      .catch(() => setProviderStatus({}));
   }, []);
+
+  // Map a settings integration id → its provider-health provider id (where one exists).
+  const HEALTH_PROVIDER_ID: Record<string, string> = {
+    "search-console": "gsc",
+    hubspot: "hubspot",
+    dataforseo: "dataforseo",
+    "image-generation": "image-generation",
+  };
+  /** Real status for an env-backed integration: connected / not-configured (+ how to set it up). */
+  function realStatus(id: string): { connected: boolean; setupHint?: string; known: boolean } {
+    if (!providerStatus) return { connected: false, known: false }; // still loading
+    const ph = providerStatus[HEALTH_PROVIDER_ID[id] ?? id];
+    if (!ph) return { connected: false, known: false }; // not tracked by health (e.g. salesforce/pipedrive)
+    return { connected: ph.status === "connected", setupHint: ph.setupHint, known: true };
+  }
 
   const dirty = useMemo(
     () => JSON.stringify(settings.profile) !== JSON.stringify(initial.profile),
@@ -290,29 +307,6 @@ export function SettingsView({ initial }: { initial: WorkspaceSettings }) {
     }
   }
 
-  async function toggleIntegration(id: string) {
-    const integration = settings.integrations.find((item) => item.id === id);
-    if (!integration) return;
-    const status: IntegrationStatus = integration.status === "connected" ? "disabled" : "connected";
-    const previous = settings;
-    setSettings((current) => ({
-      ...current,
-      integrations: current.integrations.map((item) => (item.id === id ? { ...item, status } : item)),
-    }));
-    try {
-      const result = await api.updateIntegration(id, { status });
-      trackJob(result.job);
-      setSettings((current) => ({
-        ...current,
-        integrations: current.integrations.map((item) => (item.id === id ? result.integration : item)),
-      }));
-      notify({ kind: "success", title: "Integration updated", message: `${integration.label} is now ${status}.` });
-    } catch (err) {
-      setSettings(previous);
-      notify({ kind: "error", title: "Integration update failed", message: err instanceof Error ? err.message : "Try again." });
-    }
-  }
-
   async function addMember() {
     if (!newMember.name.trim() || !newMember.email.trim()) {
       notify({ kind: "error", title: "Name and email are required" });
@@ -343,7 +337,7 @@ export function SettingsView({ initial }: { initial: WorkspaceSettings }) {
 
   async function removeMember(member: TeamMember) {
     if (member.role === "owner") {
-      notify({ kind: "error", title: "Owner cannot be removed in the prototype" });
+      notify({ kind: "error", title: "The workspace owner can't be removed" });
       return;
     }
     const ok = await confirm({
@@ -687,32 +681,45 @@ export function SettingsView({ initial }: { initial: WorkspaceSettings }) {
             </div>
           </Panel>
 
-          {/* Other integrations */}
-          <Panel title="Other Integrations" description="Additional connectors — toggle to reflect your current setup.">
+          {/* Other integrations — server-configured (env keys), so this reflects REAL status
+              and shows how to enable each, rather than a toggle that fakes "connected". */}
+          <Panel title="Other Integrations" description="Configured on the server via API keys — status below reflects what's actually connected.">
             <div className="grid grid-cols-1 gap-3 xl:grid-cols-3">
-              {settings.integrations.filter((i) => i.id !== "wordpress" && i.id !== "webflow" && i.id !== "shopify").map((integration) => (
-                <div key={integration.id} className="rounded-xl border border-border bg-surface-sunken p-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <div className="text-h-card text-foreground">{integration.label}</div>
-                      <p className="mt-1 text-label leading-relaxed text-muted-foreground">{integration.description}</p>
+              {settings.integrations
+                .filter((i) => i.id !== "wordpress" && i.id !== "webflow" && i.id !== "shopify")
+                .map((integration) => {
+                  const real = realStatus(integration.id);
+                  const connected = real.connected;
+                  return (
+                    <div key={integration.id} className="flex flex-col rounded-xl border border-border bg-surface-sunken p-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="text-h-card text-foreground">{integration.label}</div>
+                          <p className="mt-1 text-label leading-relaxed text-muted-foreground">{integration.description}</p>
+                        </div>
+                        <Badge variant={connected ? "positive" : "muted"} className="shrink-0 gap-1">
+                          {connected ? <CheckCircle2 className="size-3" /> : null}
+                          {connected ? "Connected" : "Not configured"}
+                        </Badge>
+                      </div>
+                      {!connected && (
+                        <p className="mt-3 flex items-start gap-1.5 rounded-lg bg-card px-2.5 py-2 text-micro text-muted-foreground">
+                          <PlugZap className="mt-0.5 size-3 shrink-0 text-brand" />
+                          <span>
+                            {real.setupHint ?? "Configure this connector's API keys on the server to enable it."}
+                          </span>
+                        </p>
+                      )}
                     </div>
-                    <Badge variant={statusVariant[integration.status]} className="capitalize">
-                      {integration.status}
-                    </Badge>
-                  </div>
-                  <Button variant="outline" className="mt-4 h-9 w-full" onClick={() => toggleIntegration(integration.id)}>
-                    {integration.status === "connected" ? "Disable" : "Connect"}
-                  </Button>
-                </div>
-              ))}
+                  );
+                })}
             </div>
           </Panel>
         </div>
       )}
 
       {tab === "team" && (
-        <Panel title="Team" description="Add, view, and remove mock workspace users.">
+        <Panel title="Team" description="Add, view, and manage workspace members and their roles.">
           <div className="grid grid-cols-1 gap-3 md:grid-cols-[1fr_1fr_160px_auto]">
             <input className={inputCls} placeholder="Name" aria-label="New member name" value={newMember.name} onChange={(e) => setNewMember((m) => ({ ...m, name: e.target.value }))} />
             <input className={inputCls} placeholder="Email" aria-label="New member email" value={newMember.email} onChange={(e) => setNewMember((m) => ({ ...m, email: e.target.value }))} />
