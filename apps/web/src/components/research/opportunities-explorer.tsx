@@ -1,11 +1,13 @@
 "use client";
 
 import { Fragment, useMemo, useState } from "react";
+import Link from "next/link";
 import {
   Search,
   Sparkles,
   Check,
   X,
+  ArrowRight,
   Clock,
   ChevronDown,
   ChevronRight,
@@ -348,6 +350,15 @@ export function OpportunitiesExplorer({ initial }: { initial: KeywordOpportunity
                               Generate
                             </Button>
                           </>
+                        ) : o.status === "approved" ? (
+                          // Generated → give a forward path instead of a dead "approved" label.
+                          <Link
+                            href="/pages"
+                            className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-label font-medium text-brand transition-colors hover:bg-brand/10 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+                          >
+                            <Check className="size-3.5 text-positive" /> View page
+                            <ArrowRight className="size-3.5" />
+                          </Link>
                         ) : (
                           <span className="inline-flex items-center gap-1 text-label text-muted-foreground"><Check className="size-3.5 text-positive" /> {o.status}</span>
                         )}
@@ -381,14 +392,24 @@ export function OpportunitiesExplorer({ initial }: { initial: KeywordOpportunity
             </tbody>
           </table>
         </div>
-        {rows.length === 0 && (
-          <EmptyState
-            icon={Search}
-            title="No opportunities match your filters"
-            description="Adjust the search or filters above, or discover new opportunities from seed topics."
-            className="py-16"
-          />
-        )}
+        {rows.length === 0 &&
+          (opps.length === 0 ? (
+            // True zero (brand-new workspace) — point at the seed bar, not at "filters".
+            <EmptyState
+              icon={Sparkles}
+              tone="prompt"
+              title="Discover your first opportunities"
+              description="Enter a few seed topics in the bar above (or leave it blank to auto-seed from your Brand Memory) and we'll find the buyer-intent keywords worth a page."
+              className="py-16"
+            />
+          ) : (
+            <EmptyState
+              icon={Search}
+              title="No opportunities match your filters"
+              description="Adjust the search or filters above, or discover new opportunities from seed topics."
+              className="py-16"
+            />
+          ))}
       </div>
     </div>
   );
