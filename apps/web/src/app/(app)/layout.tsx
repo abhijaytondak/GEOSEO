@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { ClerkProvider } from "@clerk/nextjs";
@@ -37,8 +38,12 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   }
   if (!onboarded) redirect("/onboarding");
 
-  // Real workspace identity (Brand Memory / onboarding) drives the topbar — no demo brand.
-  const workspaceName = await api
+  // Real workspace identity drives the topbar — but it is NON-critical chrome, so we DON'T
+  // block the whole shell on the /settings read. Kick it off here and stream it into the
+  // topbar via <Suspense>: the sidebar + main content (children) paint immediately while
+  // the workspace name fills in. (Previously this `await` serialized the entire response
+  // behind a ~430ms settings read on every app navigation — perf audit P0.)
+  const workspaceNamePromise = api
     .getSettings()
     .then((s) => s.profile?.workspaceName)
     .catch(() => undefined);
@@ -52,7 +57,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         <div className="flex h-dvh overflow-hidden bg-background">
           <Sidebar className="hidden lg:flex" />
           <div className="flex min-w-0 flex-1 flex-col">
-            <Topbar workspaceName={workspaceName} />
+            <Suspense fallback={<Topbar />}>
+              <WorkspaceTopbar workspaceNamePromise={workspaceNamePromise} />
+            </Suspense>
             <DegradedBanner />
             <main className="flex-1 overflow-y-auto">{children}</main>
           </div>
@@ -61,4 +68,14 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       </AppFeedbackProvider>
     </ClerkProvider>
   );
+}
+
+/** Streams the workspace name into the topbar without blocking the shell render. */
+async function WorkspaceTopbar({
+  workspaceNamePromise,
+}: {
+  workspaceNamePromise: Promise<string | undefined>;
+}) {
+  const workspaceName = await workspaceNamePromise;
+  return <Topbar workspaceName={workspaceName} />;
 }

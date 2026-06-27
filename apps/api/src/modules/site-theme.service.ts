@@ -10,6 +10,28 @@ const present = (xs: unknown[]) => Math.round((xs.filter(Boolean).length / xs.le
  * profile will match the customer site. Derived from token completeness +
  * extraction confidence, scaled by confirmation status. Pure + reusable.
  */
+/** Drop a base64 data: URI (keep real http(s) URLs); used to keep list payloads light. */
+const dropDataUri = (url?: string): string | undefined =>
+  url && url.startsWith("data:") ? undefined : url;
+
+/**
+ * Lightweight projection of a theme profile for LIST responses: keeps the design tokens
+ * every consumer needs (colors, typography, layout, components, status, confidence) but
+ * strips the heavy `assets.sampleImages` array and any inlined base64 logo/favicon. The
+ * full profile (with all assets) is served by `GET /site-theme/:id`. (Perf audit P1 —
+ * the unbounded list reached ~66KB.)
+ */
+export function summarizeThemeProfile(profile: SiteThemeProfile): SiteThemeProfile {
+  return {
+    ...profile,
+    assets: {
+      logoUrl: dropDataUri(profile.assets?.logoUrl),
+      faviconUrl: dropDataUri(profile.assets?.faviconUrl),
+      sampleImages: [],
+    },
+  };
+}
+
 export function computeThemeFidelity(theme: SiteThemeProfile | null): ThemeFidelity {
   if (!theme) {
     return {
