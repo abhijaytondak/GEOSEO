@@ -19,6 +19,10 @@ const reqId = (): string => `req-${Date.now().toString(36)}-${(counter++).toStri
  * request id, tenant, user, route, status, and latency — the fields support needs
  * to trace "what happened on this workspace". Errors are forwarded to the Sentry
  * seam (no-op unless configured). Registered as a global interceptor (additive).
+ *
+ * Tracing (perf audit P2): adopts the inbound `x-request-id` the BFF forwards (falling
+ * back to a generated id) so one request is traceable browser → BFF → API logs under a
+ * single id; echoes it on the response and emits a `Server-Timing` header with latency.
  */
 @Injectable()
 export class RequestLogInterceptor implements NestInterceptor {
@@ -28,7 +32,10 @@ export class RequestLogInterceptor implements NestInterceptor {
     if (ctx.getType() !== "http") return next.handle();
     const req = ctx.switchToHttp().getRequest<TenantRequest & Request>();
     const res = ctx.switchToHttp().getResponse<Response>();
-    const id = reqId();
+    // Continue the BFF's trace id when present (end-to-end tracing), else mint one.
+    const inbound = req.headers["x-request-id"];
+    const id = (typeof inbound === "string" && inbound) || reqId();
+    if (!res.headersSent) res.setHeader("x-request-id", id);
     const startedAt = Date.now();
     const tenantId = (() => {
       try {
@@ -39,6 +46,8 @@ export class RequestLogInterceptor implements NestInterceptor {
     })();
 
     const finish = (status: number, error?: unknown) => {
+      const latencyMs = Date.now() - startedAt;
+      if (!res.headersSent) res.setHeader("Server-Timing", `app;dur=${latencyMs}`);
       const line = {
         id,
         method: req.method,
@@ -46,7 +55,7 @@ export class RequestLogInterceptor implements NestInterceptor {
         status,
         tenantId,
         userId: req.auth?.userId,
-        latencyMs: Date.now() - startedAt,
+        latencyMs,
       };
       if (error) {
         this.log.error(JSON.stringify({ ...line, error: error instanceof Error ? error.message : String(error) }));
