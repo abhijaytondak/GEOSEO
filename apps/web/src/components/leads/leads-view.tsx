@@ -119,13 +119,14 @@ export function LeadsView({ leads }: { leads: Lead[] }) {
   }
 
   const clean = rows.filter((l) => l.spamStatus === "clean");
-  const stats = [
+  const stats: { label: string; value: number | string; icon: typeof Users }[] = [
     { label: "Total leads", value: rows.length, icon: Users },
     { label: "Qualified", value: rows.filter((l) => l.status === "qualified" || l.status === "won").length, icon: BadgeCheck },
     { label: "Spam / dupes", value: rows.filter((l) => l.spamStatus !== "clean").length, icon: ShieldAlert },
     {
+      // "—" not 0 when there are no scored leads — a literal 0 reads as "your leads are terrible".
       label: "Avg score",
-      value: clean.length ? Math.round(clean.reduce((a, l) => a + l.score, 0) / clean.length) : 0,
+      value: clean.length ? Math.round(clean.reduce((a, l) => a + l.score, 0) / clean.length) : "—",
       icon: Gauge,
     },
   ];
@@ -250,7 +251,7 @@ export function LeadsView({ leads }: { leads: Lead[] }) {
       >
         {viewMode === "by-page" && (
           byPage.length === 0 ? (
-            <EmptyState icon={TableProperties} title="No leads yet" description="Once visitors submit the lead form on your published pages, conversion rates by page will appear here." className="py-16" />
+            <EmptyState icon={TableProperties} tone="prompt" title="No leads yet" description="Once visitors submit the lead form on your published pages, conversion rates by page will appear here." action={{ label: "Go to Pages", href: "/pages" }} className="py-16" />
           ) : (
             <Table className="text-left">
               <TableHeader>
@@ -317,13 +318,18 @@ export function LeadsView({ leads }: { leads: Lead[] }) {
         {filtered.length === 0 ? (
           <EmptyState
             icon={Inbox}
-            title="No leads match this filter"
+            tone={filter === "all" ? "prompt" : "default"}
+            title={filter === "all" ? "No leads yet" : "No leads match this filter"}
             description={
               filter === "all"
-                ? "Captured leads from your published pages will appear here."
+                ? "Leads are captured when visitors submit the form on a published page. Publish a page to start collecting them."
                 : "Try a different spam filter to see more leads."
             }
-            action={filter === "all" ? undefined : { label: "Show all leads", onClick: () => setFilter("all") }}
+            action={
+              filter === "all"
+                ? { label: "Go to Pages", href: "/pages" }
+                : { label: "Show all leads", onClick: () => setFilter("all") }
+            }
             className="py-16"
           />
         ) : (

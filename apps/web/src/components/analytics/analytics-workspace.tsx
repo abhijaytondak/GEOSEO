@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import {
   LayoutGrid,
   LineChart,
@@ -76,8 +76,21 @@ export function AnalyticsWorkspace({
   authority: AuthorityOverview;
 }) {
   const params = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
   const initialTab = (TABS.find((t) => t.id === params.get("view"))?.id ?? "overview") as Tab;
   const [tab, setTab] = useState<Tab>(initialTab);
+
+  // Switch tab AND reflect it in the URL (?view=) so the lens is bookmarkable/shareable and
+  // survives refresh + back/forward. Previously ?view= was read on mount but never written.
+  function selectTab(next: Tab) {
+    setTab(next);
+    const qs = new URLSearchParams(params.toString());
+    if (next === "overview") qs.delete("view");
+    else qs.set("view", next);
+    const q = qs.toString();
+    router.replace(q ? `${pathname}?${q}` : pathname, { scroll: false });
+  }
 
   type RoiRow = { id: string; title: string; slug: string; currentRank: number; impressions: number; clicks: number; leadCount: number; wonCount: number; avgLeadScore: number; conversionRate: number };
   type RoiTotals = { totalLeads: number; totalWon: number; totalImpressions: number; totalClicks: number; pagesWithLeads: number };
@@ -199,7 +212,7 @@ export function AnalyticsWorkspace({
               role="tab"
               type="button"
               aria-selected={active}
-              onClick={() => setTab(t.id)}
+              onClick={() => selectTab(t.id)}
               className={cn(
                 "inline-flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-label font-medium transition-colors focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/40",
                 active ? "bg-foreground text-background" : "text-muted-foreground hover:bg-muted hover:text-foreground",
