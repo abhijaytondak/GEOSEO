@@ -3,9 +3,13 @@ import { pageEngineApi } from "@/lib/page-engine-client";
 import { api } from "@/lib/api-client";
 import { SITE_URL } from "@/components/marketing/data";
 import { ALL_FEATURE_PAGES, featureHref } from "@/components/marketing/platform-data";
-import { CONTENT, PUBLISHED_SLUGS } from "@/components/resources/content";
+// Body-free metadata index (slug + lastModified) — no article bodies in the sitemap graph.
+import { RESOURCE_INDEX, PUBLISHED_SLUGS } from "@/components/resources/resource-index";
 
-export const dynamic = "force-dynamic";
+// ISR so the public sitemap becomes a Vercel cache HIT. In demo mode the route does
+// no API fetch (pure static marketing output) → fully cached + revalidated every 5 min.
+// In a real deployment the no-store feed/brand fetches keep it fresh per request.
+export const revalidate = 300;
 
 /** Demo deployments serve sample feed content via the mock fallback; never list those
  *  demo/customer feed URLs in the production sitemap (audit critical #1). */
@@ -33,7 +37,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     })),
     ...PUBLISHED_SLUGS.map((slug) => ({
       url: `${SITE_URL}/resources/${slug}`,
-      lastModified: CONTENT[slug].updated,
+      lastModified: RESOURCE_INDEX[slug].updated,
       changeFrequency: "monthly" as const,
       priority: 0.7,
     })),

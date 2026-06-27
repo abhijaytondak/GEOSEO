@@ -19,8 +19,59 @@ declare global {
   }
 }
 
+const PUTER_SRC = "https://js.puter.com/v2/";
+let puterLoad: Promise<PuterChat | null> | null = null;
+
+/**
+ * Lazily inject the Puter SDK and resolve its `ai.chat` function — ONLY when an AI call
+ * is actually about to run. The script is no longer in the root layout, so public
+ * marketing/feeds pages ship zero Puter JS; it loads on demand (once, cached) inside the
+ * gated generate/extract/discover flows. Resolves null if it can't load (SSR, blocked,
+ * timeout) so every caller keeps its graceful fallback.
+ */
+export function ensurePuter(): Promise<PuterChat | null> {
+  if (typeof window === "undefined") return Promise.resolve(null);
+  if (typeof window.puter?.ai?.chat === "function") return Promise.resolve(window.puter.ai.chat);
+  if (puterLoad) return puterLoad;
+
+  puterLoad = new Promise<PuterChat | null>((resolve) => {
+    const ready = () => typeof window.puter?.ai?.chat === "function";
+    const done = () => resolve(ready() ? window.puter!.ai!.chat! : null);
+
+    let script = document.querySelector<HTMLScriptElement>(`script[src="${PUTER_SRC}"]`);
+    if (!script) {
+      script = document.createElement("script");
+      script.src = PUTER_SRC;
+      script.async = true;
+      document.head.appendChild(script);
+    }
+    if (ready()) return done();
+
+    // The SDK attaches window.puter shortly after the script's load event — poll briefly.
+    const onLoad = () => {
+      let tries = 0;
+      const poll = window.setInterval(() => {
+        if (ready() || ++tries > 40) {
+          window.clearInterval(poll);
+          done();
+        }
+      }, 50); // up to ~2s after load
+    };
+    script.addEventListener("load", onLoad, { once: true });
+    script.addEventListener("error", () => resolve(null), { once: true });
+    // Hard ceiling so a stuck load never blocks the caller forever.
+    window.setTimeout(() => resolve(ready() ? window.puter!.ai!.chat! : null), 12_000);
+  });
+  return puterLoad;
+}
+
+/**
+ * Browser-capability gate kept for call sites: in a browser we CAN load Puter on demand,
+ * so the AI fallback path is available (the actual load happens inside the AI calls via
+ * `ensurePuter`, which fails gracefully → null). False during SSR.
+ */
 export function puterReady(): boolean {
-  return typeof window !== "undefined" && typeof window.puter?.ai?.chat === "function";
+  return typeof window !== "undefined";
 }
 
 /**
@@ -48,7 +99,7 @@ export const RICH_CONTENT_RULES = `Write deeply researched, genuinely useful con
 - Accuracy: never invent statistics, customers, prices, or claims not grounded in the brand context. Truthful and useful over promotional.`;
 
 export async function draftWithPuter(query: string, pageType: string, brandHint?: string): Promise<PuterDraft | null> {
-  const chat = typeof window !== "undefined" ? window.puter?.ai?.chat : undefined;
+  const chat = await ensurePuter();
   if (!chat) return null;
 
   const brand = brandHint?.trim() || "the customer's brand (no Brand Memory provided — write accurate, brand-neutral copy)";
@@ -98,8 +149,9 @@ export async function extractBrandLibraryWithPuter(
   siteText: string,
   ctx: { url: string; company?: string },
 ): Promise<PuterBrandLibrary | null> {
-  const chat = typeof window !== "undefined" ? window.puter?.ai?.chat : undefined;
-  if (!chat || !siteText.trim()) return null;
+  if (!siteText.trim()) return null;
+  const chat = await ensurePuter();
+  if (!chat) return null;
 
   const prompt = `You are a brand strategist extracting a company's real Brand Memory from its own website copy. Use ONLY facts present in the text — never invent products, prices, statistics, customers, or claims. If the text gives no basis for a field, use an empty array or empty string.
 Website: ${ctx.url}
@@ -148,9 +200,10 @@ export async function discoverCompetitorsWithPuter(ctx: {
   valueProp?: string;
   domain?: string;
 }): Promise<PuterCompetitor[]> {
-  const chat = typeof window !== "undefined" ? window.puter?.ai?.chat : undefined;
   const company = ctx.company?.trim();
-  if (!chat || !company) return [];
+  if (!company) return [];
+  const chat = await ensurePuter();
+  if (!chat) return [];
 
   const prompt = `You are a market-intelligence analyst. Identify the real, direct competitors of a company — actual companies in the same market a buyer would compare it against. Never invent companies.
 Company: ${company}${ctx.domain ? ` (website: ${ctx.domain})` : ""}

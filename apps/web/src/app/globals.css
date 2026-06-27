@@ -324,6 +324,21 @@
   .stagger-3 { animation-delay: 120ms; }
   .stagger-4 { animation-delay: 160ms; }
 
+  /* JS-free scroll-in reveal — replaces a per-item <Reveal> client island on
+     content-dense lists (e.g. /resources, 100+ cards). Base state is fully VISIBLE
+     so crawlers and browsers without scroll-driven animations see all content
+     (SEO/GEO-safe); the entrance only enhances where supported + motion is allowed. */
+  .reveal-scroll { opacity: 1; }
+  @supports (animation-timeline: view()) {
+    @media (prefers-reduced-motion: no-preference) {
+      .reveal-scroll {
+        animation: fade-in-up 0.6s var(--ease-out-expo) both;
+        animation-timeline: view();
+        animation-range: entry 0% cover 22%;
+      }
+    }
+  }
+
   /* card hover lift — subtle elevation on hover */
   .card-lift {
     transition: box-shadow 180ms var(--ease-out-expo), transform 180ms var(--ease-out-expo);
