@@ -9,12 +9,10 @@ import { Button } from "@/components/ui/button";
 export const dynamic = "force-dynamic";
 
 export default async function PagesPage() {
-  const [pages, opportunities, blueprints, recommendations] = await Promise.all([
-    pageEngineApi.getPages(),
-    pageEngineApi.getOpportunities(),
-    pageEngineApi.getBlueprints(),
-    pageEngineApi.getRefreshRecommendations(),
-  ]);
+  // Only the page list is above-the-fold, so it's the lone blocking fetch — TTFB no longer
+  // waits on the slower opportunities/blueprints/recommendations reads (perf audit P1).
+  // PagesView fetches those client-side after paint (each is behind a toggle/selection).
+  const pages = await pageEngineApi.getPages();
 
   return (
     <>
@@ -35,12 +33,7 @@ export default async function PagesPage() {
         }
       />
       <div className="p-6 sm:p-8">
-        <PagesView
-          pages={pages}
-          opportunities={opportunities}
-          blueprints={blueprints}
-          recommendations={recommendations}
-        />
+        <PagesView pages={pages} />
       </div>
     </>
   );
