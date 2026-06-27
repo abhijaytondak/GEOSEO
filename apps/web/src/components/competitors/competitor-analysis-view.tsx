@@ -117,37 +117,16 @@ export function CompetitorAnalysisView() {
   useEffect(() => {
     let cancelled = false;
     (async () => {
+      // Mount = SERVER result only. We deliberately do NOT auto-run the browser-AI (Puter)
+      // discovery here: it injects the Puter SDK and pops an unbranded third-party consent
+      // modal, which blocked the whole page on a "Analyzing…" spinner until dismissed (QA
+      // P0). When the server has no data, the empty state's "Run analysis" button triggers
+      // the Puter path on an EXPLICIT user action (consent modal is expected there).
       let res: CompetitorAnalysis | null = null;
       try {
         res = await api.getCompetitorAnalysis();
       } catch {
-        /* fall through to browser AI */
-      }
-      // Brave SERP is the only trustworthy server tier; for empty results or the
-      // noisy keyless DuckDuckGo/heuristic tiers, discover dynamically via browser
-      // AI (Puter) — works for any company, no server key needed.
-      if ((!res || res.competitors.length === 0 || res.source !== "brave") && puterReady()) {
-        try {
-          const brand = await api.getBrandProfile();
-          const comps = await discoverCompetitorsWithPuter({
-            company: brand.company,
-            industry: brand.industry,
-            valueProp: brand.valueProp,
-            domain: brand.domain,
-          });
-          if (comps.length && !cancelled) {
-            setData(
-              buildFromPuter(
-                brand.domain || res?.domain || "",
-                comps,
-                (brand.keywords?.length ? brand.keywords : res?.keywords) ?? [],
-              ),
-            );
-            return;
-          }
-        } catch {
-          /* keep the server result */
-        }
+        /* empty state handles a failed/absent server result */
       }
       if (!cancelled) setData(res);
     })().finally(() => {

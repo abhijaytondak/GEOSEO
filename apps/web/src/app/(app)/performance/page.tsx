@@ -47,12 +47,12 @@ export default async function PerformancePage({
   const ranks = ranksAll.slice(-days);
   const impressions = impressionsAll.slice(-days);
 
-  const avgRank = Math.round(
-    ranks.reduce((a, p) => a + p.rank, 0) / ranks.length,
-  );
+  // Guard the no-data case (empty series until Search Console is connected) so the stats
+  // read #0 / 0% like the rest of the app instead of "#NaN" / "NaN%" (QA P1).
+  const avgRank = ranks.length ? Math.round(ranks.reduce((a, p) => a + p.rank, 0) / ranks.length) : 0;
   const totalImpr = impressions.reduce((a, p) => a + p.impressions, 0);
   const totalClicks = impressions.reduce((a, p) => a + p.clicks, 0);
-  const ctr = ((totalClicks / totalImpr) * 100).toFixed(1);
+  const ctr = totalImpr ? ((totalClicks / totalImpr) * 100).toFixed(1) : "0.0";
 
   // Within-window movement (first half → second half) for per-KPI delta chips (§8).
   const half = Math.max(1, Math.floor(ranks.length / 2));

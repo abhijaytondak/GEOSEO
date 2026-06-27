@@ -228,7 +228,7 @@ export function AlertsFeed({ alerts: initialAlerts }: { alerts: Alert[] }) {
       ) : (
         <EmptyState
           icon={Bell}
-          title={`No ${filter} alerts`}
+          title={filter === "all" ? "No alerts" : `No ${filter} alerts`}
           description="You're all caught up here."
         />
       )}
