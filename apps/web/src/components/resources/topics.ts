@@ -185,6 +185,14 @@ export const TOPICS: Topic[] = [
   { slug: "how-to-run-a-geo-content-audit", cluster: "measurement", title: "How to run a GEO content audit", keyword: "geo content audit", intent: "informational" },
   { slug: "repurposing-content-for-ai-search", cluster: "tactics", title: "Repurposing existing content for AI search", keyword: "repurposing content for ai search", intent: "informational" },
   { slug: "competitive-geo-analysis", cluster: "measurement", title: "Competitive GEO analysis: why rivals get cited", keyword: "competitive geo analysis", intent: "informational" },
+
+  // ── Batch: GEO program operations (119 → 125) ───────────────────────
+  { slug: "digital-pr-for-geo", cluster: "tactics", title: "Digital PR for GEO: earning AI citations off-page", keyword: "digital pr for geo", intent: "informational" },
+  { slug: "geo-experimentation-and-testing", cluster: "measurement", title: "GEO experimentation and testing", keyword: "geo experimentation testing", intent: "informational" },
+  { slug: "site-migrations-without-losing-ai-citations", cluster: "seo-foundations", title: "Site migrations without losing AI citations", keyword: "site migration ai citations", intent: "informational" },
+  { slug: "reporting-geo-results-to-executives", cluster: "measurement", title: "Reporting GEO results to executives", keyword: "reporting geo results", intent: "informational" },
+  { slug: "scaling-geo-content-without-thin-pages", cluster: "tactics", title: "Scaling GEO content without thin pages", keyword: "scaling geo content", intent: "informational" },
+  { slug: "building-a-geo-team", cluster: "tactics", title: "Building a GEO team: roles and ownership", keyword: "building a geo team", intent: "commercial" },
 ];
 
 /** Resolve a topic by slug. */
