@@ -178,6 +178,13 @@ export const TOPICS: Topic[] = [
   { slug: "can-you-do-geo-without-a-blog", cluster: "tactics", title: "Can you do GEO without a blog?", keyword: "geo without a blog", intent: "informational" },
   { slug: "how-much-content-do-you-need-for-geo", cluster: "tactics", title: "How much content do you need for GEO?", keyword: "how much content for geo", intent: "informational" },
   { slug: "what-pages-should-you-optimize-first-for-geo", cluster: "tactics", title: "Which pages to optimize first for GEO", keyword: "what pages to optimize first for geo", intent: "informational" },
+
+  // ── Batch: advanced GEO + content workflow (114 → 119) ──────────────
+  { slug: "the-geo-content-workflow", cluster: "tactics", title: "The GEO content workflow: research to measurement", keyword: "geo content workflow", intent: "informational" },
+  { slug: "how-to-write-a-geo-content-brief", cluster: "tactics", title: "How to write a GEO content brief", keyword: "geo content brief", intent: "informational" },
+  { slug: "how-to-run-a-geo-content-audit", cluster: "measurement", title: "How to run a GEO content audit", keyword: "geo content audit", intent: "informational" },
+  { slug: "repurposing-content-for-ai-search", cluster: "tactics", title: "Repurposing existing content for AI search", keyword: "repurposing content for ai search", intent: "informational" },
+  { slug: "competitive-geo-analysis", cluster: "measurement", title: "Competitive GEO analysis: why rivals get cited", keyword: "competitive geo analysis", intent: "informational" },
 ];
 
 /** Resolve a topic by slug. */
