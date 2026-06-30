@@ -9,6 +9,7 @@ import { BATCH_VERTICALS } from "./content-verticals";
 import { BATCH_VERTICALS2 } from "./content-verticals2";
 import { BATCH_WORKFLOWS } from "./content-workflows";
 import { BATCH_OPERATIONS } from "./content-operations";
+import { BATCH_VERTICALS3 } from "./content-verticals3";
 
 /**
  * Authored resource content. Each entry is a real, substantive article — published only
@@ -385,6 +386,7 @@ export const CONTENT: Record<string, Article> = {
   ...BATCH_VERTICALS2,
   ...BATCH_WORKFLOWS,
   ...BATCH_OPERATIONS,
+  ...BATCH_VERTICALS3,
 };
 
 export function getArticle(slug: string): Article | undefined {
