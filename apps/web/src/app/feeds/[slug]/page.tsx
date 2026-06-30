@@ -31,6 +31,7 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
   if (!page) return { title: "Not found" };
   const host = memory?.profile.domain?.trim() || "yourdomain.com";
   const canonical = page.publishedUrl ?? `https://${host}/feeds${page.slug}`;
+  const shareImage = page.ogImageUrl ?? page.heroImageUrl;
   return {
     title: page.metaTitle,
     description: page.metaDescription,
@@ -41,9 +42,13 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
       description: page.metaDescription,
       url: canonical,
       type: "article",
-      ...(page.ogImageUrl ?? page.heroImageUrl
-        ? { images: [{ url: page.ogImageUrl ?? page.heroImageUrl ?? "" }] }
-        : {}),
+      ...(shareImage ? { images: [{ url: shareImage }] } : {}),
+    },
+    twitter: {
+      card: shareImage ? "summary_large_image" : "summary",
+      title: page.metaTitle,
+      description: page.metaDescription,
+      ...(shareImage ? { images: [shareImage] } : {}),
     },
   };
 }

@@ -146,6 +146,9 @@ export interface SchemaContext {
   dateModified?: string;
   keywords?: string[];
   wordCount?: number;
+  /** Hero / illustration image — emitted as an ImageObject on the primary node for
+   *  Google Images eligibility + richer Article/BlogPosting rich results. */
+  image?: { url: string; alt?: string };
   /** BCP-47 language; defaults to "en". */
   lang?: string;
 }
@@ -169,8 +172,9 @@ export function buildSchemaJson(pageType: string, data: SchemaContext): string {
   const siteId = data.companyUrl ? `${data.companyUrl}#website` : "#website";
   const pageId = data.url ? `${data.url}#primary` : "#primary";
 
-  // AEO: tell voice/answer engines which parts are the quotable answer.
-  const speakable = { "@type": "SpeakableSpecification", cssSelector: ["h1", "h2", "p"] };
+  // AEO: tell voice/answer engines which parts are the quotable answer
+  // (incl. the rendered <blockquote> direct-answer block on the feed page).
+  const speakable = { "@type": "SpeakableSpecification", cssSelector: ["h1", "h2", "p", "blockquote"] };
 
   const faqNode = (name: string) => ({
     "@type": "FAQPage",
@@ -217,6 +221,9 @@ export function buildSchemaJson(pageType: string, data: SchemaContext): string {
     ...(data.dateModified ? { dateModified: data.dateModified } : {}),
     ...(typeof data.wordCount === "number" && data.wordCount > 0 ? { wordCount: data.wordCount } : {}),
     ...(data.keywords?.length ? { keywords: data.keywords.join(", ") } : {}),
+    ...(data.image?.url
+      ? { image: { "@type": "ImageObject", url: data.image.url, ...(data.image.alt ? { caption: data.image.alt } : {}) } }
+      : {}),
     ...(data.company
       ? { author: { "@type": "Organization", name: data.author || data.company }, publisher: { "@id": orgId } }
       : {}),
@@ -228,6 +235,19 @@ export function buildSchemaJson(pageType: string, data: SchemaContext): string {
     primary.mainEntity = faqs.map((f) => ({ "@type": "Question", name: f.q, acceptedAnswer: { "@type": "Answer", text: f.a } }));
   }
   graph.push(primary);
+
+  // AEO: mark the page's lead answer as an extractable Quotation — the self-contained
+  // claim AI answer engines (Perplexity, AI Overviews) lift and cite. Mirrors the
+  // <blockquote> direct-answer block rendered at the top of the feed page.
+  const quickAnswer = (faqs[0]?.a || data.description || "").replace(/\s+/g, " ").trim();
+  if (quickAnswer) {
+    graph.push({
+      "@type": "Quotation",
+      text: quickAnswer,
+      ...(data.url ? { citation: data.url } : {}),
+      ...(data.company ? { isPartOf: { "@id": pageId } } : {}),
+    });
+  }
 
   // BreadcrumbList — Home → page type → this page.
   if (data.companyUrl || data.url) {
