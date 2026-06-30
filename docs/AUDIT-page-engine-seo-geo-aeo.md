@@ -126,6 +126,11 @@ heuristic hit-count not real citation attribution, no content-recency loop.
   but there is no location field on `BrandProfile`/settings to source it from, and those types + their
   UI are the **Codex lane** — needs a `location`/`serviceArea` field added there (coordinate before
   building).
-- Remaining: P1 items **8–9** (breadcrumb UI, comparison-table semantics) + **11** (competitor-gap →
-  discovery loop — touches the Codex-lane competitor service); P2 as above. `regeneratePage`/
-  `rewritePage` could adopt the #4 gate (follow-on).
+- **Batch 4: items 8, 9** ✅ — visible **breadcrumb** `<nav aria-label="Breadcrumb">` on `/feeds`
+  (Home › category › title, mirrors the BreadcrumbList JSON-LD) + proper **table semantics** on both
+  comparison-table renderers (`scope="col"` on column headers, row labels → `<th scope="row">`).
+  Verified live: breadcrumb "Home › Comparisons › …"; scope=col×6 + scope=row×11.
+- Remaining: P1 **#11** (competitor-gap → discovery loop — touches the Codex-lane competitor service)
+  + **#10** (geo, deferred — needs a Codex-lane brand location field); P2 (real per-engine citation
+  tracking, content-recency auto-refresh, HowTo/hreflang). `regeneratePage`/`rewritePage` could adopt
+  the #4 gate (follow-on).
