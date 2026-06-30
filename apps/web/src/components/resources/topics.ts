@@ -205,6 +205,18 @@ export const TOPICS: Topic[] = [
   { slug: "geo-for-financial-advisors", cluster: "use-cases", title: "GEO for financial advisors and wealth management", keyword: "geo for financial advisors", intent: "commercial" },
   { slug: "geo-for-fitness-studios", cluster: "use-cases", title: "GEO for fitness studios and gyms", keyword: "geo for fitness studios", intent: "commercial" },
   { slug: "geo-for-course-creators", cluster: "use-cases", title: "GEO for course creators and online education", keyword: "geo for course creators", intent: "commercial" },
+
+  // ── Batch: content formats that get cited (135 → 145) ───────────────
+  { slug: "listicles-that-get-cited", cluster: "tactics", title: "How to write listicles that get cited by AI", keyword: "listicles that get cited", intent: "informational" },
+  { slug: "glossary-pages-for-geo", cluster: "tactics", title: "Glossary and definition pages for GEO", keyword: "glossary pages for geo", intent: "informational" },
+  { slug: "how-to-structure-a-pricing-page-for-geo", cluster: "conversion", title: "How to structure a pricing page for GEO", keyword: "pricing page for geo", intent: "informational" },
+  { slug: "product-pages-for-ai-search", cluster: "tactics", title: "Optimizing product pages for AI search", keyword: "product pages for ai search", intent: "informational" },
+  { slug: "about-pages-and-eeat", cluster: "tactics", title: "About pages and E-E-A-T for AI search", keyword: "about pages eeat", intent: "informational" },
+  { slug: "author-bios-and-eeat", cluster: "tactics", title: "Author bios and E-E-A-T for AI search", keyword: "author bios eeat", intent: "informational" },
+  { slug: "case-studies-for-geo", cluster: "tactics", title: "Case studies for GEO: proof that gets cited", keyword: "case studies for geo", intent: "informational" },
+  { slug: "how-to-content-for-ai-search", cluster: "tactics", title: "How-to content for AI search", keyword: "how-to content for ai search", intent: "informational" },
+  { slug: "landing-pages-for-ai-search", cluster: "conversion", title: "Landing pages for AI search traffic", keyword: "landing pages for ai search", intent: "informational" },
+  { slug: "video-content-and-geo", cluster: "tactics", title: "Video content and GEO: making video citable", keyword: "video content and geo", intent: "informational" },
 ];
 
 /** Resolve a topic by slug. */
