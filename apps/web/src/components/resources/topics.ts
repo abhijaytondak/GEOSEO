@@ -193,6 +193,18 @@ export const TOPICS: Topic[] = [
   { slug: "reporting-geo-results-to-executives", cluster: "measurement", title: "Reporting GEO results to executives", keyword: "reporting geo results", intent: "informational" },
   { slug: "scaling-geo-content-without-thin-pages", cluster: "tactics", title: "Scaling GEO content without thin pages", keyword: "scaling geo content", intent: "informational" },
   { slug: "building-a-geo-team", cluster: "tactics", title: "Building a GEO team: roles and ownership", keyword: "building a geo team", intent: "commercial" },
+
+  // ── Batch: industry verticals, wave 3 (125 → 135) ───────────────────
+  { slug: "geo-for-home-services", cluster: "use-cases", title: "GEO for home services (HVAC, plumbing, electrical)", keyword: "geo for home services", intent: "commercial" },
+  { slug: "geo-for-restaurants", cluster: "use-cases", title: "GEO for restaurants", keyword: "geo for restaurants", intent: "commercial" },
+  { slug: "geo-for-dental-practices", cluster: "use-cases", title: "GEO for dental practices", keyword: "geo for dental practices", intent: "commercial" },
+  { slug: "geo-for-accounting-firms", cluster: "use-cases", title: "GEO for accounting firms and CPAs", keyword: "geo for accounting firms", intent: "commercial" },
+  { slug: "geo-for-manufacturers", cluster: "use-cases", title: "GEO for manufacturers and industrial B2B", keyword: "geo for manufacturers", intent: "commercial" },
+  { slug: "geo-for-automotive", cluster: "use-cases", title: "GEO for automotive (dealers and auto services)", keyword: "geo for automotive", intent: "commercial" },
+  { slug: "geo-for-cybersecurity", cluster: "use-cases", title: "GEO for cybersecurity companies", keyword: "geo for cybersecurity", intent: "commercial" },
+  { slug: "geo-for-financial-advisors", cluster: "use-cases", title: "GEO for financial advisors and wealth management", keyword: "geo for financial advisors", intent: "commercial" },
+  { slug: "geo-for-fitness-studios", cluster: "use-cases", title: "GEO for fitness studios and gyms", keyword: "geo for fitness studios", intent: "commercial" },
+  { slug: "geo-for-course-creators", cluster: "use-cases", title: "GEO for course creators and online education", keyword: "geo for course creators", intent: "commercial" },
 ];
 
 /** Resolve a topic by slug. */
