@@ -164,6 +164,20 @@ export const TOPICS: Topic[] = [
   { slug: "building-a-geo-content-strategy", cluster: "tactics", title: "How to build a GEO content strategy", keyword: "geo content strategy", intent: "informational" },
   { slug: "how-to-prioritize-geo-topics", cluster: "tactics", title: "How to prioritize which GEO topics to target", keyword: "prioritize geo topics", intent: "informational" },
   { slug: "geo-content-calendar", cluster: "tactics", title: "Building a GEO content calendar", keyword: "geo content calendar", intent: "informational" },
+
+  // ── Batch: industry verticals + buyer questions (101 → 113) ─────────
+  { slug: "geo-for-law-firms", cluster: "use-cases", title: "GEO for law firms: an AI-citation playbook", keyword: "geo for law firms", intent: "commercial" },
+  { slug: "geo-for-insurance", cluster: "use-cases", title: "GEO for insurance: getting cited in AI answers", keyword: "geo for insurance", intent: "commercial" },
+  { slug: "geo-for-travel-and-hospitality", cluster: "use-cases", title: "GEO for travel and hospitality", keyword: "geo for travel hospitality", intent: "commercial" },
+  { slug: "geo-for-recruiting-and-hr", cluster: "use-cases", title: "GEO for recruiting and HR tech", keyword: "geo for recruiting hr", intent: "commercial" },
+  { slug: "geo-for-developer-tools", cluster: "use-cases", title: "GEO for developer tools and APIs", keyword: "geo for developer tools", intent: "commercial" },
+  { slug: "geo-for-consultants", cluster: "use-cases", title: "GEO for independent consultants", keyword: "geo for consultants", intent: "commercial" },
+  { slug: "does-geo-work-for-small-businesses", cluster: "geo-fundamentals", title: "Does GEO work for small businesses?", keyword: "does geo work for small business", intent: "commercial" },
+  { slug: "how-long-does-geo-take-to-work", cluster: "geo-fundamentals", title: "How long does GEO take to show results?", keyword: "how long does geo take to work", intent: "informational" },
+  { slug: "is-geo-worth-it", cluster: "geo-fundamentals", title: "Is GEO worth it? An honest assessment", keyword: "is geo worth it", intent: "commercial" },
+  { slug: "can-you-do-geo-without-a-blog", cluster: "tactics", title: "Can you do GEO without a blog?", keyword: "geo without a blog", intent: "informational" },
+  { slug: "how-much-content-do-you-need-for-geo", cluster: "tactics", title: "How much content do you need for GEO?", keyword: "how much content for geo", intent: "informational" },
+  { slug: "what-pages-should-you-optimize-first-for-geo", cluster: "tactics", title: "Which pages to optimize first for GEO", keyword: "what pages to optimize first for geo", intent: "informational" },
 ];
 
 /** Resolve a topic by slug. */
