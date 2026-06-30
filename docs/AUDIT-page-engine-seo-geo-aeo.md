@@ -115,6 +115,17 @@ heuristic hit-count not real citation attribution, no content-recency loop.
   is recorded in the page version history. Guarantees the engine never ships content worse than
   its own fallback. (Verified: thin draft → rejected w/ reason "thin draft (11w < 350)"; rich
   draft → kept; proof string woven into the rendered section.)
-- Remaining: P0 none; P1 items 8–13 (breadcrumb UI, table semantics, llms.txt semantic layer,
-  geo keyword targeting, competitor-gap→discovery loop, cannibalization, intent confidence); P2 as
-  above. `regeneratePage`/`rewritePage` could adopt the same #4 gate (follow-on).
+- **Batch 3: items 12, 13** ✅ — cross-page **cannibalization detection** (`cannibalizingPage`: exact
+  target-keyword match OR token-overlap Jaccard ≥ 0.5 → sets `duplicate` + new `cannibalizesPageId`
+  + an evidence warning; topically-related-but-distinct keywords are NOT flagged) and **intent/stage
+  confidence** (`classifyIntents` now returns a 0–100 `confidence`; regex fallback assigns decisive
+  vs catch-all scores via `regexIntentConfidence`; new `KeywordOpportunity.intentConfidence`, surfaced
+  in the explorer with a "unsure" flag < 60). Verified keyless: 15/23 overlapping opps flagged to the
+  right page; every newly-discovered opp carries `intentConfidence`.
+- **Item 10 (geo keyword targeting) — DEFERRED:** `researchKeywords` already accepts `locationName`,
+  but there is no location field on `BrandProfile`/settings to source it from, and those types + their
+  UI are the **Codex lane** — needs a `location`/`serviceArea` field added there (coordinate before
+  building).
+- Remaining: P1 items **8–9** (breadcrumb UI, comparison-table semantics) + **11** (competitor-gap →
+  discovery loop — touches the Codex-lane competitor service); P2 as above. `regeneratePage`/
+  `rewritePage` could adopt the #4 gate (follow-on).

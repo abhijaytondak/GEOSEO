@@ -342,6 +342,16 @@ function stageFromIntent(intent: SearchIntent): FunnelStage {
   return "consideration"; // commercial / comparison / navigational / local
 }
 
+/** Confidence for the regex intent fallback — higher when the keyword carries a decisive signal,
+ *  lower for the catch-all "commercial" default (so the UI can flag uncertain classifications). */
+function regexIntentConfidence(keyword: string, intent: SearchIntent): number {
+  const k = keyword.toLowerCase();
+  if (intent === "comparison" && /\b(vs|versus|alternatives?|compare|comparison)\b/.test(k)) return 85;
+  if (intent === "informational" && /\b(how|what|why|guide|tutorial|examples?|tips)\b/.test(k)) return 75;
+  if (intent === "transactional") return 72;
+  return 55; // default "commercial" — least certain
+}
+
 /** A question / "People Also Ask"-style query — a prime AEO (answer-engine) target. */
 function isQuestionKeyword(keyword: string): boolean {
   return /^(how|what|why|when|where|who|which|can|do(es)?|is|are|should|will)\b/i.test(keyword.trim()) || keyword.includes("?");
@@ -1432,6 +1442,26 @@ export class PageEngineStore implements OnModuleInit {
     return created;
   }
 
+  /** Find an existing page this keyword would cannibalize — exact target-keyword match OR strong
+   *  token overlap (Jaccard ≥ 0.5), i.e. the two would compete for the same query. Returns the
+   *  first such page (topically-related-but-distinct keywords, low overlap, are NOT flagged). */
+  private cannibalizingPage(tenantId: string, keyword: string): GeneratedPage | undefined {
+    const kl = keyword.toLowerCase();
+    const kwTokens = new Set(keywordTokens(keyword));
+    return this.st(tenantId).pages.find((p) =>
+      p.targetKeywords.some((t) => {
+        const tl = t.toLowerCase();
+        if (tl === kl) return true; // exact duplicate
+        const tTokens = new Set(keywordTokens(t));
+        if (kwTokens.size === 0 || tTokens.size === 0) return false;
+        let inter = 0;
+        for (const x of kwTokens) if (tTokens.has(x)) inter++;
+        const union = new Set([...kwTokens, ...tTokens]).size;
+        return union > 0 && inter / union >= 0.5; // strong overlap → competes for the same query
+      }),
+    );
+  }
+
   /** Real keyword idea (DataForSEO or AI-search) → scored opportunity. */
   private oppFromIdea(
     tenantId: string,
@@ -1443,6 +1473,7 @@ export class PageEngineStore implements OnModuleInit {
     this.seq += 1;
     const intent = intentOverride ?? classified?.intent ?? classifyKwIntent(idea.keyword);
     const funnelStage = classified?.stage ?? stageFromIntent(intent);
+    const intentConfidence = classified?.confidence ?? regexIntentConfidence(idea.keyword, intent);
     const question = isQuestionKeyword(idea.keyword);
     const commercialValue = clampN((idea.cpc > 0 ? Math.min(idea.cpc * 8, 55) : idea.competition * 55) + 25, 1, 99);
     const confidence = clampN(60 + (idea.searchVolume > 100 ? 15 : 0) + (idea.difficulty < 40 ? 15 : 0), 1, 99);
@@ -1452,10 +1483,12 @@ export class PageEngineStore implements OnModuleInit {
       src === "dataforseo" ? "DataForSEO" : src === "ai-search" ? "AI-search demand" : src === "autocomplete" ? "Google Autocomplete" : "Long-tail expansion";
     // Question/AEO keywords → FAQ; otherwise the intent map (comparison/guide/landing/…).
     const recommendedPageType = question ? "faq" : PAGE_TYPE_BY_INTENT[intent] ?? "landing";
-    const evidence =
+    const cannibal = this.cannibalizingPage(tenantId, idea.keyword);
+    const baseEvidence =
       src === "dataforseo"
         ? `DataForSEO: ${idea.searchVolume.toLocaleString()} searches/mo · difficulty ${idea.difficulty} · CPC $${idea.cpc.toFixed(2)}.`
         : `${srcLabel} · est. ${idea.searchVolume.toLocaleString()} searches/mo · difficulty ${idea.difficulty}${question ? " · question (AEO)" : ""}.`;
+    const evidence = cannibal ? `${baseEvidence} ⚠ Overlaps existing page "${cannibal.title}" — may cannibalize it.` : baseEvidence;
     return {
       id: `kw-disc-${this.seq}`,
       query: idea.keyword.toLowerCase(),
@@ -1468,13 +1501,15 @@ export class PageEngineStore implements OnModuleInit {
       commercialValue,
       cpc: idea.cpc > 0 ? idea.cpc : undefined,
       confidence,
+      intentConfidence,
       score,
       question,
       recommendedPageType,
       competitorUrls: [],
       evidence,
       status: "new",
-      duplicate: this.st(tenantId).pages.some((p) => p.targetKeywords.some((k) => k.toLowerCase() === idea.keyword.toLowerCase())),
+      duplicate: !!cannibal,
+      cannibalizesPageId: cannibal?.id,
       createdAt: this.now,
     };
   }
@@ -1489,6 +1524,8 @@ export class PageEngineStore implements OnModuleInit {
     const volume = 300 + (h % 9) * 600;
     const difficulty = 25 + (h % 50);
     const commercialValue = 55 + (h % 40);
+    const cannibal = this.cannibalizingPage(tenantId, seed);
+    const baseEvidence = `Seed-derived opportunity for "${seed}" — validate volume with the research provider.`;
     return {
       id: `kw-disc-${this.seq}`,
       query: seed.toLowerCase(),
@@ -1500,13 +1537,16 @@ export class PageEngineStore implements OnModuleInit {
       difficulty,
       commercialValue,
       confidence: 70 + (h % 25),
+      // Seed path has no LLM classification — confidence comes from the regex heuristic.
+      intentConfidence: regexIntentConfidence(seed, intent),
       score: opportunityScore({ volume, difficulty, commercialValue }),
       question,
       recommendedPageType: question ? "faq" : PAGE_TYPE_BY_INTENT[intent] ?? "landing",
       competitorUrls: [],
-      evidence: `Seed-derived opportunity for "${seed}" — validate volume with the research provider.`,
+      evidence: cannibal ? `${baseEvidence} ⚠ Overlaps existing page "${cannibal.title}" — may cannibalize it.` : baseEvidence,
       status: "new",
-      duplicate: this.st(tenantId).pages.some((p) => p.targetKeywords.some((k) => k.toLowerCase() === seed.toLowerCase())),
+      duplicate: !!cannibal,
+      cannibalizesPageId: cannibal?.id,
       createdAt: this.now,
     };
   }

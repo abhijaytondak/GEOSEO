@@ -50,6 +50,8 @@ export interface KeywordOpportunity {
   cpc?: number;
   /** 0–100 model confidence in the recommendation. */
   confidence: number;
+  /** 0–100 confidence in the intent/funnel-stage classification (LLM, else regex heuristic). */
+  intentConfidence?: number;
   /** 0–100 blended opportunity score (volume reach × value × winnability) — the default sort. */
   score?: number;
   /** True for question / "People Also Ask"-style queries — prime AEO (answer-engine) targets. */
@@ -61,6 +63,8 @@ export interface KeywordOpportunity {
   status: OpportunityStatus;
   /** Flagged when it cannibalizes an existing page (PRD §7.2 dedupe). */
   duplicate?: boolean;
+  /** Id of the existing page this opportunity would cannibalize (exact or strong keyword overlap). */
+  cannibalizesPageId?: string;
   createdAt: ISODate;
 }
 
