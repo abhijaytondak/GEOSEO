@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { RefreshCw, Send, TrendingUp, Sparkles, Route, MessageSquare, Globe, Loader2, Copy, Check } from "lucide-react";
-import type { Lead, LeadActivity, LeadJourneyEvent, LeadJourneySummary, LeadScore, TeamMember } from "@geoseo/types";
+import { RefreshCw, Send, TrendingUp, Sparkles, Route, MessageSquare, Globe, Loader2, Copy, Check, Cloud } from "lucide-react";
+import type { Lead, LeadActivity, LeadJourneyEvent, LeadJourneySummary, LeadScore, LeadStatus, TeamMember } from "@geoseo/types";
 import { pageEngineApi } from "@/lib/page-engine-client";
 import { api } from "@/lib/api-client";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
@@ -14,11 +14,14 @@ import { relativeTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { useAppFeedback } from "@/components/system/app-feedback";
 import { apiError, readApiEnvelope } from "@/lib/api-envelope";
+import { LEAD_STATUSES, STATUS_TINT } from "./lead-status";
 
 interface Props {
   lead: Lead | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onStatusChange?: (id: string, status: LeadStatus) => void;
+  onSyncCrm?: (id: string) => void;
 }
 
 function Bar({ label, value }: { label: string; value: number }) {
@@ -36,17 +39,25 @@ function Bar({ label, value }: { label: string; value: number }) {
   );
 }
 
-export function LeadDetailDrawer({ lead, open, onOpenChange }: Props) {
+export function LeadDetailDrawer({ lead, open, onOpenChange, onStatusChange, onSyncCrm }: Props) {
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="flex w-full flex-col gap-0 p-0 sm:max-w-xl">
-        {lead && <Detail key={lead.id} lead={lead} />}
+        {lead && <Detail key={lead.id} lead={lead} onStatusChange={onStatusChange} onSyncCrm={onSyncCrm} />}
       </SheetContent>
     </Sheet>
   );
 }
 
-function Detail({ lead }: { lead: Lead }) {
+function Detail({
+  lead,
+  onStatusChange,
+  onSyncCrm,
+}: {
+  lead: Lead;
+  onStatusChange?: (id: string, status: LeadStatus) => void;
+  onSyncCrm?: (id: string) => void;
+}) {
   const { notify } = useAppFeedback();
   const [score, setScore] = useState<LeadScore | null>(null);
   const [journey, setJourney] = useState<{ events: LeadJourneyEvent[]; summary: LeadJourneySummary } | null>(null);
@@ -237,6 +248,52 @@ function Detail({ lead }: { lead: Lead }) {
 
         {/* Overview */}
         <TabsContent value="overview" className="min-h-0 flex-1 space-y-5 overflow-y-auto px-6 py-4">
+          {/* Manage — status + CRM sync. Shown immediately (doesn't wait on the async score/journey
+              fetch) so the drawer is actionable, not read-only. Mirrors the table-row controls. */}
+          {(onStatusChange || onSyncCrm) && (
+            <div className="flex flex-wrap items-center gap-2 rounded-xl border border-border bg-surface-sunken p-3">
+              {onStatusChange && (
+                <label className="flex items-center gap-2">
+                  <span className="text-label font-medium text-muted-foreground">Status</span>
+                  <select
+                    value={lead.status}
+                    onChange={(e) => onStatusChange(lead.id, e.target.value as LeadStatus)}
+                    aria-label={`Status for ${lead.name}`}
+                    className={cn(
+                      "h-8 cursor-pointer rounded-full border-0 px-3 text-label font-semibold capitalize outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+                      STATUS_TINT[lead.status],
+                    )}
+                  >
+                    {LEAD_STATUSES.map((s) => (
+                      <option key={s} value={s}>
+                        {s}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              )}
+              {onSyncCrm && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="ml-auto h-8"
+                  onClick={() => onSyncCrm(lead.id)}
+                  disabled={lead.crmSyncStatus === "synced" || lead.crmSyncStatus === "pending"}
+                  loading={lead.crmSyncStatus === "pending"}
+                >
+                  {lead.crmSyncStatus === "synced" ? (
+                    <>
+                      <Check className="size-3.5 text-positive" /> Synced
+                    </>
+                  ) : (
+                    <>
+                      <Cloud className="size-3.5" /> Sync to CRM
+                    </>
+                  )}
+                </Button>
+              )}
+            </div>
+          )}
           {!loaded ? (
             <Loading />
           ) : (

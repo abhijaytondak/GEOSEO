@@ -20,17 +20,10 @@ import { cn } from "@/lib/utils";
 import { useAppFeedback } from "@/components/system/app-feedback";
 import { pageEngineApi } from "@/lib/page-engine-client";
 import { LeadDetailDrawer } from "./lead-detail-drawer";
+import { LEAD_STATUSES, STATUS_TINT } from "./lead-status";
 
 type BadgeVariant = "brand" | "positive" | "negative" | "warning" | "info" | "muted";
 
-// status (editable via <select>) keeps the tint classes; spam → semantic Badge variant.
-const STATUS: Record<LeadStatus, string> = {
-  new: "bg-info/12 text-info",
-  qualified: "bg-brand/12 text-brand",
-  contacted: "bg-warning/15 text-warning",
-  won: "bg-positive/12 text-positive",
-  lost: "bg-muted text-muted-foreground",
-};
 const SPAM: Record<SpamStatus, { label: string; variant: BadgeVariant }> = {
   clean: { label: "Clean", variant: "positive" },
   spam: { label: "Spam", variant: "negative" },
@@ -59,42 +52,49 @@ export function LeadsView({ leads }: { leads: Lead[] }) {
     setDetailOpen(true);
   }
 
+  // Patch a lead in the table AND the open drawer snapshot, so a change made in
+  // either surface stays consistent across both (the drawer holds its own `selected` copy).
+  function patchLead(id: string, patch: Partial<Lead>) {
+    setRows((arr) => arr.map((l) => (l.id === id ? { ...l, ...patch } : l)));
+    setSelected((s) => (s && s.id === id ? { ...s, ...patch } : s));
+  }
+
   async function setStatus(id: string, status: LeadStatus) {
-    const prev = rows;
-    setRows((arr) => arr.map((l) => (l.id === id ? { ...l, status } : l)));
+    const prevStatus = rows.find((l) => l.id === id)?.status;
+    patchLead(id, { status });
     try {
       await pageEngineApi.updateLeadStatus(id, status);
     } catch (err) {
-      setRows(prev);
+      if (prevStatus) patchLead(id, { status: prevStatus });
       notify({ kind: "error", title: "Update failed", message: err instanceof Error ? err.message : "Try again." });
     }
   }
 
   async function syncLead(id: string) {
     // Optimistic "pending" only — the real CRM seam decides synced/skipped/failed (no fake "synced").
-    setRows((arr) => arr.map((l) => (l.id === id ? { ...l, crmSyncStatus: "pending" } : l)));
+    patchLead(id, { crmSyncStatus: "pending" });
     try {
       const { result } = await pageEngineApi.crmSyncLead(id);
       if (result.status === "synced") {
-        setRows((arr) => arr.map((l) => (l.id === id ? { ...l, crmSyncStatus: "synced" } : l)));
+        patchLead(id, { crmSyncStatus: "synced" });
         notify({
           kind: "success",
           title: "Synced to CRM",
           message: result.externalUrl ? `Record: ${result.externalUrl}` : `Provider: ${result.provider}`,
         });
       } else if (result.status === "skipped") {
-        setRows((arr) => arr.map((l) => (l.id === id ? { ...l, crmSyncStatus: "none" } : l)));
+        patchLead(id, { crmSyncStatus: "none" });
         notify({
           kind: "info",
           title: "CRM not connected",
           message: "Add a HubSpot key on the API to sync leads to your CRM.",
         });
       } else {
-        setRows((arr) => arr.map((l) => (l.id === id ? { ...l, crmSyncStatus: "none" } : l)));
+        patchLead(id, { crmSyncStatus: "none" });
         notify({ kind: "error", title: "Sync failed", message: result.error ?? "Try again." });
       }
     } catch (err) {
-      setRows((arr) => arr.map((l) => (l.id === id ? { ...l, crmSyncStatus: "none" } : l)));
+      patchLead(id, { crmSyncStatus: "none" });
       notify({ kind: "error", title: "Sync failed", message: err instanceof Error ? err.message : "Try again." });
     }
   }
@@ -377,10 +377,10 @@ export function LeadsView({ leads }: { leads: Lead[] }) {
                           aria-label={`Status for ${l.name}`}
                           className={cn(
                             "cursor-pointer rounded-full border-0 px-2 py-0.5 text-micro font-semibold capitalize outline-none focus-visible:ring-3 focus-visible:ring-ring/40",
-                            STATUS[l.status],
+                            STATUS_TINT[l.status],
                           )}
                         >
-                          {(["new", "qualified", "contacted", "won", "lost"] as LeadStatus[]).map((s) => (
+                          {LEAD_STATUSES.map((s) => (
                             <option key={s} value={s}>
                               {s}
                             </option>
@@ -454,10 +454,10 @@ export function LeadsView({ leads }: { leads: Lead[] }) {
                       aria-label={`Status for ${l.name}`}
                       className={cn(
                         "h-7 cursor-pointer rounded-full border-0 px-2.5 text-micro font-semibold capitalize outline-none focus-visible:ring-3 focus-visible:ring-ring/40",
-                        STATUS[l.status],
+                        STATUS_TINT[l.status],
                       )}
                     >
-                      {(["new", "qualified", "contacted", "won", "lost"] as LeadStatus[]).map((s) => (
+                      {LEAD_STATUSES.map((s) => (
                         <option key={s} value={s}>
                           {s}
                         </option>
@@ -489,7 +489,13 @@ export function LeadsView({ leads }: { leads: Lead[] }) {
         </>)}
       </Panel>
 
-      <LeadDetailDrawer lead={selected} open={detailOpen} onOpenChange={setDetailOpen} />
+      <LeadDetailDrawer
+        lead={selected}
+        open={detailOpen}
+        onOpenChange={setDetailOpen}
+        onStatusChange={setStatus}
+        onSyncCrm={syncLead}
+      />
     </div>
   );
 }
