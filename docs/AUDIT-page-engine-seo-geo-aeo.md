@@ -105,7 +105,16 @@ heuristic hit-count not real citation attribution, no content-recency loop.
 
 ## Implementation status
 
-- **Batch 1 (this audit's first build): items 1, 3, 5, 6, 7** — content answer-first openings +
-  word-count floors + Article-image schema + Quote/blockquote + Twitter cards. See the
-  corresponding PR.
-- Remaining P0/P1/P2 items: open, prioritized as above.
+- **Batch 1: items 1, 3, 5, 6, 7** ✅ — content answer-first openings + word-count floors +
+  Article-image schema + Quotation/blockquote + Twitter cards.
+- **Batch 2: items 2, 4** ✅ — proof-point injection into the template path (`injectProof` weaves
+  real Brand-Library proof into the most relevant section; no-op without proof, never fabricated)
+  + an LLM/browser-draft **quality gate** in `generatePage`: the deterministic template is always
+  built as a baseline, and the draft is kept only if it is not thin (≥ 0.5 × `MIN_WORDS`) and at
+  least as citable as the template (within 5 pts) — otherwise the template is used and the reason
+  is recorded in the page version history. Guarantees the engine never ships content worse than
+  its own fallback. (Verified: thin draft → rejected w/ reason "thin draft (11w < 350)"; rich
+  draft → kept; proof string woven into the rendered section.)
+- Remaining: P0 none; P1 items 8–13 (breadcrumb UI, table semantics, llms.txt semantic layer,
+  geo keyword targeting, competitor-gap→discovery loop, cannibalization, intent confidence); P2 as
+  above. `regeneratePage`/`rewritePage` could adopt the same #4 gate (follow-on).

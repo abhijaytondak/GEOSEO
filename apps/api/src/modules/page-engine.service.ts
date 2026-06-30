@@ -4,7 +4,7 @@ import { resolveMode } from "../common/mode";
 import { DEFAULT_TENANT_ID } from "../common/tenant";
 import { draftPageContent, type DraftContent } from "../llm/deepseek";
 import { specFor, buildSchemaJson, type SchemaContext } from "../llm/page-type-spec";
-import { clampTitle, clampDescription, computeSeoChecks } from "../common/seo";
+import { clampTitle, clampDescription, computeSeoChecks, MIN_WORDS } from "../common/seo";
 import { scoreCitability } from "../common/citability";
 import { buildInfographic } from "../llm/infographic";
 import { classifyIntents, type ClassifiedIntent } from "../llm/intent";
@@ -271,6 +271,28 @@ function buildSectionsForType(
         },
       ];
   }
+}
+
+/**
+ * Weave brand-verified proof points into the most relevant template section so the keyless
+ * template path carries concrete stats / case studies / awards — the statistical-density and
+ * uniqueness signals AI answer engines reward (audit #2). Strictly real: proof comes from the
+ * Brand Library; no-op when the workspace has no proof points, so nothing is ever fabricated.
+ */
+function injectProof(
+  sections: { heading: string; body: string }[],
+  brand: string,
+  proof: string[],
+): { heading: string; body: string }[] {
+  if (!proof.length || !sections.length) return sections;
+  const idx = sections.findIndex((s) => /why|results?|verdict|choose|different|matters|inside|deliver/i.test(s.heading));
+  const target = idx >= 0 ? idx : sections.length - 1;
+  const b = brand || "We";
+  return sections.map((s, i) =>
+    i === target
+      ? { ...s, body: `${s.body}\n\nThe results back this up — ${b} can point to concrete proof: ${proof.join("; ")}.` }
+      : s,
+  );
 }
 
 function countWords(p: { heroCopy: string; sections: { body: string }[]; faqs: { q: string; a: string }[] }): number {
@@ -832,22 +854,57 @@ export class PageEngineStore implements OnModuleInit {
     const ai = content ?? (await draftPageContent(opp.query, opp.recommendedPageType, await this.brandHint(tenantId)));
     const title = opp.query.replace(/\b\w/g, (c) => c.toUpperCase());
     const company = this.brand.current()?.company?.trim();
-    // Meta discipline (SEO): clamp to Google's snippet budgets on a word boundary, so an
-    // over-long LLM/template title or description isn't truncated mid-word in the SERP.
-    const metaTitle = clampTitle(ai?.metaTitle ?? (company ? `${title} | ${company}` : title));
     // Page-type spec drives structure for BOTH the AI and template paths, so a
     // Blog/Service/Comparison page is distinct either way (PRD Phase 1).
     const spec = specFor(opp.recommendedPageType);
-    const metaDescription = clampDescription(
-      ai?.metaDescription ?? `A ${spec.label.toLowerCase()} targeting "${opp.query}", drafted from Brand Memory.`,
+
+    // Deterministic template baseline — always built. It's the floor the LLM draft must beat,
+    // and proof-injected (audit #2) so the keyless path carries real, brand-verified evidence.
+    const lib = await this.library.get(tenantId);
+    const proof = lib.proofPoints
+      .slice(0, 3)
+      .map((p) => (p.label + (p.detail ? ` — ${p.detail}` : "")).trim())
+      .filter(Boolean);
+    const templateSections = injectProof(
+      buildSectionsForType(opp.recommendedPageType, opp.query, company ?? title, opp.intent),
+      company ?? title,
+      proof,
     );
-    // Use type-specific section builder for the template path; LLM path uses ai.sections.
-    const sections = ai?.sections?.length
-      ? ai.sections
-      : buildSectionsForType(opp.recommendedPageType, opp.query, company ?? title, opp.intent);
-    const faqs = ai?.faqs?.length
-      ? ai.faqs
-      : buildFaqsForType(opp.recommendedPageType, opp.query, spec.faqCount);
+    const templateFaqs = buildFaqsForType(opp.recommendedPageType, opp.query, spec.faqCount);
+    const templateHero = `Draft hero for ${opp.query}.`;
+
+    // Quality gate (audit #4): keep the LLM/browser draft only if it's structurally sound
+    // (already enforced in draftPageContent), not thin, and at least as citable as the template
+    // — so the engine never ships content worse than its own deterministic fallback.
+    let useAi = !!ai?.sections?.length;
+    let rejectReason = "";
+    if (useAi && ai) {
+      const minWords = (MIN_WORDS[opp.recommendedPageType] ?? 500) * 0.5;
+      const aiWords = countWords({ heroCopy: ai.heroCopy ?? "", sections: ai.sections, faqs: ai.faqs ?? [] });
+      const aiCit = scoreCitability({
+        heroCopy: ai.heroCopy ?? "",
+        sections: ai.sections,
+        faqs: ai.faqs?.length ? ai.faqs : templateFaqs,
+      }).score;
+      const tplCit = scoreCitability({ heroCopy: templateHero, sections: templateSections, faqs: templateFaqs }).score;
+      if (aiWords < minWords) {
+        useAi = false;
+        rejectReason = `thin draft (${aiWords}w < ${Math.round(minWords)})`;
+      } else if (aiCit < tplCit - 5) {
+        useAi = false;
+        rejectReason = `low citability (${aiCit} vs template ${tplCit})`;
+      }
+    }
+
+    // Meta discipline (SEO): clamp to Google's snippet budgets on a word boundary, so an
+    // over-long LLM/template title or description isn't truncated mid-word in the SERP.
+    const metaTitle = clampTitle((useAi ? ai?.metaTitle : undefined) ?? (company ? `${title} | ${company}` : title));
+    const metaDescription = clampDescription(
+      (useAi ? ai?.metaDescription : undefined) ?? `A ${spec.label.toLowerCase()} targeting "${opp.query}", drafted from Brand Memory.`,
+    );
+    const sections = useAi ? ai!.sections : templateSections;
+    const faqs = useAi ? (ai!.faqs?.length ? ai!.faqs : templateFaqs) : templateFaqs;
+    const heroCopy = useAi ? (ai!.heroCopy ?? templateHero) : templateHero;
     const page: GeneratedPage = {
       id: `pg-gen-${this.seq}`,
       blueprintId: s.blueprints[0]?.id ?? "bp-1",
@@ -858,7 +915,7 @@ export class PageEngineStore implements OnModuleInit {
       status: "draft",
       metaTitle,
       metaDescription,
-      heroCopy: ai?.heroCopy ?? `Draft hero for ${opp.query}.`,
+      heroCopy,
       sections,
       faqs,
       cta: spec.cta,
@@ -868,7 +925,7 @@ export class PageEngineStore implements OnModuleInit {
         opp.query,
         opp.recommendedPageType,
         company ?? title,
-        (await this.library.get(tenantId)).proofPoints,
+        lib.proofPoints,
       ),
       targetKeywords: [opp.query],
       wordCount: 0,
@@ -902,7 +959,12 @@ export class PageEngineStore implements OnModuleInit {
       page.ogImageUrl = placeholder.url;
     }
     s.pages.unshift(page);
-    this.snapshot(tenantId, page, ai ? "AI-generated draft" : "Template draft", "ai");
+    this.snapshot(
+      tenantId,
+      page,
+      useAi ? "AI-generated draft" : ai ? `Template draft (LLM draft rejected: ${rejectReason})` : "Template draft",
+      "ai",
+    );
     opp.status = "approved";
     this.save(tenantId, T.pages, page.id, page);
     this.save(tenantId, T.opps, opp.id, opp);
