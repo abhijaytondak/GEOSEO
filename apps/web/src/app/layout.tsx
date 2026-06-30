@@ -18,6 +18,12 @@ const geistMono = Geist_Mono({
   display: "swap",
 });
 
+// Google Search Console site verification — set GOOGLE_SITE_VERIFICATION on the Vercel
+// project (the token GSC gives you) + redeploy, and the verification meta tag renders.
+// Omitted entirely when unset, so no empty/placeholder tag ships. No code change needed
+// to activate — just the env var.
+const googleSiteVerification = process.env.GOOGLE_SITE_VERIFICATION;
+
 export const metadata: Metadata = {
   // Resolves relative OG/Twitter image URLs during static generation (fixes the
   // "metadataBase not set, using http://localhost:3000" build warning).
@@ -25,6 +31,7 @@ export const metadata: Metadata = {
   title: "GEOSEO — Authority & SEO Optimization Engine",
   description:
     "Automated backlink acquisition, domain authority growth, and continuous SEO optimization — surfaced in a world-class dashboard.",
+  ...(googleSiteVerification ? { verification: { google: googleSiteVerification } } : {}),
 };
 
 export default function RootLayout({
