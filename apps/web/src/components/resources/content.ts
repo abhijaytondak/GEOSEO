@@ -14,6 +14,7 @@ import { BATCH_FORMATS } from "./content-formats";
 import { BATCH_ENGINES2 } from "./content-engines2";
 import { BATCH_SCHEMA } from "./content-schema";
 import { BATCH_MEASUREMENT } from "./content-measurement";
+import { BATCH_STRATEGY } from "./content-strategy";
 
 /**
  * Authored resource content. Each entry is a real, substantive article — published only
@@ -395,6 +396,7 @@ export const CONTENT: Record<string, Article> = {
   ...BATCH_ENGINES2,
   ...BATCH_SCHEMA,
   ...BATCH_MEASUREMENT,
+  ...BATCH_STRATEGY,
 };
 
 export function getArticle(slug: string): Article | undefined {
