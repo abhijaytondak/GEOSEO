@@ -5,6 +5,7 @@ import { Reveal } from "@/components/motion/reveal";
 import { PerformanceActions, type RangeKey } from "@/components/performance/performance-actions";
 import { RankChartLazy, TrafficChartLazy, AiVisibilityLazy } from "@/components/performance/lazy-charts";
 import { TrackedPagesTable } from "@/components/performance/tracked-pages-table";
+import { TopQueries } from "@/components/performance/top-queries";
 import { InsightBand, type InsightStatus } from "@/components/dashboard/insight-band";
 import { DeltaChip } from "@/components/dashboard/delta-chip";
 import { InfoHint } from "@/components/ui/info-hint";
@@ -34,12 +35,13 @@ export default async function PerformancePage({
   const activeRange: RangeKey = VALID_RANGES.includes(range as RangeKey) ? (range as RangeKey) : "8w";
   const days = RANGE_DAYS[activeRange];
 
-  const [ranksAll, impressionsAll, aiSignals, pages, overview] = await Promise.all([
+  const [ranksAll, impressionsAll, aiSignals, pages, overview, topQueries] = await Promise.all([
     api.getRankSeries(),
     api.getImpressionSeries(),
     api.getAiVisibility(),
     api.getTrackedPages(),
     api.getPerformanceOverview(activeRange),
+    api.getGscSearchAnalytics(activeRange, "query"),
   ]);
   // Whether these numbers are real Search Console data or heuristic demo data (honesty: don't pass mock off as live).
   const isLiveData = overview.source === "gsc";
@@ -190,6 +192,17 @@ export default async function PerformancePage({
               <TrackedPagesTable pages={pages} />
             </Panel>
           </div>
+        </Reveal>
+
+        {/* Top search queries from Search Console — the real "what we rank for" view */}
+        <Reveal delay={0.12}>
+          <Panel
+            title="Top Search Queries"
+            description="The search terms sending you Google traffic — from Search Console"
+            bodyClassName="px-1.5 pb-1.5"
+          >
+            <TopQueries configured={topQueries.configured} rows={topQueries.rows} />
+          </Panel>
         </Reveal>
       </div>
     </>
