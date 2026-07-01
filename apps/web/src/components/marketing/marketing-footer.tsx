@@ -14,6 +14,7 @@ const COLUMNS: Col[] = [
     links: [
       ...SOLUTIONS.map((s) => ({ label: s.label, href: featureHref(s) })),
       { label: "Integrations", href: "/integrations" },
+      { label: "Best GEO tools", href: "/compare/best-geo-tools" },
       { label: "Resources", href: "/resources" },
     ],
   },
