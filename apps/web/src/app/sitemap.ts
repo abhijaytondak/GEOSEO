@@ -30,6 +30,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${SITE_URL}/pricing`, changeFrequency: "monthly", priority: 0.9 },
     { url: `${SITE_URL}/demo`, changeFrequency: "monthly", priority: 0.8 },
     { url: `${SITE_URL}/resources`, changeFrequency: "weekly", priority: 0.8 },
+    // Trust / E-E-A-T pages
+    ...["about", "methodology", "security", "privacy", "terms"].map((p) => ({
+      url: `${SITE_URL}/${p}`,
+      changeFrequency: "monthly" as const,
+      priority: p === "about" || p === "methodology" ? 0.6 : 0.4,
+    })),
     ...ALL_FEATURE_PAGES.map((f) => ({
       url: `${SITE_URL}${featureHref(f)}`,
       changeFrequency: "monthly" as const,
