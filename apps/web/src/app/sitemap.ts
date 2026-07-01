@@ -30,6 +30,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${SITE_URL}/pricing`, changeFrequency: "monthly", priority: 0.9 },
     { url: `${SITE_URL}/demo`, changeFrequency: "monthly", priority: 0.8 },
     { url: `${SITE_URL}/resources`, changeFrequency: "weekly", priority: 0.8 },
+    // Integrations hub + per-platform pages (BOFU)
+    { url: `${SITE_URL}/integrations`, changeFrequency: "monthly", priority: 0.8 },
+    ...["wordpress", "webflow", "shopify"].map((s) => ({
+      url: `${SITE_URL}/integrations/${s}`,
+      changeFrequency: "monthly" as const,
+      priority: 0.8,
+    })),
     // Trust / E-E-A-T pages
     ...["about", "methodology", "security", "privacy", "terms"].map((p) => ({
       url: `${SITE_URL}/${p}`,

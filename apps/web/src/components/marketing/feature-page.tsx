@@ -5,8 +5,40 @@ import { cn } from "@/lib/utils";
 import { AuditForm } from "./audit-form";
 import { FeatureBlock } from "./feature-sections";
 import { type FeaturePageData, resolveRelated, featureHref } from "./platform-data";
+import { SITE_URL } from "./data";
 
 const DISPLAY = "[font-family:var(--font-display)] font-semibold tracking-tight";
+
+/** WebPage + BreadcrumbList JSON-LD for every platform/solution page — bound to the
+ *  site's Organization/WebSite nodes so engines tie each feature page to the brand entity. */
+function FeatureSchema({ data }: { data: FeaturePageData }) {
+  const url = `${SITE_URL}${featureHref(data)}`;
+  const crumbLabel = data.kind === "platform" ? "Platform" : "Solutions";
+  const crumbHref = data.kind === "platform" ? `${SITE_URL}/platform` : `${SITE_URL}/solutions`;
+  const graph = {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "WebPage",
+        "@id": `${url}#page`,
+        url,
+        name: data.metaTitle || data.title,
+        description: data.metaDescription || data.subtitle,
+        isPartOf: { "@id": `${SITE_URL}/#website` },
+        about: { "@id": `${SITE_URL}/#org` },
+      },
+      {
+        "@type": "BreadcrumbList",
+        itemListElement: [
+          { "@type": "ListItem", position: 1, name: "Home", item: SITE_URL },
+          { "@type": "ListItem", position: 2, name: crumbLabel, item: crumbHref },
+          { "@type": "ListItem", position: 3, name: data.label, item: url },
+        ],
+      },
+    ],
+  };
+  return <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(graph) }} />;
+}
 const CARD = "group relative rounded-2xl border border-border bg-card shadow-card transition-all duration-300 hover:-translate-y-1 hover:border-brand/30 hover:shadow-float";
 
 function Eyebrow({ children, dark }: { children: React.ReactNode; dark?: boolean }) {
@@ -31,6 +63,7 @@ export function FeaturePage({ data }: { data: FeaturePageData }) {
 
   return (
     <>
+      <FeatureSchema data={data} />
       {/* hero */}
       <section className="relative overflow-hidden bg-background">
         <div aria-hidden className="bg-aurora pointer-events-none absolute inset-0" />
