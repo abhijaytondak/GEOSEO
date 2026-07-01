@@ -241,6 +241,18 @@ export const TOPICS: Topic[] = [
   { slug: "article-schema-for-ai", cluster: "tactics", title: "Article schema for AI search", keyword: "article schema for ai", intent: "informational" },
   { slug: "video-schema-for-ai", cluster: "tactics", title: "Video schema (VideoObject) for AI search", keyword: "video schema for ai", intent: "informational" },
   { slug: "testing-and-validating-structured-data", cluster: "tactics", title: "Testing and validating structured data", keyword: "testing structured data", intent: "informational" },
+
+  // ── Batch: measurement, ROI & reporting (165 → 175) ─────────────────
+  { slug: "google-analytics-4-for-ai-traffic", cluster: "measurement", title: "Google Analytics 4 for AI traffic", keyword: "ga4 for ai traffic", intent: "informational" },
+  { slug: "building-a-geo-dashboard", cluster: "measurement", title: "Building a GEO dashboard", keyword: "geo dashboard", intent: "informational" },
+  { slug: "setting-geo-goals-and-benchmarks", cluster: "measurement", title: "Setting GEO goals and benchmarks", keyword: "geo goals benchmarks", intent: "informational" },
+  { slug: "branded-vs-unbranded-ai-visibility", cluster: "measurement", title: "Branded vs unbranded AI visibility", keyword: "branded vs unbranded ai visibility", intent: "informational" },
+  { slug: "utm-tracking-for-ai-referrals", cluster: "measurement", title: "UTM tracking for AI referrals", keyword: "utm tracking ai referrals", intent: "informational" },
+  { slug: "sentiment-and-context-of-ai-citations", cluster: "measurement", title: "Sentiment and context of AI citations", keyword: "sentiment of ai citations", intent: "informational" },
+  { slug: "how-to-measure-geo-roi", cluster: "measurement", title: "How to measure GEO ROI", keyword: "how to measure geo roi", intent: "commercial" },
+  { slug: "what-to-do-when-ai-citations-drop", cluster: "measurement", title: "What to do when AI citations drop", keyword: "ai citations dropped", intent: "informational" },
+  { slug: "log-file-analysis-for-geo", cluster: "measurement", title: "Log-file analysis for GEO", keyword: "log file analysis geo", intent: "informational" },
+  { slug: "ai-crawl-monitoring-and-patterns", cluster: "measurement", title: "AI crawl monitoring: reading crawler patterns", keyword: "ai crawl monitoring", intent: "informational" },
 ];
 
 /** Resolve a topic by slug. */

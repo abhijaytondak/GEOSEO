@@ -13,6 +13,7 @@ import { BATCH_VERTICALS3 } from "./content-verticals3";
 import { BATCH_FORMATS } from "./content-formats";
 import { BATCH_ENGINES2 } from "./content-engines2";
 import { BATCH_SCHEMA } from "./content-schema";
+import { BATCH_MEASUREMENT } from "./content-measurement";
 
 /**
  * Authored resource content. Each entry is a real, substantive article — published only
@@ -393,6 +394,7 @@ export const CONTENT: Record<string, Article> = {
   ...BATCH_FORMATS,
   ...BATCH_ENGINES2,
   ...BATCH_SCHEMA,
+  ...BATCH_MEASUREMENT,
 };
 
 export function getArticle(slug: string): Article | undefined {
