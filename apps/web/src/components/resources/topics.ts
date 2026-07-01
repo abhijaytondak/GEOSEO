@@ -217,6 +217,18 @@ export const TOPICS: Topic[] = [
   { slug: "how-to-content-for-ai-search", cluster: "tactics", title: "How-to content for AI search", keyword: "how-to content for ai search", intent: "informational" },
   { slug: "landing-pages-for-ai-search", cluster: "conversion", title: "Landing pages for AI search traffic", keyword: "landing pages for ai search", intent: "informational" },
   { slug: "video-content-and-geo", cluster: "tactics", title: "Video content and GEO: making video citable", keyword: "video content and geo", intent: "informational" },
+
+  // ── Batch: AI engines & surfaces (145 → 155) ────────────────────────
+  { slug: "how-to-rank-in-meta-ai", cluster: "ai-engines", title: "How to get cited in Meta AI", keyword: "how to rank in meta ai", intent: "informational" },
+  { slug: "how-to-rank-in-grok", cluster: "ai-engines", title: "How to get cited in Grok (X's AI)", keyword: "how to rank in grok", intent: "informational" },
+  { slug: "how-to-get-cited-by-deepseek", cluster: "ai-engines", title: "How to get cited by DeepSeek", keyword: "how to get cited by deepseek", intent: "informational" },
+  { slug: "geo-for-amazon-rufus", cluster: "ai-engines", title: "GEO for Amazon Rufus (shopping AI)", keyword: "geo for amazon rufus", intent: "informational" },
+  { slug: "geo-for-apple-intelligence", cluster: "ai-engines", title: "GEO for Apple Intelligence and Siri", keyword: "geo for apple intelligence", intent: "informational" },
+  { slug: "geo-for-voice-assistants", cluster: "ai-engines", title: "GEO for voice assistants (Alexa, Google Assistant)", keyword: "geo for voice assistants", intent: "informational" },
+  { slug: "how-ai-engines-differ-in-what-they-cite", cluster: "ai-engines", title: "How AI engines differ in what they cite", keyword: "how ai engines differ citations", intent: "informational" },
+  { slug: "how-to-rank-in-brave-leo", cluster: "ai-engines", title: "How to get cited in Brave's AI (Leo)", keyword: "how to rank in brave ai", intent: "informational" },
+  { slug: "how-to-rank-in-you-com", cluster: "ai-engines", title: "How to get cited in You.com", keyword: "how to rank in you.com", intent: "informational" },
+  { slug: "multi-engine-geo-strategy", cluster: "ai-engines", title: "Multi-engine GEO strategy: win across all AI search", keyword: "multi-engine geo strategy", intent: "informational" },
 ];
 
 /** Resolve a topic by slug. */
