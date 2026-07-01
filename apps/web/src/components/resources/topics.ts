@@ -265,6 +265,18 @@ export const TOPICS: Topic[] = [
   { slug: "building-the-business-case-for-geo", cluster: "conversion", title: "Building the business case for GEO", keyword: "business case for geo", intent: "commercial" },
   { slug: "geo-vs-paid-ads", cluster: "comparisons", title: "GEO vs paid ads: how they compare", keyword: "geo vs paid ads", intent: "comparison" },
   { slug: "geo-and-content-marketing-together", cluster: "tactics", title: "GEO and content marketing working together", keyword: "geo and content marketing", intent: "informational" },
+
+  // ── Batch: international & regional GEO (185 → 195) ──────────────────
+  { slug: "geo-for-non-english-markets", cluster: "use-cases", title: "GEO for non-English markets", keyword: "geo for non-english markets", intent: "informational" },
+  { slug: "hreflang-and-international-geo", cluster: "seo-foundations", title: "hreflang and international GEO", keyword: "hreflang international geo", intent: "informational" },
+  { slug: "geo-for-multi-region-brands", cluster: "use-cases", title: "GEO for multi-region brands", keyword: "geo for multi-region brands", intent: "commercial" },
+  { slug: "cultural-localization-for-geo", cluster: "tactics", title: "Cultural localization for GEO", keyword: "cultural localization geo", intent: "informational" },
+  { slug: "regional-ai-engines", cluster: "ai-engines", title: "Regional AI engines: Baidu, Yandex, Naver & more", keyword: "regional ai engines", intent: "informational" },
+  { slug: "translating-vs-localizing-for-geo", cluster: "tactics", title: "Translating vs localizing content for GEO", keyword: "translating vs localizing geo", intent: "informational" },
+  { slug: "geo-for-global-and-local-intent", cluster: "tactics", title: "GEO for global vs local intent", keyword: "global vs local intent geo", intent: "informational" },
+  { slug: "how-ai-engines-handle-languages", cluster: "ai-engines", title: "How AI engines handle languages", keyword: "how ai engines handle languages", intent: "informational" },
+  { slug: "geo-for-emerging-markets", cluster: "use-cases", title: "GEO for emerging markets", keyword: "geo for emerging markets", intent: "informational" },
+  { slug: "country-specific-geo-strategy", cluster: "tactics", title: "Building a country-specific GEO strategy", keyword: "country-specific geo strategy", intent: "informational" },
 ];
 
 /** Resolve a topic by slug. */
