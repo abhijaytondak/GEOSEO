@@ -67,35 +67,57 @@ export async function POST(req: Request) {
     }
   }
 
-  // Email every marketing lead to the team inbox when an email provider (Resend) is configured.
-  // Resend's onboarding@resend.dev sender delivers to the account owner's own address WITHOUT
-  // domain verification — so leads land straight in your inbox with just a RESEND_API_KEY.
+  // Email every marketing lead to the team inbox.
+  //  • Preferred: Resend (set RESEND_API_KEY) — branded HTML, reply-to the lead.
+  //  • Default (no key): FormSubmit — emails the recipient directly with NO API key or account
+  //    (the recipient just clicks a one-time activation link on the first lead). This makes
+  //    lead→inbox work out of the box; upgrade to Resend later by adding the key.
+  // Disable entirely by setting LEAD_EMAIL_TO="".
+  const emailTo = process.env.LEAD_EMAIL_TO ?? "rajputabhijay1@gmail.com";
   const resendKey = process.env.RESEND_API_KEY;
-  if (resendKey) {
-    const emailTo = process.env.LEAD_EMAIL_TO || "rajputabhijay1@gmail.com";
-    const esc = (v: string) => v.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-    const rows: [string, string][] = [
-      ["Email", lead.email],
-      ["Company", lead.company || "—"],
-      ["Website", lead.website || "—"],
-      ["Message", lead.message || "—"],
-      ["Source page", lead.sourceUrl || "—"],
-      ["Received", lead.receivedAt],
-    ];
+  if (emailTo) {
+    const subject = `New GEOSEO lead: ${lead.email}${lead.company ? ` (${lead.company})` : ""}`;
     try {
-      await fetch("https://api.resend.com/emails", {
-        method: "POST",
-        headers: { authorization: `Bearer ${resendKey}`, "content-type": "application/json" },
-        body: JSON.stringify({
-          from: process.env.LEAD_EMAIL_FROM || "GEOSEO Leads <onboarding@resend.dev>",
-          to: [emailTo],
-          reply_to: lead.email,
-          subject: `New GEOSEO lead: ${lead.email}${lead.company ? ` (${lead.company})` : ""}`,
-          html: `<h2 style="font-family:system-ui,sans-serif">New GEOSEO marketing lead</h2><table cellpadding="6" style="border-collapse:collapse;font-family:system-ui,sans-serif;font-size:14px">${rows
-            .map(([k, v]) => `<tr><td style="color:#6b7280">${k}</td><td><strong>${esc(String(v))}</strong></td></tr>`)
-            .join("")}</table>`,
-        }),
-      });
+      if (resendKey) {
+        const esc = (v: string) => v.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        const rows: [string, string][] = [
+          ["Email", lead.email],
+          ["Company", lead.company || "—"],
+          ["Website", lead.website || "—"],
+          ["Message", lead.message || "—"],
+          ["Source page", lead.sourceUrl || "—"],
+          ["Received", lead.receivedAt],
+        ];
+        await fetch("https://api.resend.com/emails", {
+          method: "POST",
+          headers: { authorization: `Bearer ${resendKey}`, "content-type": "application/json" },
+          body: JSON.stringify({
+            from: process.env.LEAD_EMAIL_FROM || "GEOSEO Leads <onboarding@resend.dev>",
+            to: [emailTo],
+            reply_to: lead.email,
+            subject,
+            html: `<h2 style="font-family:system-ui,sans-serif">New GEOSEO marketing lead</h2><table cellpadding="6" style="border-collapse:collapse;font-family:system-ui,sans-serif;font-size:14px">${rows
+              .map(([k, v]) => `<tr><td style="color:#6b7280">${k}</td><td><strong>${esc(String(v))}</strong></td></tr>`)
+              .join("")}</table>`,
+          }),
+        });
+      } else {
+        // No key: FormSubmit delivers flat fields to `emailTo` (one-time activation on first lead).
+        await fetch(`https://formsubmit.co/ajax/${encodeURIComponent(emailTo)}`, {
+          method: "POST",
+          headers: { "content-type": "application/json", accept: "application/json" },
+          body: JSON.stringify({
+            _subject: subject,
+            _template: "table",
+            email: lead.email,
+            company: lead.company || "—",
+            website: lead.website || "—",
+            message: lead.message || "—",
+            source_page: lead.sourceUrl || "—",
+            received: lead.receivedAt,
+          }),
+        });
+      }
     } catch {
       // Non-fatal: the log floor + webhook still captured the lead.
     }
