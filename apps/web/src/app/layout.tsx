@@ -3,7 +3,7 @@ import { Inter, Geist_Mono } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { GoogleAnalytics } from "@/components/system/google-analytics";
+import { GoogleAnalytics, GoogleTagManager, GoogleTagManagerNoScript } from "@/components/system/google-analytics";
 import { SITE_URL } from "@/components/marketing/data";
 import "./globals.css";
 
@@ -50,13 +50,17 @@ export default function RootLayout({
       className={`${inter.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full">
+        {/* GTM noscript fallback — must be first in <body>. No-op until NEXT_PUBLIC_GTM_ID is set. */}
+        <GoogleTagManagerNoScript gtmId={process.env.NEXT_PUBLIC_GTM_ID} />
         <TooltipProvider delay={150}>{children}</TooltipProvider>
         {/* Real-user Core Web Vitals + page analytics (per-route RUM). Tiny client
             scripts that no-op off the Vercel platform; safe on every route. */}
         <SpeedInsights />
         <Analytics />
-        {/* GA4 — activates when NEXT_PUBLIC_GA_ID (G-XXXXXXXX) is set; no-op until then. */}
+        {/* GA4 direct — activates when NEXT_PUBLIC_GA_ID (G-XXXXXXXX) is set; no-op until then. */}
         <GoogleAnalytics gaId={process.env.NEXT_PUBLIC_GA_ID} />
+        {/* Google Tag Manager — activates when NEXT_PUBLIC_GTM_ID (GTM-XXXXXXX) is set; no-op until then. */}
+        <GoogleTagManager gtmId={process.env.NEXT_PUBLIC_GTM_ID} />
       </body>
     </html>
   );
