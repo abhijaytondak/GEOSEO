@@ -37,6 +37,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: "monthly" as const,
       priority: 0.8,
     })),
+    // Comparison / buyer's-guide (BOFU)
+    { url: `${SITE_URL}/compare/best-geo-tools`, changeFrequency: "monthly", priority: 0.8 },
     // Trust / E-E-A-T pages
     ...["about", "methodology", "security", "privacy", "terms"].map((p) => ({
       url: `${SITE_URL}/${p}`,
