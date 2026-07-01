@@ -21,7 +21,7 @@ const COLUMNS: Col[] = [
     links: [
       { label: "Pricing", href: "/pricing" },
       { label: "How it works", href: "/#how-it-works" },
-      { label: "Why GEOSEO", href: "/#why" },
+      { label: "Why Citensity", href: "/#why" },
       { label: "Book a demo", href: "/demo" },
       { label: "Sign in", href: "/home" },
     ],

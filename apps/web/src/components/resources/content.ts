@@ -27,7 +27,7 @@ import { BATCH_STRATEGY } from "./content-strategy";
 const FLAGSHIP: Record<string, Article> = {
   "what-is-generative-engine-optimization": {
     slug: "what-is-generative-engine-optimization",
-    metaTitle: "What is Generative Engine Optimization (GEO)? | GEOSEO",
+    metaTitle: "What is Generative Engine Optimization (GEO)? | Citensity",
     metaDescription:
       "Generative Engine Optimization (GEO) is the practice of structuring content so AI answer engines cite your brand as the source. Here's how GEO works and how to start.",
     updated: "2026-06-25",
@@ -95,7 +95,7 @@ const FLAGSHIP: Record<string, Article> = {
 
   "geo-vs-seo": {
     slug: "geo-vs-seo",
-    metaTitle: "GEO vs SEO: What's the Difference? | GEOSEO",
+    metaTitle: "GEO vs SEO: What's the Difference? | Citensity",
     metaDescription:
       "GEO optimizes content to be cited by AI answer engines; SEO optimizes pages to rank in search results. Here's how they differ, overlap, and work together.",
     updated: "2026-06-25",
@@ -152,13 +152,13 @@ const FLAGSHIP: Record<string, Article> = {
     related: [
       { label: "What is Generative Engine Optimization?", href: "/resources/what-is-generative-engine-optimization" },
       { label: "GEO vs AEO vs SEO: a clear breakdown", href: "/resources/geo-vs-aeo-vs-seo" },
-      { label: "How GEOSEO works", href: "/#how-it-works" },
+      { label: "How Citensity works", href: "/#how-it-works" },
     ],
   },
 
   "how-to-rank-in-chatgpt": {
     slug: "how-to-rank-in-chatgpt",
-    metaTitle: "How to Get Cited in ChatGPT (2026 Guide) | GEOSEO",
+    metaTitle: "How to Get Cited in ChatGPT (2026 Guide) | Citensity",
     metaDescription:
       "You can't 'rank' in ChatGPT like Google — but you can become a source it cites. Here's how ChatGPT Search selects sources and how to earn citations.",
     updated: "2026-06-25",
@@ -210,7 +210,7 @@ const FLAGSHIP: Record<string, Article> = {
     faqs: [
       { q: "Can I pay to appear in ChatGPT answers?", a: "No. ChatGPT Search citations are earned through retrievable, authoritative, well-structured content — not paid placement." },
       { q: "Do I need to allow GPTBot?", a: "To be eligible for citation in ChatGPT Search, yes — if you block OpenAI's crawlers, your content can't be retrieved or cited." },
-      { q: "How do I know if ChatGPT cites me?", a: "Track brand citations across engines for your target questions, and watch your logs for OpenAI crawler activity. GEOSEO's analytics surface both." },
+      { q: "How do I know if ChatGPT cites me?", a: "Track brand citations across engines for your target questions, and watch your logs for OpenAI crawler activity. Citensity's analytics surface both." },
     ],
     related: [
       { label: "How to rank in Perplexity", href: "/resources/how-to-rank-in-perplexity" },
@@ -221,7 +221,7 @@ const FLAGSHIP: Record<string, Article> = {
 
   "structured-data-for-ai-search": {
     slug: "structured-data-for-ai-search",
-    metaTitle: "Structured Data (JSON-LD) for AI Search | GEOSEO",
+    metaTitle: "Structured Data (JSON-LD) for AI Search | Citensity",
     metaDescription:
       "Structured data helps AI engines understand and cite your pages. Here are the JSON-LD schema types that matter for AI search and how to implement them.",
     updated: "2026-06-25",
@@ -273,7 +273,7 @@ const FLAGSHIP: Record<string, Article> = {
 
   "how-to-track-ai-citations": {
     slug: "how-to-track-ai-citations",
-    metaTitle: "How to Track AI Citations of Your Brand | GEOSEO",
+    metaTitle: "How to Track AI Citations of Your Brand | Citensity",
     metaDescription:
       "You can't improve what you can't see. Here's how to track when AI engines cite your brand, measure share of voice, and find the gaps to close.",
     updated: "2026-06-25",
@@ -323,7 +323,7 @@ const FLAGSHIP: Record<string, Article> = {
 
   "geo-for-saas": {
     slug: "geo-for-saas",
-    metaTitle: "GEO for SaaS: A Practical Playbook | GEOSEO",
+    metaTitle: "GEO for SaaS: A Practical Playbook | Citensity",
     metaDescription:
       "A practical Generative Engine Optimization playbook for SaaS: get cited by AI engines for comparison, alternative, and best-tool queries that drive pipeline.",
     updated: "2026-06-25",

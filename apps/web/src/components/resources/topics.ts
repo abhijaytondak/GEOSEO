@@ -1,5 +1,5 @@
 /**
- * Keyword research → topic map for the GEOSEO resources hub (/resources).
+ * Keyword research → topic map for the Citensity resources hub (/resources).
  *
  * 100 target pages clustered around Generative Engine Optimization (GEO), AI-search
  * visibility, and the SEO foundations that still matter. Each topic targets a real

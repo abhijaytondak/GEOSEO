@@ -26,7 +26,7 @@ const MAX_GENERATE = 6;
  * (docs/PRD-workflow-navigation-optimization.md §6.1 "Next Best Actions").
  * Turns the completed analysis (opportunities, refresh recs, backlink prospects)
  * into a holistic, review-and-execute plan: e.g. "12 pages to create" → Initiate
- * → GEOSEO drafts them in the background, then they appear in Pipeline to review.
+ * → Citensity drafts them in the background, then they appear in Pipeline to review.
  * Self-fetching so it drops onto Home without changing its server load.
  */
 export function GrowthPlan() {
@@ -67,7 +67,7 @@ export function GrowthPlan() {
     if (!batch.length) return;
     const ok = await confirm({
       title: `Initiate ${batch.length} page${batch.length > 1 ? "s" : ""}?`,
-      message: `GEOSEO will draft ${batch.length} buyer-intent page${batch.length > 1 ? "s" : ""} from your top opportunities in the background. Review and publish them in Pipeline when ready.`,
+      message: `Citensity will draft ${batch.length} buyer-intent page${batch.length > 1 ? "s" : ""} from your top opportunities in the background. Review and publish them in Pipeline when ready.`,
       confirmLabel: "Initiate",
     });
     if (!ok) return;

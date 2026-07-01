@@ -54,7 +54,7 @@ export function Hero() {
         </Reveal>
         <Reveal delay={0.1}>
           <p className="mx-auto mt-6 max-w-xl text-lg leading-relaxed text-muted-foreground">
-            GEOSEO learns your brand, then continuously creates and publishes pages engineered to rank in Google and get
+            Citensity learns your brand, then continuously creates and publishes pages engineered to rank in Google and get
             cited by ChatGPT, Perplexity, and AI Overviews — so qualified leads find you first.
           </p>
         </Reveal>
@@ -281,7 +281,7 @@ export function MetricsBand() {
 /* --------------------------------------------------------- COMPARISON */
 export function Comparison() {
   const cols = [
-    { key: "geoseo" as const, label: "GEOSEO", accent: true },
+    { key: "geoseo" as const, label: "Citensity", accent: true },
     { key: "agency" as const, label: "SEO agency", accent: false },
     { key: "diy" as const, label: "DIY tools", accent: false },
   ];
@@ -290,7 +290,7 @@ export function Comparison() {
       <div className="mx-auto max-w-5xl px-5 sm:px-6">
         <Reveal>
           <div className="mx-auto max-w-2xl text-center">
-            <Eyebrow>Why GEOSEO</Eyebrow>
+            <Eyebrow>Why Citensity</Eyebrow>
             <h2 className={cn(DISPLAY, "mt-5 text-3xl text-foreground sm:text-4xl")}>Built for the way buyers <span className={GRAD}>search now.</span></h2>
           </div>
         </Reveal>
@@ -326,7 +326,7 @@ export function Comparison() {
 
 /* ------------------------------------------------------------- PROOF */
 export function ProofBand() {
-  const points = ["Structured data on every page", "Entity & topic coverage by design", "Cited-ready, answer-shaped content", "Dogfooded — this site runs on GEOSEO"];
+  const points = ["Structured data on every page", "Entity & topic coverage by design", "Cited-ready, answer-shaped content", "Dogfooded — this site runs on Citensity"];
   return (
     <section className="border-y border-border bg-surface-sunken py-20 sm:py-24">
       <div className="mx-auto max-w-5xl px-5 sm:px-6">
@@ -338,7 +338,7 @@ export function ProofBand() {
               <p className="mt-4 text-lg leading-relaxed text-muted-foreground">
                 We&apos;re onboarding our founding customers now. Until those case studies are public, here&apos;s the
                 honest proof: the GEO methodology this engine is built on — and the fact that this very site is created
-                and optimized with GEOSEO.
+                and optimized with Citensity.
               </p>
               <Link href="#audit" className="ease-expo mt-6 inline-flex items-center gap-1.5 rounded-full bg-brand px-5 py-2.5 text-sm font-semibold text-brand-foreground shadow-raised transition-all duration-200 hover:-translate-y-0.5 hover:brightness-110">
                 Become a founding customer <ArrowRight className="size-4" />

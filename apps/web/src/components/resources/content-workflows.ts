@@ -3,7 +3,7 @@ import type { Article } from "@/components/resources/content-types";
 export const BATCH_WORKFLOWS: Record<string, Article> = {
   "how-ai-engines-choose-sources": {
     slug: "how-ai-engines-choose-sources",
-    metaTitle: "How Do AI Engines Choose Which Sources to Cite? | GEOSEO",
+    metaTitle: "How Do AI Engines Choose Which Sources to Cite? | Citensity",
     metaDescription:
       "AI engines retrieve candidate passages, rank them for relevance and trust, then attribute the answer to the few they actually leaned on. Here's the mechanism — and what makes a passage citable.",
     updated: "2026-06-30",
@@ -77,7 +77,7 @@ export const BATCH_WORKFLOWS: Record<string, Article> = {
 
   "the-geo-content-workflow": {
     slug: "the-geo-content-workflow",
-    metaTitle: "The GEO Content Workflow: Research to Measurement | GEOSEO",
+    metaTitle: "The GEO Content Workflow: Research to Measurement | Citensity",
     metaDescription:
       "A repeatable, end-to-end workflow for producing content that AI engines cite: query research, answer-first briefs, drafting, optimization, publishing, and citation measurement.",
     updated: "2026-06-30",
@@ -154,13 +154,13 @@ export const BATCH_WORKFLOWS: Record<string, Article> = {
     related: [
       { label: "How to write a GEO content brief", href: "/resources/how-to-write-a-geo-content-brief" },
       { label: "Building a GEO content strategy", href: "/resources/building-a-geo-content-strategy" },
-      { label: "GEOSEO Page Engine", href: "/platform/page-engine" },
+      { label: "Citensity Page Engine", href: "/platform/page-engine" },
     ],
   },
 
   "how-to-write-a-geo-content-brief": {
     slug: "how-to-write-a-geo-content-brief",
-    metaTitle: "How to Write a GEO Content Brief (Template) | GEOSEO",
+    metaTitle: "How to Write a GEO Content Brief (Template) | Citensity",
     metaDescription:
       "A GEO content brief defines the exact question, the self-contained answer, and the structure before you draft — so the page is built to be cited. Here's the template and how to use it.",
     updated: "2026-06-30",
@@ -224,7 +224,7 @@ export const BATCH_WORKFLOWS: Record<string, Article> = {
 
   "how-to-run-a-geo-content-audit": {
     slug: "how-to-run-a-geo-content-audit",
-    metaTitle: "How to Run a GEO Content Audit | GEOSEO",
+    metaTitle: "How to Run a GEO Content Audit | Citensity",
     metaDescription:
       "A GEO content audit inventories your existing pages and scores each for citation-readiness — answer clarity, structure, evidence, and freshness — so you know what to fix, refresh, or retire.",
     updated: "2026-06-30",
@@ -295,7 +295,7 @@ export const BATCH_WORKFLOWS: Record<string, Article> = {
 
   "repurposing-content-for-ai-search": {
     slug: "repurposing-content-for-ai-search",
-    metaTitle: "Repurposing Existing Content for AI Search | GEOSEO",
+    metaTitle: "Repurposing Existing Content for AI Search | Citensity",
     metaDescription:
       "You don't always need new content to win AI citations. Here's how to repurpose webinars, docs, sales calls, and old posts into answer-first, citable pages — without creating thin duplicates.",
     updated: "2026-06-30",
@@ -361,7 +361,7 @@ export const BATCH_WORKFLOWS: Record<string, Article> = {
 
   "competitive-geo-analysis": {
     slug: "competitive-geo-analysis",
-    metaTitle: "Competitive GEO Analysis: Why Rivals Get Cited | GEOSEO",
+    metaTitle: "Competitive GEO Analysis: Why Rivals Get Cited | Citensity",
     metaDescription:
       "A competitive GEO analysis reverse-engineers why other brands get cited by AI engines for your target questions — so you can find the gaps you can win and the moats you'll have to out-answer.",
     updated: "2026-06-30",

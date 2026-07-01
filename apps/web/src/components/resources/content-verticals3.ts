@@ -3,7 +3,7 @@ import type { Article } from "@/components/resources/content-types";
 export const BATCH_VERTICALS3: Record<string, Article> = {
   "geo-for-home-services": {
     slug: "geo-for-home-services",
-    metaTitle: "GEO for Home Services (HVAC, Plumbing, Electrical) | GEOSEO",
+    metaTitle: "GEO for Home Services (HVAC, Plumbing, Electrical) | Citensity",
     metaDescription:
       "GEO for home-services businesses: get cited when people ask AI engines for help with an emergency repair, a quote, or 'who to call near me' — the moment before they book.",
     updated: "2026-06-30",
@@ -57,13 +57,13 @@ export const BATCH_VERTICALS3: Record<string, Article> = {
     related: [
       { label: "GEO for local business", href: "/resources/geo-for-local-business" },
       { label: "GEO for small businesses: does it work?", href: "/resources/does-geo-work-for-small-businesses" },
-      { label: "GEOSEO Leads", href: "/platform/leads" },
+      { label: "Citensity Leads", href: "/platform/leads" },
     ],
   },
 
   "geo-for-restaurants": {
     slug: "geo-for-restaurants",
-    metaTitle: "GEO for Restaurants: Get Cited in AI Dining Answers | GEOSEO",
+    metaTitle: "GEO for Restaurants: Get Cited in AI Dining Answers | Citensity",
     metaDescription:
       "GEO for restaurants: get recommended when diners ask AI engines 'best [cuisine] near me', 'where to eat for a date', or 'is this place good for groups' - before they pick where to go.",
     updated: "2026-06-30",
@@ -123,7 +123,7 @@ export const BATCH_VERTICALS3: Record<string, Article> = {
 
   "geo-for-dental-practices": {
     slug: "geo-for-dental-practices",
-    metaTitle: "GEO for Dental Practices: AI-Citation Playbook | GEOSEO",
+    metaTitle: "GEO for Dental Practices: AI-Citation Playbook | Citensity",
     metaDescription:
       "GEO for dental practices: get cited when patients ask AI engines about symptoms, procedures, costs, and 'a dentist near me' - within the health-content trust rules engines apply.",
     updated: "2026-06-30",
@@ -182,7 +182,7 @@ export const BATCH_VERTICALS3: Record<string, Article> = {
 
   "geo-for-accounting-firms": {
     slug: "geo-for-accounting-firms",
-    metaTitle: "GEO for Accounting Firms & CPAs | GEOSEO",
+    metaTitle: "GEO for Accounting Firms & CPAs | Citensity",
     metaDescription:
       "GEO for accounting firms: get cited when individuals and businesses ask AI engines about tax, bookkeeping, and 'do I need an accountant' - the trust-heavy questions before they hire.",
     updated: "2026-06-30",
@@ -241,7 +241,7 @@ export const BATCH_VERTICALS3: Record<string, Article> = {
 
   "geo-for-manufacturers": {
     slug: "geo-for-manufacturers",
-    metaTitle: "GEO for Manufacturers & Industrial B2B | GEOSEO",
+    metaTitle: "GEO for Manufacturers & Industrial B2B | Citensity",
     metaDescription:
       "GEO for manufacturers: get cited when engineers and procurement teams ask AI engines about specs, capabilities, materials, and suppliers - in long, technical, high-consideration buying cycles.",
     updated: "2026-06-30",
@@ -301,7 +301,7 @@ export const BATCH_VERTICALS3: Record<string, Article> = {
 
   "geo-for-automotive": {
     slug: "geo-for-automotive",
-    metaTitle: "GEO for Automotive (Dealers & Auto Services) | GEOSEO",
+    metaTitle: "GEO for Automotive (Dealers & Auto Services) | Citensity",
     metaDescription:
       "GEO for automotive: get cited when buyers and owners ask AI engines about models, pricing, repairs, and 'a dealer/shop near me' - across both big-ticket and local-service decisions.",
     updated: "2026-06-30",
@@ -360,7 +360,7 @@ export const BATCH_VERTICALS3: Record<string, Article> = {
 
   "geo-for-cybersecurity": {
     slug: "geo-for-cybersecurity",
-    metaTitle: "GEO for Cybersecurity Companies | GEOSEO",
+    metaTitle: "GEO for Cybersecurity Companies | Citensity",
     metaDescription:
       "GEO for cybersecurity vendors: get cited when security teams ask AI engines about threats, controls, compliance, and tooling - in a technical, trust-critical, high-scrutiny buying process.",
     updated: "2026-06-30",
@@ -419,7 +419,7 @@ export const BATCH_VERTICALS3: Record<string, Article> = {
 
   "geo-for-financial-advisors": {
     slug: "geo-for-financial-advisors",
-    metaTitle: "GEO for Financial Advisors & Wealth Management | GEOSEO",
+    metaTitle: "GEO for Financial Advisors & Wealth Management | Citensity",
     metaDescription:
       "GEO for financial advisors: get cited when people ask AI engines about retirement, investing, and 'do I need a financial advisor' - within the compliance rules that govern financial promotion.",
     updated: "2026-06-30",
@@ -478,7 +478,7 @@ export const BATCH_VERTICALS3: Record<string, Article> = {
 
   "geo-for-fitness-studios": {
     slug: "geo-for-fitness-studios",
-    metaTitle: "GEO for Fitness Studios & Gyms | GEOSEO",
+    metaTitle: "GEO for Fitness Studios & Gyms | Citensity",
     metaDescription:
       "GEO for gyms and fitness studios: get cited when people ask AI engines about workouts, classes, and 'a gym near me' - turning local discovery into trials and memberships.",
     updated: "2026-06-30",
@@ -537,7 +537,7 @@ export const BATCH_VERTICALS3: Record<string, Article> = {
 
   "geo-for-course-creators": {
     slug: "geo-for-course-creators",
-    metaTitle: "GEO for Course Creators & Online Education | GEOSEO",
+    metaTitle: "GEO for Course Creators & Online Education | Citensity",
     metaDescription:
       "GEO for course creators: get cited when learners ask AI engines how to learn a skill, which course to take, and 'is [topic] worth learning' - turning AI-search demand into enrollments.",
     updated: "2026-06-30",

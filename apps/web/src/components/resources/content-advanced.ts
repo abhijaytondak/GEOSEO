@@ -3,7 +3,7 @@ import type { Article } from "@/components/resources/content-types";
 export const BATCH_ADVANCED: Record<string, Article> = {
   "how-to-get-cited-in-ai-answers": {
     slug: "how-to-get-cited-in-ai-answers",
-    metaTitle: "How to Get Cited in AI Answers: Full Guide | GEOSEO",
+    metaTitle: "How to Get Cited in AI Answers: Full Guide | Citensity",
     metaDescription:
       "To get cited in AI answers, publish accurate, self-contained passages that directly resolve real questions and are easy for engines to retrieve and attribute.",
     updated: "2026-06-25",
@@ -48,7 +48,7 @@ export const BATCH_ADVANCED: Record<string, Article> = {
         heading: "Measure, then concentrate your effort",
         body: [
           "You cannot improve what you do not watch. Run your priority questions through the major engines, record whether your brand appears and in what context, and note which pages win citations. Patterns emerge quickly - certain formats and topics get picked up far more than others - and that tells you where to invest.",
-          "A platform like GEOSEO closes this loop: Brand Memory keeps a grounded source of truth so generated pages never fabricate, the Page Engine publishes answer-first pages at scale, and Analytics tracks AI citations across engines so you know which work actually moved visibility.",
+          "A platform like Citensity closes this loop: Brand Memory keeps a grounded source of truth so generated pages never fabricate, the Page Engine publishes answer-first pages at scale, and Analytics tracks AI citations across engines so you know which work actually moved visibility.",
         ],
       },
     ],
@@ -79,7 +79,7 @@ export const BATCH_ADVANCED: Record<string, Article> = {
 
   "heading-structure-for-seo-and-ai": {
     slug: "heading-structure-for-seo-and-ai",
-    metaTitle: "Heading Structure for SEO and AI | GEOSEO",
+    metaTitle: "Heading Structure for SEO and AI | Citensity",
     metaDescription:
       "Good heading structure uses one H1 and descriptive, question-shaped H2s in logical order - so both search crawlers and AI engines can locate the right answer fast.",
     updated: "2026-06-25",
@@ -143,7 +143,7 @@ export const BATCH_ADVANCED: Record<string, Article> = {
 
   "how-to-use-tables-for-ai-extraction": {
     slug: "how-to-use-tables-for-ai-extraction",
-    metaTitle: "Using Tables and Lists for AI Extraction | GEOSEO",
+    metaTitle: "Using Tables and Lists for AI Extraction | Citensity",
     metaDescription:
       "Tables and lists make structured data easy for AI engines to parse and quote. Use real HTML tables with clear headers so comparisons and specs extract accurately.",
     updated: "2026-06-25",
@@ -210,7 +210,7 @@ export const BATCH_ADVANCED: Record<string, Article> = {
 
   "image-seo-and-alt-text-for-ai": {
     slug: "image-seo-and-alt-text-for-ai",
-    metaTitle: "Image SEO and Alt Text in the AI Era | GEOSEO",
+    metaTitle: "Image SEO and Alt Text in the AI Era | Citensity",
     metaDescription:
       "In the AI era, descriptive alt text and the copy around an image tell engines what it shows. Write alt text that conveys meaning, and never lock facts inside images.",
     updated: "2026-06-25",
@@ -276,7 +276,7 @@ export const BATCH_ADVANCED: Record<string, Article> = {
 
   "content-clusters-and-pillar-pages": {
     slug: "content-clusters-and-pillar-pages",
-    metaTitle: "Content Clusters and Pillar Pages | GEOSEO",
+    metaTitle: "Content Clusters and Pillar Pages | Citensity",
     metaDescription:
       "Content clusters pair a broad pillar page with focused supporting articles, interlinked to build topical authority - the depth AI engines reward in a source.",
     updated: "2026-06-25",
@@ -342,7 +342,7 @@ export const BATCH_ADVANCED: Record<string, Article> = {
 
   "how-to-optimize-for-google-ai-mode": {
     slug: "how-to-optimize-for-google-ai-mode",
-    metaTitle: "How to Optimize for Google AI Mode | GEOSEO",
+    metaTitle: "How to Optimize for Google AI Mode | Citensity",
     metaDescription:
       "Optimize for Google AI Mode by earning organic relevance, structuring answers clearly, and covering follow-up questions - AI Mode draws from Google's index.",
     updated: "2026-06-25",
@@ -388,7 +388,7 @@ export const BATCH_ADVANCED: Record<string, Article> = {
         heading: "Measure AI Mode visibility distinctly",
         body: [
           "AI Mode surfaces and links differently from the classic ten blue links, so treat its visibility as its own metric. Watch how your priority questions render in AI Mode, whether you're cited, and how that correlates with traffic and conversions, because click behavior in a generative result differs from a standard SERP.",
-          "This is exactly where AI-visibility tracking earns its keep. GEOSEO Analytics monitors whether and how your brand appears across AI surfaces - including Google's AI experiences - so you can tie structural changes to citation outcomes instead of guessing.",
+          "This is exactly where AI-visibility tracking earns its keep. Citensity Analytics monitors whether and how your brand appears across AI surfaces - including Google's AI experiences - so you can tie structural changes to citation outcomes instead of guessing.",
         ],
       },
     ],
@@ -415,7 +415,7 @@ export const BATCH_ADVANCED: Record<string, Article> = {
 
   "multilingual-geo": {
     slug: "multilingual-geo",
-    metaTitle: "Multilingual GEO: Cited Across Languages | GEOSEO",
+    metaTitle: "Multilingual GEO: Cited Across Languages | Citensity",
     metaDescription:
       "Multilingual GEO means earning AI citations in every language you serve - through native-quality content, correct hreflang, and locale-specific answers.",
     updated: "2026-06-25",
@@ -488,7 +488,7 @@ export const BATCH_ADVANCED: Record<string, Article> = {
 
   "meta-descriptions-for-ai-search": {
     slug: "meta-descriptions-for-ai-search",
-    metaTitle: "Do Meta Descriptions Matter for AI Search? | GEOSEO",
+    metaTitle: "Do Meta Descriptions Matter for AI Search? | Citensity",
     metaDescription:
       "Meta descriptions aren't a direct AI ranking factor, but a clear, accurate one still earns clicks and frames your page - the on-page answer is what actually gets cited.",
     updated: "2026-06-25",
@@ -552,7 +552,7 @@ export const BATCH_ADVANCED: Record<string, Article> = {
 
   "how-to-make-content-quotable": {
     slug: "how-to-make-content-quotable",
-    metaTitle: "How to Make Your Content Quotable by AI | GEOSEO",
+    metaTitle: "How to Make Your Content Quotable by AI | Citensity",
     metaDescription:
       "Make content quotable by AI with self-contained, specific, conclusion-first sentences that resolve a question on their own - so an engine can lift them cleanly.",
     updated: "2026-06-25",
@@ -618,7 +618,7 @@ export const BATCH_ADVANCED: Record<string, Article> = {
 
   "best-geo-tools": {
     slug: "best-geo-tools",
-    metaTitle: "The Best GEO Tools in 2026 | GEOSEO",
+    metaTitle: "The Best GEO Tools in 2026 | Citensity",
     metaDescription:
       "The best GEO tools track AI citations, audit content for extractability, and publish answer-first pages. Here are the capability categories that matter and how to evaluate them.",
     updated: "2026-06-25",
@@ -656,7 +656,7 @@ export const BATCH_ADVANCED: Record<string, Article> = {
         heading: "Capability 2: grounded content production",
         body: [
           "The second area is producing content engines want to cite - answer-first, well-structured, and, critically, grounded in your real facts. The biggest risk in AI-assisted content is fabrication; a tool that generates confident but invented claims will get you contradicted and dropped from answers. Look for a grounded source of truth that constrains generation to facts you've verified.",
-          "Strong production tooling also handles structure (headings, tables, schema, llms.txt) and publishing, so the output is extractable end to end. This is the model GEOSEO follows: Brand Memory holds the verified facts, the Page Engine generates and publishes answer-first pages from them, and the AI Feed emits the structured signals engines consume.",
+          "Strong production tooling also handles structure (headings, tables, schema, llms.txt) and publishing, so the output is extractable end to end. This is the model Citensity follows: Brand Memory holds the verified facts, the Page Engine generates and publishes answer-first pages from them, and the AI Feed emits the structured signals engines consume.",
         ],
       },
       {
@@ -690,7 +690,7 @@ export const BATCH_ADVANCED: Record<string, Article> = {
 
   "how-to-audit-your-ai-visibility": {
     slug: "how-to-audit-your-ai-visibility",
-    metaTitle: "How to Audit Your AI Visibility | GEOSEO",
+    metaTitle: "How to Audit Your AI Visibility | Citensity",
     metaDescription:
       "Audit AI visibility by testing your priority questions across engines, checking crawl access for AI bots, and assessing whether your answers are extractable and well-structured.",
     updated: "2026-06-25",
@@ -735,7 +735,7 @@ export const BATCH_ADVANCED: Record<string, Article> = {
         heading: "Step 4: prioritize, fix, and re-audit",
         body: [
           "Turn findings into a ranked action list - access blockers first (they gate everything), then high-value questions where you're absent but the page exists, then structural fixes to make existing answers extractable. Tie each item to the question it should help you win, so the work is measurable.",
-          "Then close the loop: re-run the same questions after changes ship. AI visibility auditing is continuous, not one-off, because engines and your content both change. A platform like GEOSEO automates the tracking and re-testing so the audit becomes an ongoing signal rather than a quarterly project.",
+          "Then close the loop: re-run the same questions after changes ship. AI visibility auditing is continuous, not one-off, because engines and your content both change. A platform like Citensity automates the tracking and re-testing so the audit becomes an ongoing signal rather than a quarterly project.",
         ],
       },
     ],
@@ -762,7 +762,7 @@ export const BATCH_ADVANCED: Record<string, Article> = {
 
   "how-to-set-up-ai-citation-monitoring": {
     slug: "how-to-set-up-ai-citation-monitoring",
-    metaTitle: "How to Set Up AI Citation Monitoring | GEOSEO",
+    metaTitle: "How to Set Up AI Citation Monitoring | Citensity",
     metaDescription:
       "Set up AI citation monitoring by defining priority prompts, testing them across engines on a schedule, and tracking presence and share of voice over time.",
     updated: "2026-06-25",
@@ -807,7 +807,7 @@ export const BATCH_ADVANCED: Record<string, Article> = {
         heading: "Step 4: trend, alert, and act",
         body: [
           "The output of monitoring is a trend line and a comparison, not a snapshot. Watch presence and share of voice over time, alert when you lose a citation you used to win or when a competitor takes a prompt you held, and feed wins back into your content strategy - the formats and topics that get cited tell you where to invest next.",
-          "Doing this by hand across many prompts and engines doesn't scale, which is the case for tooling. GEOSEO Analytics runs this loop continuously - tracking AI citations and share of voice across engines and surfacing regressions - so monitoring is a standing signal rather than a manual chore. Be clear-eyed about method: distinguish measured citations from heuristic estimates so the numbers stay trustworthy.",
+          "Doing this by hand across many prompts and engines doesn't scale, which is the case for tooling. Citensity Analytics runs this loop continuously - tracking AI citations and share of voice across engines and surfacing regressions - so monitoring is a standing signal rather than a manual chore. Be clear-eyed about method: distinguish measured citations from heuristic estimates so the numbers stay trustworthy.",
         ],
       },
     ],
@@ -834,7 +834,7 @@ export const BATCH_ADVANCED: Record<string, Article> = {
 
   "robots-txt-for-ai-crawlers": {
     slug: "robots-txt-for-ai-crawlers",
-    metaTitle: "robots.txt for AI Crawlers: Config Guide | GEOSEO",
+    metaTitle: "robots.txt for AI Crawlers: Config Guide | Citensity",
     metaDescription:
       "Configure robots.txt for AI crawlers per user-agent. Allowing answer-engine bots is what makes your content eligible to be retrieved and cited in live answers.",
     updated: "2026-06-25",
@@ -901,7 +901,7 @@ export const BATCH_ADVANCED: Record<string, Article> = {
 
   "schema-markup-mistakes": {
     slug: "schema-markup-mistakes",
-    metaTitle: "Schema Markup Mistakes That Cost Citations | GEOSEO",
+    metaTitle: "Schema Markup Mistakes That Cost Citations | Citensity",
     metaDescription:
       "Common schema mistakes - marking up content not on the page, wrong types, invalid syntax, and inconsistency with visible text - undermine the trust signals AI engines rely on.",
     updated: "2026-06-25",
@@ -968,7 +968,7 @@ export const BATCH_ADVANCED: Record<string, Article> = {
 
   "how-often-to-publish-for-geo": {
     slug: "how-often-to-publish-for-geo",
-    metaTitle: "How Often Should You Publish for GEO? | GEOSEO",
+    metaTitle: "How Often Should You Publish for GEO? | Citensity",
     metaDescription:
       "For GEO, publishing cadence matters less than quality and coverage. Publish as often as you can produce genuinely useful, citable pages - and refresh existing ones.",
     updated: "2026-06-25",

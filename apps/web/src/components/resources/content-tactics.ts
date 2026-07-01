@@ -3,7 +3,7 @@ import type { Article } from "@/components/resources/content-types";
 export const BATCH_TACTICS: Record<string, Article> = {
   "how-to-write-a-tldr-that-gets-cited": {
     slug: "how-to-write-a-tldr-that-gets-cited",
-    metaTitle: "How to Write a TL;DR That Gets Cited | GEOSEO",
+    metaTitle: "How to Write a TL;DR That Gets Cited | Citensity",
     metaDescription:
       "A citable TL;DR answers the page's core question in 1-3 self-contained sentences at the top. Here's how to write one AI answer engines will lift verbatim.",
     updated: "2026-06-25",
@@ -84,7 +84,7 @@ export const BATCH_TACTICS: Record<string, Article> = {
 
   "statistics-and-original-data-for-geo": {
     slug: "statistics-and-original-data-for-geo",
-    metaTitle: "Why Original Data Wins AI Citations | GEOSEO",
+    metaTitle: "Why Original Data Wins AI Citations | Citensity",
     metaDescription:
       "Original statistics and data give AI answer engines something concrete and attributable to cite. Here's why proprietary data outperforms recycled claims in GEO.",
     updated: "2026-06-25",
@@ -163,7 +163,7 @@ export const BATCH_TACTICS: Record<string, Article> = {
 
   "internal-linking-for-ai-search": {
     slug: "internal-linking-for-ai-search",
-    metaTitle: "Internal Linking for AI Search | GEOSEO",
+    metaTitle: "Internal Linking for AI Search | Citensity",
     metaDescription:
       "Internal linking helps AI engines understand which pages are authoritative and how your topics connect. Here's how to structure links so your best pages get cited.",
     updated: "2026-06-25",
@@ -239,7 +239,7 @@ export const BATCH_TACTICS: Record<string, Article> = {
 
   "freshness-and-content-decay": {
     slug: "freshness-and-content-decay",
-    metaTitle: "Content Freshness and AI Visibility | GEOSEO",
+    metaTitle: "Content Freshness and AI Visibility | Citensity",
     metaDescription:
       "Stale content loses AI citations as facts go out of date and competitors publish newer answers. Here's how content decay works and how to keep pages cite-worthy.",
     updated: "2026-06-25",
@@ -310,7 +310,7 @@ export const BATCH_TACTICS: Record<string, Article> = {
 
   "topical-authority-for-geo": {
     slug: "topical-authority-for-geo",
-    metaTitle: "How to Build Topical Authority for GEO | GEOSEO",
+    metaTitle: "How to Build Topical Authority for GEO | Citensity",
     metaDescription:
       "Topical authority is comprehensive, consistent coverage of a subject that makes AI engines treat you as a trusted source. Here's how to build it for GEO.",
     updated: "2026-06-25",
@@ -383,7 +383,7 @@ export const BATCH_TACTICS: Record<string, Article> = {
 
   "schema-types-that-matter-for-ai": {
     slug: "schema-types-that-matter-for-ai",
-    metaTitle: "The Schema Types That Matter Most for AI | GEOSEO",
+    metaTitle: "The Schema Types That Matter Most for AI | Citensity",
     metaDescription:
       "A handful of schema.org types do most of the work for AI search: Article, FAQPage, Organization, Product, and HowTo. Here's which to use and why.",
     updated: "2026-06-25",
@@ -464,7 +464,7 @@ export const BATCH_TACTICS: Record<string, Article> = {
 
   "how-to-optimize-for-citations-not-clicks": {
     slug: "how-to-optimize-for-citations-not-clicks",
-    metaTitle: "Optimizing for Citations, Not Just Clicks | GEOSEO",
+    metaTitle: "Optimizing for Citations, Not Just Clicks | Citensity",
     metaDescription:
       "AI answers often resolve a query without a click, so the win is being the cited source. Here's how to optimize content for citations instead of only clicks.",
     updated: "2026-06-25",
@@ -535,7 +535,7 @@ export const BATCH_TACTICS: Record<string, Article> = {
 
   "page-speed-and-ai-crawlability": {
     slug: "page-speed-and-ai-crawlability",
-    metaTitle: "Page Speed, Rendering, and AI Crawlability | GEOSEO",
+    metaTitle: "Page Speed, Rendering, and AI Crawlability | Citensity",
     metaDescription:
       "AI crawlers often don't run JavaScript, so content must be in the server HTML. Here's how rendering, speed, and access control affect whether AI engines see you.",
     updated: "2026-06-25",
@@ -617,7 +617,7 @@ export const BATCH_TACTICS: Record<string, Article> = {
 
   "comparison-pages-that-get-cited": {
     slug: "comparison-pages-that-get-cited",
-    metaTitle: "Comparison Pages AI Engines Cite | GEOSEO",
+    metaTitle: "Comparison Pages AI Engines Cite | Citensity",
     metaDescription:
       "AI engines lean on comparison content for 'X vs Y' and 'best' queries. Here's how to write fair, structured comparison pages that earn citations and trust.",
     updated: "2026-06-25",
@@ -690,7 +690,7 @@ export const BATCH_TACTICS: Record<string, Article> = {
 
   "ai-share-of-voice": {
     slug: "ai-share-of-voice",
-    metaTitle: "AI Share of Voice: How to Measure It | GEOSEO",
+    metaTitle: "AI Share of Voice: How to Measure It | Citensity",
     metaDescription:
       "AI share of voice is how often your brand is cited in AI answers versus competitors for your key questions. Here's how to define, measure, and improve it.",
     updated: "2026-06-25",
@@ -768,7 +768,7 @@ export const BATCH_TACTICS: Record<string, Article> = {
 
   "measuring-ai-search-traffic": {
     slug: "measuring-ai-search-traffic",
-    metaTitle: "How to Measure Traffic From AI Search | GEOSEO",
+    metaTitle: "How to Measure Traffic From AI Search | Citensity",
     metaDescription:
       "AI search traffic shows up in referrers and as branded-search lift. Here's how to identify, segment, and measure visits that originate from AI answer engines.",
     updated: "2026-06-25",
@@ -846,7 +846,7 @@ export const BATCH_TACTICS: Record<string, Article> = {
 
   "ai-bot-traffic-in-server-logs": {
     slug: "ai-bot-traffic-in-server-logs",
-    metaTitle: "Finding AI-Bot Traffic in Server Logs | GEOSEO",
+    metaTitle: "Finding AI-Bot Traffic in Server Logs | Citensity",
     metaDescription:
       "AI crawlers identify themselves by user agent in your server logs. Here's how to find bots like GPTBot and PerplexityBot and read what they tell you.",
     updated: "2026-06-25",
@@ -925,7 +925,7 @@ export const BATCH_TACTICS: Record<string, Article> = {
 
   "geo-kpis-that-matter": {
     slug: "geo-kpis-that-matter",
-    metaTitle: "The GEO KPIs That Actually Matter | GEOSEO",
+    metaTitle: "The GEO KPIs That Actually Matter | Citensity",
     metaDescription:
       "The GEO KPIs worth tracking measure citations, share of voice, and downstream pipeline, not vanity metrics. Here's the metric stack that reflects real progress.",
     updated: "2026-06-25",
@@ -1002,7 +1002,7 @@ export const BATCH_TACTICS: Record<string, Article> = {
 
   "attributing-pipeline-to-ai-search": {
     slug: "attributing-pipeline-to-ai-search",
-    metaTitle: "Attributing Pipeline to AI Search | GEOSEO",
+    metaTitle: "Attributing Pipeline to AI Search | Citensity",
     metaDescription:
       "AI search rarely leaves a clean attribution trail. Here's how to connect AI citations and referrals to real pipeline using self-reported and multi-touch signals.",
     updated: "2026-06-25",
@@ -1080,7 +1080,7 @@ export const BATCH_TACTICS: Record<string, Article> = {
 
   "google-search-console-for-ai-overviews": {
     slug: "google-search-console-for-ai-overviews",
-    metaTitle: "Search Console and AI Overview Impact | GEOSEO",
+    metaTitle: "Search Console and AI Overview Impact | Citensity",
     metaDescription:
       "Search Console doesn't isolate AI Overviews directly, but its data reveals the impact through impression, click, and CTR patterns. Here's how to read the signals.",
     updated: "2026-06-25",

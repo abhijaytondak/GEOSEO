@@ -13,7 +13,7 @@ const TABS: { key: TabKey; label: string; icon: LucideIcon }[] = [
 ];
 
 /**
- * Stylized in-page preview of the GEOSEO product — a browser-framed panel with a
+ * Stylized in-page preview of the Citensity product — a browser-framed panel with a
  * tab per pipeline stage. Mock data, faithful to the real dashboard's tokens/layout
  * (honest representation, crisp at any resolution, no screenshot bitmaps).
  */

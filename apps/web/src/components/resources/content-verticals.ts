@@ -2,7 +2,7 @@ import type { Article } from "@/components/resources/content-types";
 export const BATCH_VERTICALS: Record<string, Article> = {
   "geo-for-marketplaces": {
     slug: "geo-for-marketplaces",
-    metaTitle: "GEO for Marketplaces: A Playbook | GEOSEO",
+    metaTitle: "GEO for Marketplaces: A Playbook | Citensity",
     metaDescription:
       "GEO for marketplaces: get cited by AI engines for category, supply, and trust questions so buyers and sellers find you inside AI answers, not just search.",
     updated: "2026-06-25",
@@ -62,7 +62,7 @@ export const BATCH_VERTICALS: Record<string, Article> = {
 
   "geo-for-d2c-brands": {
     slug: "geo-for-d2c-brands",
-    metaTitle: "GEO for D2C Brands: A Playbook | GEOSEO",
+    metaTitle: "GEO for D2C Brands: A Playbook | Citensity",
     metaDescription:
       "GEO for D2C brands: get cited by AI engines on product-research, 'best for', and comparison questions shoppers ask before they ever reach your store.",
     updated: "2026-06-25",
@@ -122,7 +122,7 @@ export const BATCH_VERTICALS: Record<string, Article> = {
 
   "geo-for-professional-services": {
     slug: "geo-for-professional-services",
-    metaTitle: "GEO for Professional Services Firms | GEOSEO",
+    metaTitle: "GEO for Professional Services Firms | Citensity",
     metaDescription:
       "GEO for professional services: get cited by AI engines on expertise, 'how do I' and 'do I need a [professional]' questions that precede a high-trust hire.",
     updated: "2026-06-25",
@@ -182,7 +182,7 @@ export const BATCH_VERTICALS: Record<string, Article> = {
 
   "geo-for-real-estate": {
     slug: "geo-for-real-estate",
-    metaTitle: "GEO for Real Estate: A Practical Playbook | GEOSEO",
+    metaTitle: "GEO for Real Estate: A Practical Playbook | Citensity",
     metaDescription:
       "GEO for real estate: get cited by AI engines on neighborhood, market, and 'best agent / area' questions buyers and sellers ask before they pick anyone.",
     updated: "2026-06-25",
@@ -242,7 +242,7 @@ export const BATCH_VERTICALS: Record<string, Article> = {
 
   "geo-for-education": {
     slug: "geo-for-education",
-    metaTitle: "GEO for Education and Edtech | GEOSEO",
+    metaTitle: "GEO for Education and Edtech | Citensity",
     metaDescription:
       "GEO for education and edtech: get cited by AI engines on 'how do I learn X', course-comparison, and outcome questions students ask before they enroll.",
     updated: "2026-06-25",
@@ -302,7 +302,7 @@ export const BATCH_VERTICALS: Record<string, Article> = {
 
   "geo-for-publishers": {
     slug: "geo-for-publishers",
-    metaTitle: "GEO for Publishers and Media | GEOSEO",
+    metaTitle: "GEO for Publishers and Media | Citensity",
     metaDescription:
       "GEO for content publishers and media: stay cited and credited by AI engines, protect attribution, and turn AI-surfaced authority into audience and revenue.",
     updated: "2026-06-25",
@@ -362,7 +362,7 @@ export const BATCH_VERTICALS: Record<string, Article> = {
 
   "geo-for-marketing-teams": {
     slug: "geo-for-marketing-teams",
-    metaTitle: "GEO for In-House Marketing Teams | GEOSEO",
+    metaTitle: "GEO for In-House Marketing Teams | Citensity",
     metaDescription:
       "GEO for in-house marketing teams: how to add Generative Engine Optimization to your existing program, win buy-in, and report AI citations to leadership.",
     updated: "2026-06-25",
@@ -422,7 +422,7 @@ export const BATCH_VERTICALS: Record<string, Article> = {
 
   "geo-for-founders": {
     slug: "geo-for-founders",
-    metaTitle: "GEO for Founders Doing It Themselves | GEOSEO",
+    metaTitle: "GEO for Founders Doing It Themselves | Citensity",
     metaDescription:
       "GEO for founders doing it themselves: a lean, high-leverage way to earn AI citations with no team, no budget, and very little time. Where to start and what to skip.",
     updated: "2026-06-25",
@@ -482,7 +482,7 @@ export const BATCH_VERTICALS: Record<string, Article> = {
 
   "geo-for-nonprofits": {
     slug: "geo-for-nonprofits",
-    metaTitle: "GEO for Nonprofits: A Practical Playbook | GEOSEO",
+    metaTitle: "GEO for Nonprofits: A Practical Playbook | Citensity",
     metaDescription:
       "GEO for nonprofits: get cited by AI engines on cause, 'how to help', and 'where to donate' questions so supporters and beneficiaries find your mission.",
     updated: "2026-06-25",
@@ -542,7 +542,7 @@ export const BATCH_VERTICALS: Record<string, Article> = {
 
   "in-house-vs-agency-for-geo": {
     slug: "in-house-vs-agency-for-geo",
-    metaTitle: "In-House vs Agency for GEO | GEOSEO",
+    metaTitle: "In-House vs Agency for GEO | Citensity",
     metaDescription:
       "In-house vs agency for GEO: how to decide who should run your Generative Engine Optimization based on expertise depth, content velocity, and your budget.",
     updated: "2026-06-25",
@@ -602,7 +602,7 @@ export const BATCH_VERTICALS: Record<string, Article> = {
 
   "geo-platform-vs-manual": {
     slug: "geo-platform-vs-manual",
-    metaTitle: "GEO Platform vs Doing It Manually | GEOSEO",
+    metaTitle: "GEO Platform vs Doing It Manually | Citensity",
     metaDescription:
       "GEO platform vs doing it manually: when manual GEO is enough, where it breaks down at scale, and what a platform actually automates that hand-work cannot.",
     updated: "2026-06-25",
@@ -662,7 +662,7 @@ export const BATCH_VERTICALS: Record<string, Article> = {
 
   "geo-vs-content-marketing": {
     slug: "geo-vs-content-marketing",
-    metaTitle: "GEO vs Traditional Content Marketing | GEOSEO",
+    metaTitle: "GEO vs Traditional Content Marketing | Citensity",
     metaDescription:
       "GEO vs traditional content marketing: how the goal shifts from earning clicks to earning citations, and how to evolve the content you already produce.",
     updated: "2026-06-25",
@@ -722,7 +722,7 @@ export const BATCH_VERTICALS: Record<string, Article> = {
 
   "building-a-geo-content-strategy": {
     slug: "building-a-geo-content-strategy",
-    metaTitle: "How to Build a GEO Content Strategy | GEOSEO",
+    metaTitle: "How to Build a GEO Content Strategy | Citensity",
     metaDescription:
       "How to build a GEO content strategy: map the questions buyers ask AI, ground content in real facts, structure for citation, and measure share of voice.",
     updated: "2026-06-25",
@@ -783,7 +783,7 @@ export const BATCH_VERTICALS: Record<string, Article> = {
 
   "how-to-prioritize-geo-topics": {
     slug: "how-to-prioritize-geo-topics",
-    metaTitle: "How to Prioritize GEO Topics to Target | GEOSEO",
+    metaTitle: "How to Prioritize GEO Topics to Target | Citensity",
     metaDescription:
       "How to prioritize which GEO topics to target: score candidate questions by buying intent, current citation gap, and your authority to win them.",
     updated: "2026-06-25",
@@ -843,7 +843,7 @@ export const BATCH_VERTICALS: Record<string, Article> = {
 
   "geo-content-calendar": {
     slug: "geo-content-calendar",
-    metaTitle: "Building a GEO Content Calendar | GEOSEO",
+    metaTitle: "Building a GEO Content Calendar | Citensity",
     metaDescription:
       "Building a GEO content calendar: a cadence that balances new answer pages, refreshes for freshness, and measurement so your citations compound over time.",
     updated: "2026-06-25",

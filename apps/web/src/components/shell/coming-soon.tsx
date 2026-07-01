@@ -19,7 +19,7 @@ export function ComingSoon({
         </div>
         <div className="mt-4 text-sm font-medium text-foreground">Coming soon</div>
         <p className="mt-1 max-w-sm text-sm text-muted-foreground">
-          This module is part of the GEOSEO roadmap and isn&apos;t wired up in the MVP
+          This module is part of the Citensity roadmap and isn&apos;t wired up in the MVP
           prototype yet.
         </p>
       </div>

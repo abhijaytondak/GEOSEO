@@ -2,18 +2,20 @@ import { pageEngineApi } from "@/lib/page-engine-client";
 import { api } from "@/lib/api-client";
 import { BRAND, TAGLINE, SITE_URL } from "@/components/marketing/data";
 import { ALL_FEATURE_PAGES, featureHref } from "@/components/marketing/platform-data";
+import { RESOURCE_INDEX, PUBLISHED_SLUGS } from "@/components/resources/resource-index";
+import { getTopic } from "@/components/resources/topics";
 
 // ISR so this AI-crawler guidance becomes a Vercel cache HIT (it was a force-dynamic
 // MISS). In demo mode the route returns before any fetch → fully cacheable.
 export const revalidate = 300;
 
-/** Demo deployments have no real tenant — expose the GEOSEO product identity + marketing
+/** Demo deployments have no real tenant — expose the Citensity product identity + marketing
  *  pages, never the demo workspace's brand or sample feed URLs (audit critical #1). */
 const DEMO = process.env.NEXT_PUBLIC_GEOSEO_MODE === "demo";
 
 /**
  * llms.txt — AI-crawler guidance listing citation-ready pages. (PRD §7.7.)
- * In demo mode it presents the GEOSEO product + marketing pages. In a real deployment it
+ * In demo mode it presents the Citensity product + marketing pages. In a real deployment it
  * is built from the workspace's own Brand Memory and published /feeds pages.
  */
 export async function GET() {
@@ -25,6 +27,14 @@ export async function GET() {
       "## Pages",
       `- [${BRAND}](${SITE_URL}/): ${TAGLINE}`,
       ...ALL_FEATURE_PAGES.map((f) => `- [${f.label}](${SITE_URL}${featureHref(f)}): ${f.tagline}`),
+      "",
+      "## Guides & resources (GEO and AI-search)",
+      `- [${BRAND} resource library](${SITE_URL}/resources): Answer-first guides on generative engine optimization, AI-search visibility, and SEO.`,
+      ...PUBLISHED_SLUGS.map((slug) => {
+        const title = getTopic(slug)?.title ?? slug;
+        const desc = RESOURCE_INDEX[slug]?.metaDescription ?? "";
+        return `- [${title}](${SITE_URL}/resources/${slug}): ${desc}`;
+      }),
     ];
     return new Response(lines.join("\n"), {
       headers: {

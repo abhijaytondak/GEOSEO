@@ -327,7 +327,7 @@ function Palette({ onClose }: { onClose: () => void }) {
               }
             }}
             placeholder="Search pages, prospects, alerts, leads…"
-            aria-label="Search GEOSEO"
+            aria-label="Search Citensity"
             className="h-12 flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground/70"
           />
           {loading ? (

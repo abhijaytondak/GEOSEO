@@ -24,7 +24,7 @@ export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
           <Orbit className="size-[18px]" strokeWidth={2.25} />
         </div>
         <div className="leading-none">
-          <div className="text-[15px] font-semibold tracking-tight text-foreground">GEOSEO</div>
+          <div className="text-[15px] font-semibold tracking-tight text-foreground">Citensity</div>
           <div className="mt-1 text-[11px] font-medium text-muted-foreground">Authority Engine</div>
         </div>
       </div>
