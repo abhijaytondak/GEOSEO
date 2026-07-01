@@ -229,6 +229,18 @@ export const TOPICS: Topic[] = [
   { slug: "how-to-rank-in-brave-leo", cluster: "ai-engines", title: "How to get cited in Brave's AI (Leo)", keyword: "how to rank in brave ai", intent: "informational" },
   { slug: "how-to-rank-in-you-com", cluster: "ai-engines", title: "How to get cited in You.com", keyword: "how to rank in you.com", intent: "informational" },
   { slug: "multi-engine-geo-strategy", cluster: "ai-engines", title: "Multi-engine GEO strategy: win across all AI search", keyword: "multi-engine geo strategy", intent: "informational" },
+
+  // ── Batch: schema-type deep-dives (155 → 165) ───────────────────────
+  { slug: "product-schema-for-ai", cluster: "tactics", title: "Product schema for AI search", keyword: "product schema for ai", intent: "informational" },
+  { slug: "howto-schema-guide", cluster: "tactics", title: "HowTo schema guide for AI search", keyword: "howto schema guide", intent: "informational" },
+  { slug: "review-schema-for-ai", cluster: "tactics", title: "Review and rating schema for AI search", keyword: "review schema for ai", intent: "informational" },
+  { slug: "event-schema-for-ai", cluster: "tactics", title: "Event schema for AI search", keyword: "event schema for ai", intent: "informational" },
+  { slug: "localbusiness-schema-guide", cluster: "tactics", title: "LocalBusiness schema guide for AI search", keyword: "localbusiness schema guide", intent: "informational" },
+  { slug: "organization-schema-for-ai", cluster: "tactics", title: "Organization schema for AI search", keyword: "organization schema for ai", intent: "informational" },
+  { slug: "breadcrumb-schema-explained", cluster: "tactics", title: "Breadcrumb schema explained for AI search", keyword: "breadcrumb schema", intent: "informational" },
+  { slug: "article-schema-for-ai", cluster: "tactics", title: "Article schema for AI search", keyword: "article schema for ai", intent: "informational" },
+  { slug: "video-schema-for-ai", cluster: "tactics", title: "Video schema (VideoObject) for AI search", keyword: "video schema for ai", intent: "informational" },
+  { slug: "testing-and-validating-structured-data", cluster: "tactics", title: "Testing and validating structured data", keyword: "testing structured data", intent: "informational" },
 ];
 
 /** Resolve a topic by slug. */
