@@ -253,6 +253,18 @@ export const TOPICS: Topic[] = [
   { slug: "what-to-do-when-ai-citations-drop", cluster: "measurement", title: "What to do when AI citations drop", keyword: "ai citations dropped", intent: "informational" },
   { slug: "log-file-analysis-for-geo", cluster: "measurement", title: "Log-file analysis for GEO", keyword: "log file analysis geo", intent: "informational" },
   { slug: "ai-crawl-monitoring-and-patterns", cluster: "measurement", title: "AI crawl monitoring: reading crawler patterns", keyword: "ai crawl monitoring", intent: "informational" },
+
+  // ── Batch: strategy & business (175 → 185) ──────────────────────────
+  { slug: "geo-budget-and-costs", cluster: "conversion", title: "GEO budget and costs: what to plan for", keyword: "geo budget costs", intent: "commercial" },
+  { slug: "geo-roadmap-by-quarter", cluster: "tactics", title: "A GEO roadmap by quarter", keyword: "geo roadmap", intent: "informational" },
+  { slug: "geo-for-startups-vs-enterprise", cluster: "use-cases", title: "GEO for startups vs enterprise", keyword: "geo startups vs enterprise", intent: "commercial" },
+  { slug: "geo-and-brand-building", cluster: "tactics", title: "GEO and brand building", keyword: "geo and brand building", intent: "informational" },
+  { slug: "geo-and-pr-working-together", cluster: "tactics", title: "GEO and PR working together", keyword: "geo and pr", intent: "informational" },
+  { slug: "when-to-hire-geo-help", cluster: "conversion", title: "When to hire GEO help (agency or in-house)", keyword: "when to hire geo help", intent: "commercial" },
+  { slug: "geo-maturity-model", cluster: "tactics", title: "The GEO maturity model", keyword: "geo maturity model", intent: "informational" },
+  { slug: "building-the-business-case-for-geo", cluster: "conversion", title: "Building the business case for GEO", keyword: "business case for geo", intent: "commercial" },
+  { slug: "geo-vs-paid-ads", cluster: "comparisons", title: "GEO vs paid ads: how they compare", keyword: "geo vs paid ads", intent: "comparison" },
+  { slug: "geo-and-content-marketing-together", cluster: "tactics", title: "GEO and content marketing working together", keyword: "geo and content marketing", intent: "informational" },
 ];
 
 /** Resolve a topic by slug. */
