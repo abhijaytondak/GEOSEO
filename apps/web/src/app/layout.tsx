@@ -3,6 +3,7 @@ import { Inter, Geist_Mono } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { GoogleAnalytics } from "@/components/system/google-analytics";
 import { SITE_URL } from "@/components/marketing/data";
 import "./globals.css";
 
@@ -54,6 +55,8 @@ export default function RootLayout({
             scripts that no-op off the Vercel platform; safe on every route. */}
         <SpeedInsights />
         <Analytics />
+        {/* GA4 — activates when NEXT_PUBLIC_GA_ID (G-XXXXXXXX) is set; no-op until then. */}
+        <GoogleAnalytics gaId={process.env.NEXT_PUBLIC_GA_ID} />
       </body>
     </html>
   );
