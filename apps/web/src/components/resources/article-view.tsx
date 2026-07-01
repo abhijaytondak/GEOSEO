@@ -166,8 +166,8 @@ export function ArticleJsonLd({ article, siteUrl }: { article: Article; siteUrl:
         description: article.metaDescription,
         datePublished: article.updated,
         dateModified: article.updated,
-        author: { "@type": "Organization", name: "GEOSEO", url: siteUrl },
-        publisher: { "@type": "Organization", name: "GEOSEO", url: siteUrl },
+        author: { "@type": "Organization", name: "Citensity", url: siteUrl },
+        publisher: { "@type": "Organization", name: "Citensity", url: siteUrl },
         mainEntityOfPage: url,
       },
       {

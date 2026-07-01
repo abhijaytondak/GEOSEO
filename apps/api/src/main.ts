@@ -43,7 +43,7 @@ async function bootstrap() {
 
   // OpenAPI / Swagger — /api/docs (UI) + /api/docs-json (spec).
   const config = new DocumentBuilder()
-    .setTitle("GEOSEO API")
+    .setTitle("Citensity API")
     .setDescription("Backlinking & Continuous SEO Optimization Engine — v1")
     .setVersion("1.0")
     .addBearerAuth()
@@ -55,7 +55,7 @@ async function bootstrap() {
   // Bind all interfaces (0.0.0.0) so the container is reachable on hosts like Railway.
   await app.listen(port, "0.0.0.0");
   // eslint-disable-next-line no-console
-  console.log(`GEOSEO API on http://localhost:${port}/api/v1  ·  docs: /api/docs`);
+  console.log(`Citensity API on http://localhost:${port}/api/v1  ·  docs: /api/docs`);
 }
 
 void bootstrap();

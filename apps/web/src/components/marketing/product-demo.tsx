@@ -13,7 +13,7 @@ const TABS: { key: TabKey; label: string; icon: LucideIcon }[] = [
 ];
 
 /**
- * Stylized in-page preview of the GEOSEO product — a browser-framed panel with a
+ * Stylized in-page preview of the Citensity product — a browser-framed panel with a
  * tab per pipeline stage. Mock data, faithful to the real dashboard's tokens/layout
  * (honest representation, crisp at any resolution, no screenshot bitmaps).
  */
@@ -28,7 +28,7 @@ export function ProductDemo({ initialTab = "brand" }: { initialTab?: TabKey }) {
         <span className="size-2.5 rounded-full bg-warning/60" />
         <span className="size-2.5 rounded-full bg-positive/60" />
         <span className="ml-3 hidden truncate rounded-md bg-card px-3 py-1 text-xs text-muted-foreground sm:block">
-          app.geoseo.com/{tab === "discover" ? "research" : tab === "brand" ? "brand" : tab}
+          app.citensity.com/{tab === "discover" ? "research" : tab === "brand" ? "brand" : tab}
         </span>
       </div>
 

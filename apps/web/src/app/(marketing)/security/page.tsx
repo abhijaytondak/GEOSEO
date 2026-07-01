@@ -4,7 +4,7 @@ import { LegalPage } from "@/components/marketing/legal-page";
 import { SITE_URL, BRAND } from "@/components/marketing/data";
 
 const DESCRIPTION =
-  "GEOSEO security overview — how we handle your data, the infrastructure we run on, and our approach to safe crawling, secrets, and access. Written honestly for our current stage.";
+  "Citensity security overview — how we handle your data, the infrastructure we run on, and our approach to safe crawling, secrets, and access. Written honestly for our current stage.";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
@@ -22,13 +22,13 @@ export default function SecurityPage() {
       kicker="Trust"
       path="/security"
       updated="July 1, 2026"
-      intro="How GEOSEO protects your data and runs safely. This is an honest overview of our current practices for an early-stage product — not a claim of formal certification."
+      intro="How Citensity protects your data and runs safely. This is an honest overview of our current practices for an early-stage product — not a claim of formal certification."
       sections={[
         {
           heading: "Infrastructure",
           body: (
             <p>
-              GEOSEO runs on established cloud providers: the web app on <strong>Vercel</strong>, the API on
+              Citensity runs on established cloud providers: the web app on <strong>Vercel</strong>, the API on
               <strong> Render</strong>, and data in <strong>Supabase (Postgres)</strong> with row-level security.
               Traffic is served over HTTPS, and secrets (API keys, database credentials) are stored as
               environment variables in each provider — never committed to source control.
@@ -39,7 +39,7 @@ export default function SecurityPage() {
           heading: "Safe crawling",
           body: (
             <p>
-              When GEOSEO reads a website you provide (to build Brand Memory or analyze a competitor), requests go
+              When Citensity reads a website you provide (to build Brand Memory or analyze a competitor), requests go
               through an SSRF-guarded fetch that blocks internal/private addresses and cloud metadata endpoints,
               follows redirects only to safe hosts, and caps response size and time. We read public pages only —
               we never access your CMS or publish anything without your approval.

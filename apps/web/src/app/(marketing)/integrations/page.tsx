@@ -12,7 +12,7 @@ const CARD =
   "group relative flex h-full flex-col rounded-2xl border border-border bg-card p-6 shadow-card transition-all duration-300 hover:-translate-y-1 hover:border-brand/30 hover:shadow-float";
 
 const DESCRIPTION =
-  "Publish GEOSEO's optimized, schema-rich content straight to your stack — WordPress, Webflow, or Shopify — or to a managed feed. Draft-first: you review every page before it goes live.";
+  "Publish Citensity's optimized, schema-rich content straight to your stack — WordPress, Webflow, or Shopify — or to a managed feed. Draft-first: you review every page before it goes live.";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),

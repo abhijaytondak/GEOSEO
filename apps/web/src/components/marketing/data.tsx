@@ -14,19 +14,19 @@ import {
 
 /** Public site origin used for canonical URLs + structured data. */
 export const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://geoseo-tau.vercel.app").replace(/\/+$/, "");
-export const BRAND = "GEOSEO";
+export const BRAND = "Citensity";
 export const TAGLINE = "Be the answer buyers find — in Google and AI.";
 
 /** Top nav — anchors into the long-form landing + the public content hub. */
 export const NAV_LINKS: { label: string; href: string }[] = [
   { label: "How it works", href: "#how-it-works" },
   { label: "Product", href: "#product" },
-  { label: "Why GEOSEO", href: "#why" },
+  { label: "Why Citensity", href: "#why" },
   { label: "FAQ", href: "#faq" },
   { label: "Resources", href: "/feeds" },
 ];
 
-/** AI answer engines GEOSEO is engineered to get you cited in (honest — these are the GEO targets). */
+/** AI answer engines Citensity is engineered to get you cited in (honest — these are the GEO targets). */
 export const ENGINES: string[] = ["ChatGPT", "Perplexity", "Google AI Overviews", "Gemini", "Copilot", "Claude"];
 
 export interface Step {
@@ -118,11 +118,11 @@ export const FAQS: Faq[] = [
   },
   {
     q: "How is this different from a normal SEO tool?",
-    a: "Most SEO tools report on keywords. GEOSEO is an engine: it learns your brand, finds demand, drafts and publishes optimized pages to your site, and tracks both search rankings and AI citations — then captures the leads those pages produce.",
+    a: "Most SEO tools report on keywords. Citensity is an engine: it learns your brand, finds demand, drafts and publishes optimized pages to your site, and tracks both search rankings and AI citations — then captures the leads those pages produce.",
   },
   {
     q: "Does it publish to my actual website?",
-    a: "Yes. GEOSEO publishes natively to WordPress, Webflow, or Shopify, or to a managed subdirectory on your domain — no developer needed. Every page ships with JSON-LD structured data, an updated sitemap, and an llms.txt entry so AI crawlers can find it.",
+    a: "Yes. Citensity publishes natively to WordPress, Webflow, or Shopify, or to a managed subdirectory on your domain — no developer needed. Every page ships with JSON-LD structured data, an updated sitemap, and an llms.txt entry so AI crawlers can find it.",
   },
   {
     q: "Will it make things up about my business?",

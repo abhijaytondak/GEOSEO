@@ -75,7 +75,7 @@ const FAQS = [
   { q: "Do I need a separate tool for monitoring versus publishing?", a: "Often, yes — most tools specialize. Monitoring tools track your AI visibility but don't create or publish content; content optimizers and writers help you produce it but don't track AI citations. A full-loop tool combines both so you don't stitch subscriptions together." },
   { q: "Which tools track ChatGPT, Perplexity, and Google AI Overviews?", a: "Dedicated AI-visibility monitors (such as Profound, Peec, and Otterly) focus on this, and some broader platforms include it. Coverage and engines change frequently, so confirm the current list on each vendor's site before buying." },
   { q: "Is GEO replacing traditional SEO?", a: "No. AI answers increasingly sit between a question and your site, but Google search still drives significant traffic. The durable strategy is to do both — which is why tools that only optimize for Google, or only track AI, leave a gap." },
-  { q: "Where does GEOSEO fit?", a: "GEOSEO is built to close the full loop: track AI visibility, generate answer-first content grounded in your real brand facts, publish it to your CMS, and rank in Google too. We're early-stage and honest about it — the differentiator is that the publishing is real and demonstrable, not a roadmap promise." },
+  { q: "Where does Citensity fit?", a: "Citensity is built to close the full loop: track AI visibility, generate answer-first content grounded in your real brand facts, publish it to your CMS, and rank in Google too. We're early-stage and honest about it — the differentiator is that the publishing is real and demonstrable, not a roadmap promise." },
 ];
 
 export default function BestGeoToolsPage() {
@@ -225,7 +225,7 @@ export default function BestGeoToolsPage() {
         </div>
       </section>
 
-      {/* where GEOSEO fits */}
+      {/* where Citensity fits */}
       <section className="bg-background pt-16">
         <div className="mx-auto max-w-4xl px-5 sm:px-6">
           <Reveal>

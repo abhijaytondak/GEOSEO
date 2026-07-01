@@ -132,7 +132,7 @@ export class CrmSyncStore {
       Email: lead.email,
       FirstName: firstName || "",
       LastName: lastName,
-      LeadSource: "GEOSEO",
+      LeadSource: "Citensity",
       Description: lead.pageTitle ?? "",
       Rating: rating,
     };

@@ -3,7 +3,7 @@ import type { Article } from "@/components/resources/content-types";
 export const BATCH_STRATEGY: Record<string, Article> = {
   "geo-budget-and-costs": {
     slug: "geo-budget-and-costs",
-    metaTitle: "GEO Budget and Costs: What to Plan For | GEOSEO",
+    metaTitle: "GEO Budget and Costs: What to Plan For | Citensity",
     metaDescription:
       "What does GEO actually cost? Here's how to budget for generative engine optimization - content, tools, and people - and how to phase spend as the program proves itself.",
     updated: "2026-07-01",
@@ -63,7 +63,7 @@ export const BATCH_STRATEGY: Record<string, Article> = {
 
   "geo-roadmap-by-quarter": {
     slug: "geo-roadmap-by-quarter",
-    metaTitle: "A GEO Roadmap by Quarter | GEOSEO",
+    metaTitle: "A GEO Roadmap by Quarter | Citensity",
     metaDescription:
       "GEO pays off over quarters, not weeks. Here's a phased quarterly roadmap - foundation, content velocity, authority, and optimization - to build citations that compound.",
     updated: "2026-07-01",
@@ -121,7 +121,7 @@ export const BATCH_STRATEGY: Record<string, Article> = {
 
   "geo-for-startups-vs-enterprise": {
     slug: "geo-for-startups-vs-enterprise",
-    metaTitle: "GEO for Startups vs Enterprise | GEOSEO",
+    metaTitle: "GEO for Startups vs Enterprise | Citensity",
     metaDescription:
       "Startups and enterprises play GEO differently. Here's how the approach changes by company size - agility and focus vs. authority and scale - and what each should prioritize.",
     updated: "2026-07-01",
@@ -176,7 +176,7 @@ export const BATCH_STRATEGY: Record<string, Article> = {
 
   "geo-and-brand-building": {
     slug: "geo-and-brand-building",
-    metaTitle: "GEO and Brand Building | GEOSEO",
+    metaTitle: "GEO and Brand Building | Citensity",
     metaDescription:
       "Brand and GEO reinforce each other: a strong brand earns more citations, and citations build brand. Here's how brand-building and generative engine optimization compound together.",
     updated: "2026-07-01",
@@ -231,7 +231,7 @@ export const BATCH_STRATEGY: Record<string, Article> = {
 
   "geo-and-pr-working-together": {
     slug: "geo-and-pr-working-together",
-    metaTitle: "GEO and PR Working Together | GEOSEO",
+    metaTitle: "GEO and PR Working Together | Citensity",
     metaDescription:
       "Traditional PR and GEO share a goal: authoritative third-party mentions. Here's how to align PR and generative engine optimization so earned coverage also builds AI citations.",
     updated: "2026-07-01",
@@ -286,7 +286,7 @@ export const BATCH_STRATEGY: Record<string, Article> = {
 
   "when-to-hire-geo-help": {
     slug: "when-to-hire-geo-help",
-    metaTitle: "When to Hire GEO Help (Agency or In-House) | GEOSEO",
+    metaTitle: "When to Hire GEO Help (Agency or In-House) | Citensity",
     metaDescription:
       "Should you hire for GEO, and when? Here's how to decide between doing it yourself, hiring in-house, or using an agency - based on your stage, resources, and goals.",
     updated: "2026-07-01",
@@ -344,7 +344,7 @@ export const BATCH_STRATEGY: Record<string, Article> = {
 
   "geo-maturity-model": {
     slug: "geo-maturity-model",
-    metaTitle: "The GEO Maturity Model | GEOSEO",
+    metaTitle: "The GEO Maturity Model | Citensity",
     metaDescription:
       "Where is your organization on the GEO journey? A maturity model from ad-hoc to systematic - the stages, what each looks like, and how to advance to the next.",
     updated: "2026-07-01",
@@ -403,7 +403,7 @@ export const BATCH_STRATEGY: Record<string, Article> = {
 
   "building-the-business-case-for-geo": {
     slug: "building-the-business-case-for-geo",
-    metaTitle: "Building the Business Case for GEO | GEOSEO",
+    metaTitle: "Building the Business Case for GEO | Citensity",
     metaDescription:
       "Need to get GEO funded? Here's how to build a business case that resonates with leadership - framing the shift to AI search as both opportunity and risk, with honest projections.",
     updated: "2026-07-01",
@@ -458,7 +458,7 @@ export const BATCH_STRATEGY: Record<string, Article> = {
 
   "geo-vs-paid-ads": {
     slug: "geo-vs-paid-ads",
-    metaTitle: "GEO vs Paid Ads: How They Compare | GEOSEO",
+    metaTitle: "GEO vs Paid Ads: How They Compare | Citensity",
     metaDescription:
       "GEO and paid ads solve visibility differently - compounding earned trust vs. instant paid reach. Here's an honest comparison and how to balance them.",
     updated: "2026-07-01",
@@ -518,7 +518,7 @@ export const BATCH_STRATEGY: Record<string, Article> = {
 
   "geo-and-content-marketing-together": {
     slug: "geo-and-content-marketing-together",
-    metaTitle: "GEO and Content Marketing Working Together | GEOSEO",
+    metaTitle: "GEO and Content Marketing Working Together | Citensity",
     metaDescription:
       "GEO isn't separate from content marketing - it's how content marketing wins in the AI era. Here's how to evolve your content program so it earns citations, not just reads.",
     updated: "2026-07-01",

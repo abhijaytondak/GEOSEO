@@ -3,7 +3,7 @@ import type { Article } from "@/components/resources/content-types";
 export const BATCH_MEASUREMENT: Record<string, Article> = {
   "google-analytics-4-for-ai-traffic": {
     slug: "google-analytics-4-for-ai-traffic",
-    metaTitle: "Google Analytics 4 for AI Traffic | GEOSEO",
+    metaTitle: "Google Analytics 4 for AI Traffic | Citensity",
     metaDescription:
       "AI-referred visits hide in your GA4 data. Here's how to identify, segment, and analyze traffic from ChatGPT, Perplexity, and other AI engines using GA4.",
     updated: "2026-07-01",
@@ -62,7 +62,7 @@ export const BATCH_MEASUREMENT: Record<string, Article> = {
 
   "building-a-geo-dashboard": {
     slug: "building-a-geo-dashboard",
-    metaTitle: "Building a GEO Dashboard | GEOSEO",
+    metaTitle: "Building a GEO Dashboard | Citensity",
     metaDescription:
       "A good GEO dashboard turns scattered signals into a clear view of citation share, AI traffic, and pipeline. Here's what to include and how to structure it for decisions.",
     updated: "2026-07-01",
@@ -121,7 +121,7 @@ export const BATCH_MEASUREMENT: Record<string, Article> = {
 
   "setting-geo-goals-and-benchmarks": {
     slug: "setting-geo-goals-and-benchmarks",
-    metaTitle: "Setting GEO Goals and Benchmarks | GEOSEO",
+    metaTitle: "Setting GEO Goals and Benchmarks | Citensity",
     metaDescription:
       "GEO without goals is just activity. Here's how to set realistic GEO benchmarks and targets - starting from a baseline, focusing on share of voice, and allowing for the indexing lag.",
     updated: "2026-07-01",
@@ -176,7 +176,7 @@ export const BATCH_MEASUREMENT: Record<string, Article> = {
 
   "branded-vs-unbranded-ai-visibility": {
     slug: "branded-vs-unbranded-ai-visibility",
-    metaTitle: "Branded vs Unbranded AI Visibility | GEOSEO",
+    metaTitle: "Branded vs Unbranded AI Visibility | Citensity",
     metaDescription:
       "Being cited when someone names your brand is very different from being cited for the category. Here's why the branded/unbranded split matters in GEO and how to measure and grow each.",
     updated: "2026-07-01",
@@ -235,7 +235,7 @@ export const BATCH_MEASUREMENT: Record<string, Article> = {
 
   "utm-tracking-for-ai-referrals": {
     slug: "utm-tracking-for-ai-referrals",
-    metaTitle: "UTM Tracking for AI Referrals | GEOSEO",
+    metaTitle: "UTM Tracking for AI Referrals | Citensity",
     metaDescription:
       "UTMs let you tag links so AI-referred traffic is unambiguous in analytics - but you can't UTM a citation. Here's where UTM tracking helps for GEO, and where it doesn't.",
     updated: "2026-07-01",
@@ -293,7 +293,7 @@ export const BATCH_MEASUREMENT: Record<string, Article> = {
 
   "sentiment-and-context-of-ai-citations": {
     slug: "sentiment-and-context-of-ai-citations",
-    metaTitle: "Sentiment & Context of AI Citations | GEOSEO",
+    metaTitle: "Sentiment & Context of AI Citations | Citensity",
     metaDescription:
       "Being cited isn't enough - how you're described matters. Here's why the sentiment and context of your AI citations is a distinct metric, and how to monitor and improve it.",
     updated: "2026-07-01",
@@ -348,7 +348,7 @@ export const BATCH_MEASUREMENT: Record<string, Article> = {
 
   "how-to-measure-geo-roi": {
     slug: "how-to-measure-geo-roi",
-    metaTitle: "How to Measure GEO ROI | GEOSEO",
+    metaTitle: "How to Measure GEO ROI | Citensity",
     metaDescription:
       "Proving GEO's return means connecting citation visibility to pipeline against what it cost - honestly, despite imperfect attribution. Here's a practical framework for GEO ROI.",
     updated: "2026-07-01",
@@ -408,7 +408,7 @@ export const BATCH_MEASUREMENT: Record<string, Article> = {
 
   "what-to-do-when-ai-citations-drop": {
     slug: "what-to-do-when-ai-citations-drop",
-    metaTitle: "What to Do When AI Citations Drop | GEOSEO",
+    metaTitle: "What to Do When AI Citations Drop | Citensity",
     metaDescription:
       "A drop in AI citations has a few common causes - stale content, a crawl issue, a stronger competitor, or an engine change. Here's how to diagnose and recover systematically.",
     updated: "2026-07-01",
@@ -467,7 +467,7 @@ export const BATCH_MEASUREMENT: Record<string, Article> = {
 
   "log-file-analysis-for-geo": {
     slug: "log-file-analysis-for-geo",
-    metaTitle: "Log-File Analysis for GEO | GEOSEO",
+    metaTitle: "Log-File Analysis for GEO | Citensity",
     metaDescription:
       "Server logs are the ground truth of what AI crawlers actually do on your site. Here's a practical method for analyzing logs to see which pages AI bots crawl, how often, and what to fix.",
     updated: "2026-07-01",
@@ -525,7 +525,7 @@ export const BATCH_MEASUREMENT: Record<string, Article> = {
 
   "ai-crawl-monitoring-and-patterns": {
     slug: "ai-crawl-monitoring-and-patterns",
-    metaTitle: "AI Crawl Monitoring: Reading Crawler Patterns | GEOSEO",
+    metaTitle: "AI Crawl Monitoring: Reading Crawler Patterns | Citensity",
     metaDescription:
       "How often and how deeply AI bots crawl you is a leading indicator of GEO health. Here's how to monitor crawl patterns over time and what changes in them actually mean.",
     updated: "2026-07-01",

@@ -189,7 +189,7 @@ export function SearchResultsView({
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search pages, prospects, alerts, leads…"
-              aria-label="Search GEOSEO"
+              aria-label="Search Citensity"
               className="h-11 w-full rounded-xl border border-border bg-card pl-9 pr-10 text-body outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
             />
           </div>

@@ -2,7 +2,7 @@ import type { Article } from "@/components/resources/content-types";
 export const BATCH_FUNDAMENTALS: Record<string, Article> = {
   "why-geo-matters-2026": {
     slug: "why-geo-matters-2026",
-    metaTitle: "Why GEO Matters in 2026 | GEOSEO",
+    metaTitle: "Why GEO Matters in 2026 | Citensity",
     metaDescription:
       "GEO matters in 2026 because a growing share of search now ends in an AI answer, not a list of links. If the engine doesn't cite you, you're invisible.",
     updated: "2026-06-25",
@@ -64,7 +64,7 @@ export const BATCH_FUNDAMENTALS: Record<string, Article> = {
 
   "ai-search-vs-traditional-search": {
     slug: "ai-search-vs-traditional-search",
-    metaTitle: "AI Search vs Traditional Search: What Changed | GEOSEO",
+    metaTitle: "AI Search vs Traditional Search: What Changed | Citensity",
     metaDescription:
       "Traditional search returns a ranked list of links to choose from; AI search synthesizes a direct answer and cites a few sources. Here's what actually changed.",
     updated: "2026-06-25",
@@ -125,7 +125,7 @@ export const BATCH_FUNDAMENTALS: Record<string, Article> = {
 
   "what-is-answer-engine-optimization": {
     slug: "what-is-answer-engine-optimization",
-    metaTitle: "What is Answer Engine Optimization (AEO)? | GEOSEO",
+    metaTitle: "What is Answer Engine Optimization (AEO)? | Citensity",
     metaDescription:
       "Answer Engine Optimization (AEO) is structuring content so engines can extract a direct answer to a question — for snippets, voice, and AI answers alike.",
     updated: "2026-06-25",
@@ -179,7 +179,7 @@ export const BATCH_FUNDAMENTALS: Record<string, Article> = {
 
   "do-i-still-need-seo": {
     slug: "do-i-still-need-seo",
-    metaTitle: "Do I Still Need SEO With AI Search? | GEOSEO",
+    metaTitle: "Do I Still Need SEO With AI Search? | Citensity",
     metaDescription:
       "Yes — you still need SEO in the AI-search era. The signals that earn rankings are the same ones that make AI engines trust and cite you. GEO builds on SEO.",
     updated: "2026-06-25",
@@ -233,7 +233,7 @@ export const BATCH_FUNDAMENTALS: Record<string, Article> = {
 
   "how-llms-retrieve-information": {
     slug: "how-llms-retrieve-information",
-    metaTitle: "How LLMs Retrieve Information to Answer | GEOSEO",
+    metaTitle: "How LLMs Retrieve Information to Answer | Citensity",
     metaDescription:
       "LLMs answer from two sources: knowledge baked in during training, and fresh content retrieved at query time (RAG). Retrieval is where GEO gives you leverage.",
     updated: "2026-06-25",
@@ -294,7 +294,7 @@ export const BATCH_FUNDAMENTALS: Record<string, Article> = {
 
   "what-is-rag-and-why-it-matters-for-content": {
     slug: "what-is-rag-and-why-it-matters-for-content",
-    metaTitle: "What Is RAG, and Why It Matters for Content | GEOSEO",
+    metaTitle: "What Is RAG, and Why It Matters for Content | Citensity",
     metaDescription:
       "RAG (retrieval-augmented generation) lets an AI fetch live content and ground its answer in it. It's the mechanism that turns your pages into cited sources.",
     updated: "2026-06-25",
@@ -355,7 +355,7 @@ export const BATCH_FUNDAMENTALS: Record<string, Article> = {
 
   "zero-click-search-explained": {
     slug: "zero-click-search-explained",
-    metaTitle: "Zero-Click Search, Explained | GEOSEO",
+    metaTitle: "Zero-Click Search, Explained | Citensity",
     metaDescription:
       "A zero-click search ends without the user clicking any result — the answer appears on the search surface itself. Here's why it's rising and how to stay visible.",
     updated: "2026-06-25",
@@ -415,7 +415,7 @@ export const BATCH_FUNDAMENTALS: Record<string, Article> = {
 
   "how-ai-overviews-work": {
     slug: "how-ai-overviews-work",
-    metaTitle: "How Google AI Overviews Actually Work | GEOSEO",
+    metaTitle: "How Google AI Overviews Actually Work | Citensity",
     metaDescription:
       "Google AI Overviews generate a summarized answer at the top of search by retrieving and synthesizing web sources, then linking the ones cited. Here's the mechanism.",
     updated: "2026-06-25",
@@ -476,7 +476,7 @@ export const BATCH_FUNDAMENTALS: Record<string, Article> = {
 
   "geo-vs-aeo-vs-seo": {
     slug: "geo-vs-aeo-vs-seo",
-    metaTitle: "GEO vs AEO vs SEO: A Clear Breakdown | GEOSEO",
+    metaTitle: "GEO vs AEO vs SEO: A Clear Breakdown | Citensity",
     metaDescription:
       "SEO optimizes a page to rank, AEO optimizes a passage to be the extracted answer, and GEO optimizes content to be cited by AI engines. Here's how they fit together.",
     updated: "2026-06-25",
@@ -537,7 +537,7 @@ export const BATCH_FUNDAMENTALS: Record<string, Article> = {
 
   "ai-overviews-vs-featured-snippets": {
     slug: "ai-overviews-vs-featured-snippets",
-    metaTitle: "AI Overviews vs Featured Snippets | GEOSEO",
+    metaTitle: "AI Overviews vs Featured Snippets | Citensity",
     metaDescription:
       "A featured snippet quotes one source verbatim; an AI Overview synthesizes multiple sources into a new answer and links several. Here's how they differ and overlap.",
     updated: "2026-06-25",
@@ -592,7 +592,7 @@ export const BATCH_FUNDAMENTALS: Record<string, Article> = {
 
   "chatgpt-vs-perplexity-for-search": {
     slug: "chatgpt-vs-perplexity-for-search",
-    metaTitle: "ChatGPT vs Perplexity for Search Visibility | GEOSEO",
+    metaTitle: "ChatGPT vs Perplexity for Search Visibility | Citensity",
     metaDescription:
       "ChatGPT Search and Perplexity both retrieve and cite web sources, but differ in citation style and crawlers. Here's how to be visible in each.",
     updated: "2026-06-25",
@@ -656,7 +656,7 @@ export const BATCH_FUNDAMENTALS: Record<string, Article> = {
 
   "geo-glossary": {
     slug: "geo-glossary",
-    metaTitle: "GEO Glossary: AI-Search Era Terms | GEOSEO",
+    metaTitle: "GEO Glossary: AI-Search Era Terms | Citensity",
     metaDescription:
       "A plain-English glossary of the terms you need for the AI-search era — GEO, AEO, RAG, AI Overviews, llms.txt, share of voice, and more, each defined simply.",
     updated: "2026-06-25",

@@ -96,7 +96,7 @@ export class DigestService implements OnModuleInit {
       const monthLabel = new Date(monthStart).toLocaleDateString("en-US", { month: "long", year: "numeric", timeZone: "UTC" });
 
       const html = this.buildHtml({ monthLabel, published: published.length, leadsThisMonth: leadsThisMonth.length, wonThisMonth: wonThisMonth.length, convRate, topPages });
-      const ok = await sendEmail({ to, subject: `GEOSEO Monthly Digest — ${monthLabel}`, html });
+      const ok = await sendEmail({ to, subject: `Citensity Monthly Digest — ${monthLabel}`, html });
 
       if (ok) this.log.log(`[digest] Monthly digest sent to ${to} (${monthLabel})`);
       else this.log.warn(`[digest] Failed to send monthly digest to ${to}`);
@@ -131,7 +131,7 @@ export class DigestService implements OnModuleInit {
 
       <!-- header -->
       <tr><td style="background:#0f172a;padding:24px 32px">
-        <p style="margin:0;color:#fff;font-size:16px;font-weight:700">GEOSEO</p>
+        <p style="margin:0;color:#fff;font-size:16px;font-weight:700">Citensity</p>
         <p style="margin:4px 0 0;color:#94a3b8;font-size:13px">Monthly performance digest — ${escHtml(d.monthLabel)}</p>
       </td></tr>
 
@@ -184,7 +184,7 @@ export class DigestService implements OnModuleInit {
 
       <!-- footer -->
       <tr><td style="padding:16px 32px;border-top:1px solid #f1f5f9;background:#f8fafc">
-        <p style="margin:0;font-size:12px;color:#94a3b8">GEOSEO monthly digest · <a href="${dash}/settings/notifications" style="color:#64748b">Manage emails</a></p>
+        <p style="margin:0;font-size:12px;color:#94a3b8">Citensity monthly digest · <a href="${dash}/settings/notifications" style="color:#64748b">Manage emails</a></p>
       </td></tr>
 
     </table>

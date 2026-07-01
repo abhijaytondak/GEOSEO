@@ -5,7 +5,7 @@ export const OG_SIZE = { width: 1200, height: 630 };
 export const OG_CONTENT_TYPE = "image/png";
 
 /**
- * Branded social-share card — dark canvas + violet→blue aurora glow, GEOSEO wordmark,
+ * Branded social-share card — dark canvas + violet→blue aurora glow, Citensity wordmark,
  * a small eyebrow, and the page title. Rendered via Satori (next/og), so styles are
  * limited to the supported flexbox subset (every multi-child node sets display:flex).
  */
@@ -42,7 +42,7 @@ export function ogImage({ eyebrow, title }: { eyebrow: string; title: string }) 
           >
             <div style={{ width: "18px", height: "18px", borderRadius: "9999px", backgroundColor: "rgba(255,255,255,0.92)" }} />
           </div>
-          <div style={{ fontSize: "30px", fontWeight: 700, letterSpacing: "-0.01em" }}>GEOSEO</div>
+          <div style={{ fontSize: "30px", fontWeight: 700, letterSpacing: "-0.01em" }}>Citensity</div>
         </div>
 
         {/* title block */}
