@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { Orbit } from "lucide-react";
@@ -20,6 +21,17 @@ export const dynamic = "force-dynamic";
 /** Demo deployments serve sample feed content — noindex so crawlers never see a demo identity. */
 const DEMO = process.env.NEXT_PUBLIC_GEOSEO_MODE === "demo";
 
+/** Friendly breadcrumb category per page type (mirrors the JSON-LD BreadcrumbList middle crumb). */
+const CATEGORY: Record<string, string> = {
+  guide: "Guides",
+  comparison: "Comparisons",
+  landing: "Solutions",
+  service: "Services",
+  faq: "FAQs",
+  resource: "Resources",
+  local: "Local",
+};
+
 type Params = { params: Promise<{ slug: string }> };
 
 export async function generateMetadata({ params }: Params): Promise<Metadata> {
@@ -31,6 +43,7 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
   if (!page) return { title: "Not found" };
   const host = memory?.profile.domain?.trim() || "yourdomain.com";
   const canonical = page.publishedUrl ?? `https://${host}/feeds${page.slug}`;
+  const shareImage = page.ogImageUrl ?? page.heroImageUrl;
   return {
     title: page.metaTitle,
     description: page.metaDescription,
@@ -41,9 +54,13 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
       description: page.metaDescription,
       url: canonical,
       type: "article",
-      ...(page.ogImageUrl ?? page.heroImageUrl
-        ? { images: [{ url: page.ogImageUrl ?? page.heroImageUrl ?? "" }] }
-        : {}),
+      ...(shareImage ? { images: [{ url: shareImage }] } : {}),
+    },
+    twitter: {
+      card: shareImage ? "summary_large_image" : "summary",
+      title: page.metaTitle,
+      description: page.metaDescription,
+      ...(shareImage ? { images: [shareImage] } : {}),
     },
   };
 }
@@ -92,6 +109,18 @@ export default async function FeedPage({ params }: Params) {
       <main className="mx-auto grid max-w-5xl grid-cols-1 gap-10 px-6 py-12 lg:grid-cols-[1fr_340px]">
         {/* article */}
         <article>
+          {/* Visible breadcrumb (matches the BreadcrumbList JSON-LD) — UX + crawl signal */}
+          <nav aria-label="Breadcrumb" className="mb-3">
+            <ol className="flex flex-wrap items-center gap-1.5 text-[12px] text-muted-foreground">
+              <li>
+                <Link href="/" className="transition-colors hover:text-brand">Home</Link>
+              </li>
+              <li aria-hidden="true">›</li>
+              <li>{CATEGORY[page.pageType] ?? "Insights"}</li>
+              <li aria-hidden="true">›</li>
+              <li aria-current="page" className="max-w-[60%] truncate font-medium text-foreground">{page.title}</li>
+            </ol>
+          </nav>
           <div className="mb-2 flex flex-wrap gap-1.5">
             {page.targetKeywords.map((k) => (
               <span key={k} className="rounded-md bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
@@ -170,6 +199,7 @@ export default async function FeedPage({ params }: Params) {
                             {spec.columns.map((col, ci) => (
                               <th
                                 key={ci}
+                                scope="col"
                                 style={{
                                   borderBottom: "2px solid var(--border, #e5e7eb)",
                                   padding: "0.5rem 0.75rem",
@@ -186,17 +216,19 @@ export default async function FeedPage({ params }: Params) {
                         <tbody>
                           {spec.rows.map((row, ri) => (
                             <tr key={ri}>
-                              <td
+                              <th
+                                scope="row"
                                 style={{
                                   borderBottom: "1px solid var(--border, #e5e7eb)",
                                   padding: "0.5rem 0.75rem",
                                   fontWeight: 600,
                                   color: "var(--foreground, #111)",
                                   whiteSpace: "nowrap",
+                                  textAlign: "left",
                                 }}
                               >
                                 {row.label}
-                              </td>
+                              </th>
                               {row.values.map((val, vi) => (
                                 <td
                                   key={vi}

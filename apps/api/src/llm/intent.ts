@@ -4,6 +4,8 @@ import type { FunnelStage, SearchIntent } from "@geoseo/types";
 export interface ClassifiedIntent {
   intent: SearchIntent;
   stage: FunnelStage;
+  /** 0–100 confidence in this classification (defaults to 70 when the model omits it). */
+  confidence: number;
 }
 
 const INTENTS: SearchIntent[] = ["informational", "commercial", "transactional", "navigational", "local", "comparison"];
@@ -23,12 +25,13 @@ export async function classifyIntents(keywords: string[]): Promise<Record<string
   const baseUrl = process.env.DEEPSEEK_BASE_URL ?? "https://api.deepseek.com";
   const model = process.env.DEEPSEEK_MODEL ?? "deepseek-chat";
 
-  const user = `Classify each keyword by search intent and buyer stage.
+  const user = `Classify each keyword by search intent and buyer stage, and rate your confidence.
 intent ∈ ${JSON.stringify(INTENTS)} (local = geo-qualified queries like "near me" or city names)
 stage ∈ ${JSON.stringify(STAGES)}
+confidence = integer 0-100 (how certain you are; lower it for ambiguous, multi-intent queries)
 Keywords:
 ${terms.map((t) => `- ${t}`).join("\n")}
-Return JSON exactly: {"results":[{"keyword":string,"intent":string,"stage":string}]}`;
+Return JSON exactly: {"results":[{"keyword":string,"intent":string,"stage":string,"confidence":number}]}`;
 
   try {
     const res = await fetchWithTimeout(
@@ -50,14 +53,19 @@ Return JSON exactly: {"results":[{"keyword":string,"intent":string,"stage":strin
     const data = (await res.json()) as { choices?: { message?: { content?: string } }[] };
     const content = data.choices?.[0]?.message?.content;
     if (!content) return null;
-    const parsed = JSON.parse(content) as { results?: { keyword?: string; intent?: string; stage?: string }[] };
+    const parsed = JSON.parse(content) as {
+      results?: { keyword?: string; intent?: string; stage?: string; confidence?: number }[];
+    };
     if (!Array.isArray(parsed.results)) return null;
     const map: Record<string, ClassifiedIntent> = {};
     for (const r of parsed.results) {
       const kw = String(r.keyword ?? "").trim().toLowerCase();
       const intent = r.intent as SearchIntent;
       const stage = r.stage as FunnelStage;
-      if (kw && INTENTS.includes(intent) && STAGES.includes(stage)) map[kw] = { intent, stage };
+      const confidence = Math.max(0, Math.min(100, Math.round(Number(r.confidence))));
+      if (kw && INTENTS.includes(intent) && STAGES.includes(stage)) {
+        map[kw] = { intent, stage, confidence: Number.isFinite(confidence) ? confidence : 70 };
+      }
     }
     return Object.keys(map).length ? map : null;
   } catch {

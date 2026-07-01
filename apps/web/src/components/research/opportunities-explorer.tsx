@@ -332,6 +332,11 @@ export function OpportunitiesExplorer({ initial }: { initial: KeywordOpportunity
                         {o.funnelStage && (
                           <Badge variant={STAGE_META[o.funnelStage].variant}>{STAGE_META[o.funnelStage].label}</Badge>
                         )}
+                        {typeof o.intentConfidence === "number" && (
+                          <span className={`text-micro ${o.intentConfidence < 60 ? "text-warning" : "text-muted-foreground"}`}>
+                            Intent {o.intentConfidence}%{o.intentConfidence < 60 ? " · unsure" : ""}
+                          </span>
+                        )}
                       </div>
                     </td>
                     <td className="px-3 py-3 tabular-nums text-label text-muted-foreground">{compact(o.volume)}</td>

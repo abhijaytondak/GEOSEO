@@ -42,7 +42,14 @@ export function DirectAnswer({ page }: { page: GeneratedPage }) {
       data-aeo="direct-answer"
     >
       <p className="text-micro font-semibold uppercase tracking-wide text-brand">Quick answer</p>
-      <p className="mt-2 text-[17px] leading-relaxed text-foreground">{answer}</p>
+      {/* Rendered as a <blockquote> — the self-contained element answer engines lift verbatim;
+          also matched by the page's `speakable` JSON-LD selector + the Quotation schema node. */}
+      <blockquote
+        className="mt-2 border-l-2 border-brand pl-4 text-[17px] leading-relaxed text-foreground"
+        data-aeo="key-answer"
+      >
+        {answer}
+      </blockquote>
       <dl className="mt-4 flex flex-wrap gap-x-8 gap-y-2 border-t border-border pt-3">
         {facts.map((f) => (
           <div key={f.label} className="flex flex-col">

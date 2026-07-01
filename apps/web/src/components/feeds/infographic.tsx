@@ -39,9 +39,9 @@ export function Infographic({ spec }: { spec: InfographicSpec }) {
           <table className="w-full border-collapse text-[13px]">
             <thead>
               <tr>
-                <th className="border-b border-border px-3 py-2 text-left font-semibold text-muted-foreground" />
+                <th scope="col" className="border-b border-border px-3 py-2 text-left font-semibold text-muted-foreground" />
                 {spec.columns.map((c) => (
-                  <th key={c} className="border-b border-border px-3 py-2 text-left font-semibold text-foreground">
+                  <th key={c} scope="col" className="border-b border-border px-3 py-2 text-left font-semibold text-foreground">
                     {c}
                   </th>
                 ))}
@@ -50,7 +50,7 @@ export function Infographic({ spec }: { spec: InfographicSpec }) {
             <tbody>
               {spec.rows.map((r) => (
                 <tr key={r.label}>
-                  <td className="border-b border-border px-3 py-2 font-medium text-foreground">{r.label}</td>
+                  <th scope="row" className="border-b border-border px-3 py-2 text-left font-medium text-foreground">{r.label}</th>
                   {r.cells.map((cell, j) => (
                     <td key={j} className="border-b border-border px-3 py-2 text-muted-foreground">
                       {cell}

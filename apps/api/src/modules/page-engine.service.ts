@@ -4,7 +4,7 @@ import { resolveMode } from "../common/mode";
 import { DEFAULT_TENANT_ID } from "../common/tenant";
 import { draftPageContent, type DraftContent } from "../llm/deepseek";
 import { specFor, buildSchemaJson, type SchemaContext } from "../llm/page-type-spec";
-import { clampTitle, clampDescription, computeSeoChecks } from "../common/seo";
+import { clampTitle, clampDescription, computeSeoChecks, MIN_WORDS } from "../common/seo";
 import { scoreCitability } from "../common/citability";
 import { buildInfographic } from "../llm/infographic";
 import { classifyIntents, type ClassifiedIntent } from "../llm/intent";
@@ -127,23 +127,23 @@ function buildSectionsForType(
       return [
         {
           heading: `What is ${k}?`,
-          body: `Understanding ${k} is the first step to getting results. This guide explains the core concepts and why ${k} matters for your business or workflow. ${b} has worked with organisations at every stage of this journey.`,
+          body: `${k} is a structured, repeatable approach to achieving a specific outcome — not a one-off tactic, but a system your team can rely on. In practical terms, it means replacing guesswork with a clear method: defined goals, a known sequence of steps, and measurable checkpoints along the way.\n\nThis guide explains exactly what ${k} involves, why it matters, and how to apply it from a standing start. ${b} has worked with organisations at every stage of this journey — from teams trying it for the first time to those refining a mature process. The focus throughout stays practical: concrete steps, the decisions that actually move the needle, and the pitfalls worth avoiding. Read it end to end for the full picture, or jump straight to the section that matches where you are today.`,
         },
         {
           heading: `Step 1 — Get started with ${k}`,
-          body: `The fastest way to start with ${k} is to focus on the fundamentals. Begin by identifying your goal, then map the simplest path from where you are now to where you want to be. Most teams see early wins within the first two weeks.`,
+          body: `The fastest way to start with ${k} is to fix the fundamentals before reaching for advanced techniques. Begin by writing down a single, specific goal, then map the simplest path from where you are now to where you want to be. A clear goal turns a vague ambition into something you can actually measure and improve against.\n\nFrom there, keep the first version deliberately small. Pick one workflow, one team, or one use case and prove the approach works there before expanding. Most teams see early wins within the first two weeks when they resist the urge to do everything at once. Document what you try and what happens — that record becomes the foundation for every later step.`,
         },
         {
-          heading: `Step 2 — Build your approach`,
-          body: `Once you have the basics in place, it's time to create a repeatable process for ${k}. Document what's working, remove friction from your workflow, and loop in the right stakeholders early.`,
+          heading: `Step 2 — Build a repeatable approach`,
+          body: `Once the basics are in place, ${k} becomes about turning a one-off success into a repeatable process. The goal here is consistency: anyone on the team should be able to follow the same method and get a comparable result, without relying on a single person's memory.\n\nStart by documenting the steps that worked in Step 1, then remove friction wherever you can — unnecessary approvals, manual handoffs, and unclear ownership are the usual culprits. Loop in the right stakeholders early so the process reflects how work actually happens, not how it looks on paper. A written, shared approach also makes it far easier to see what to improve next, because everyone is measuring against the same baseline.`,
         },
         {
           heading: `Step 3 — Optimise and scale`,
-          body: `The final step is turning a working approach into a scalable system. Measure what matters, iterate quickly on what isn't working, and keep ${k} front-of-mind as your team grows.`,
+          body: `The final stage of ${k} is turning a working process into a system that holds up as your team grows. Scaling rarely fails because the idea was wrong — it fails because a process that depended on close attention stops getting it once volume increases.\n\nMeasure the few metrics that genuinely reflect success, and review them on a regular cadence rather than only when something breaks. Iterate quickly on what isn't working, and resist adding complexity you can't maintain. As you scale, keep ${k} visible: make it part of onboarding, tooling, and routine reviews so it stays a habit rather than a project. Done well, the system keeps delivering long after the initial effort.`,
         },
         {
           heading: `Common mistakes with ${k}`,
-          body: `Most teams run into the same set of problems early on. The good news: they're avoidable. ${b} has compiled the top pitfalls and exactly how to sidestep each one so you reach your goals faster.`,
+          body: `Most teams hit the same avoidable problems with ${k} early on, and knowing them in advance is the easiest way to move faster. The most frequent pitfalls are:\n\n- Skipping the fundamentals and jumping straight to advanced techniques before the basics are solid.\n- Trying to do everything at once instead of proving the approach on one small use case first.\n- Failing to measure, so there's no way to tell what's working or to justify the effort.\n- Letting the process live in one person's head instead of documenting it.\n\n${b} has seen each of these across many engagements, and the fix is almost always the same: slow down at the start, write things down, and let evidence — not assumption — guide the next move.\n\nThe teams that avoid these pitfalls aren't necessarily more talented — they're simply more deliberate, and deliberateness is a choice any team can make. Treat this list as a quick pre-flight check before each new phase of ${k}, and most of these problems never get the chance to take hold in the first place.`,
         },
       ];
 
@@ -151,43 +151,43 @@ function buildSectionsForType(
       return [
         {
           heading: `The challenge: why ${k} is hard to get right`,
-          body: `Most organisations struggle with ${k} because the problem is multi-layered — it's not just a tool or a tactic. Without the right approach, teams waste time, miss opportunities, and leave revenue on the table.`,
+          body: `${k} is harder than it looks because the problem is multi-layered — it's rarely just a tool or a single tactic. Most organisations underestimate how much the moving parts depend on each other, so an effort that starts well stalls once it meets the realities of budget, time, and competing priorities.\n\nWithout a deliberate approach, the symptoms are predictable: wasted effort, missed opportunities, and outcomes that don't justify the spend. Teams end up reacting instead of planning, and the work that should compound never quite does. Naming the challenge clearly is the first step to solving it — and it's exactly where a focused ${k} engagement earns its keep.`,
         },
         {
-          heading: `Our solution: ${b} and ${k}`,
-          body: `${b} delivers a proven, end-to-end approach to ${k}. From initial discovery through to ongoing optimisation, our process is designed to produce measurable outcomes — not just activity.`,
+          heading: `How ${b} approaches ${k}`,
+          body: `${b} delivers ${k} as a proven, end-to-end process rather than a loose set of deliverables. It starts with discovery — understanding your goals, constraints, and what's already in place — so the plan fits your situation instead of a generic template.\n\nFrom there, the work moves through a structured delivery phase with clear milestones, then into ongoing optimisation so results hold up over time. At every stage the emphasis is on measurable outcomes, not activity for its own sake. You'll always know what's happening, why it matters, and what comes next, which keeps the engagement aligned to the results you actually care about.`,
         },
         {
-          heading: `Key features`,
-          body: `Our ${k} service includes three core capabilities. First, a structured onboarding process that gets your team up to speed in days, not weeks. Second, continuous monitoring so issues are caught before they become problems. Third, dedicated support so you're never stuck waiting for answers.`,
+          heading: `What the ${k} service includes`,
+          body: `A ${b} ${k} engagement is built around a few core capabilities that work together. Each one exists to remove a specific kind of friction so your team can focus on outcomes:\n\n- Structured onboarding that gets your team productive in days, not weeks.\n- Continuous monitoring so issues are caught and addressed before they become problems.\n- Dedicated support, so you're never left waiting for an answer when it matters.\n- Regular reviews that turn results into the next round of improvements.\n\nThe exact scope is confirmed during discovery and tailored to your priorities — but the principle stays the same: every part of the service should map to a result you can see.`,
         },
         {
           heading: `Why clients choose ${b}`,
-          body: `Clients choose ${b} for ${k} because we combine deep expertise with a practical, no-jargon approach. Our track record speaks for itself: teams report faster time-to-value and stronger results compared to going it alone or switching providers.`,
+          body: `Clients choose ${b} for ${k} because the approach pairs genuine expertise with a practical, no-jargon way of working. The difference shows up in how the work feels: clear communication, realistic timelines, and a focus on the outcomes that matter rather than a long list of activity.\n\nThe result is faster time-to-value and stronger, more durable results than going it alone or churning through providers. Just as importantly, you keep the knowledge: the process is documented and handed over, so your team is more capable at the end of the engagement than at the start.`,
         },
       ];
 
     case "comparison":
       return [
         {
-          heading: `${k} — overview`,
-          body: `This comparison covers everything you need to make a confident decision about ${k}. We break down the key differences, trade-offs, and the buyer profiles each option is best suited for.`,
+          heading: `${k} — the short answer`,
+          body: `The best choice for ${k} depends on one thing: whether you're optimising for speed and simplicity now, or for scale and flexibility later. There is no universal winner — only the option that fits your requirements, team size, and timeline.\n\nThis comparison gives you everything needed to decide with confidence. It breaks down where each option is strongest, the trade-offs that matter most, and the buyer profiles each one suits. Rather than declaring a single victor, it maps the decision to your situation, so you can see at a glance which path is the safer bet for the next 12 months — and what you'd be giving up either way.`,
         },
         {
-          heading: `Option A — strengths`,
-          body: `The first approach to ${k} excels when you need speed, simplicity, and a lower upfront investment. Teams with limited resources or tight deadlines often find this path the clearest route to a working solution.`,
+          heading: `Option A — where it wins`,
+          body: `Option A is the stronger choice when speed, simplicity, and a lower upfront investment matter most. It gets you to a working solution quickly, with less setup and a shorter learning curve, which is exactly what teams with limited resources or tight deadlines need.\n\nThe trade-off is headroom: the same simplicity that makes Option A fast can become a constraint as requirements grow more complex. For many teams that's a fair deal — they'd rather solve today's problem cleanly than pay now for flexibility they may never use. If you're early in your journey with ${k}, this is usually the path of least regret.`,
         },
         {
-          heading: `Option B — strengths`,
-          body: `The second approach is built for scale. If your requirements are complex, your team is large, or you need deep customisation, this option gives you the headroom to grow without hitting ceilings early on.`,
+          heading: `Option B — where it wins`,
+          body: `Option B is built for scale and is the better fit when your requirements are complex, your team is large, or you need deep customisation. It gives you room to grow without hitting ceilings early, and it tends to pay off most for organisations whose needs are already well understood.\n\nThe cost is a steeper setup and a longer time-to-value: more configuration, more decisions, and more to learn before you see results. That investment is worthwhile when you know you'll need the flexibility — and wasteful when you don't. The key question is whether your near-future requirements genuinely justify the additional complexity today.`,
         },
         {
-          heading: `Head-to-head: ${k}`,
-          body: `Side by side, the two options differ most on three dimensions: setup complexity (Option A wins), long-term flexibility (Option B wins), and total cost of ownership over 12 months (depends on team size — see pricing notes below).`,
+          heading: `${k}: head-to-head`,
+          body: `Side by side, the two options for ${k} separate most clearly on a handful of dimensions:\n\n- Setup and time-to-value: Option A is faster and simpler.\n- Long-term flexibility and customisation: Option B has the clear edge.\n- Total cost of ownership: depends heavily on team size and how long you keep the solution.\n- Best-fit buyer: Option A for lean, fast-moving teams; Option B for complex or scaling organisations.\n\nThere's no scenario where one option wins on every axis. The right call comes from weighting these factors against your own priorities rather than chasing a generic "best" verdict.`,
         },
         {
           heading: `Verdict — which is right for you?`,
-          body: `For most teams new to ${k}, Option A is the faster path to value. If you're scaling beyond 50 users or need enterprise-grade controls, Option B is worth the additional investment. ${b} can help you evaluate both options against your specific requirements.`,
+          body: `For most teams new to ${k}, Option A is the faster, lower-risk path to value, and it's the sensible default unless you have a concrete reason to choose otherwise. If you're scaling significantly or need enterprise-grade controls and customisation, Option B is worth the additional investment.\n\nThe honest answer is that the "right" choice is the one that matches your actual requirements — not the one with the longest feature list. ${b} can help you evaluate both options against your specific situation, so the decision is grounded in your needs rather than marketing claims.\n\nWhichever way you lean, write down the two or three requirements that actually drive the choice. Revisiting that short list later is the simplest way to confirm you made the right call for ${k} — or to recognise early if your needs have outgrown the option you picked.`,
         },
       ];
 
@@ -195,23 +195,23 @@ function buildSectionsForType(
       return [
         {
           heading: `Why ${k} matters for your business`,
-          body: `${k} is no longer a nice-to-have — it's a key driver of growth, efficiency, and competitive advantage. Organisations that get it right outperform their peers on every metric that matters.`,
+          body: `${k} is a direct driver of growth, efficiency, and competitive advantage — not a nice-to-have you can defer indefinitely. Organisations that treat it as a priority consistently outperform peers who leave it to chance, because the gains compound over time rather than arriving all at once.\n\nThe cost of ignoring ${k} is rarely a single dramatic failure; it's a steady drip of missed opportunities and avoidable inefficiency. Getting it right means fewer of those leaks and a clearer line between effort and result. That's why the most effective teams stop treating ${k} as a side project and start resourcing it deliberately — and why it deserves a focused, accountable owner.`,
         },
         {
           heading: `How ${b} delivers results`,
-          body: `${b} has built a proven approach to ${k} that combines the right tools, the right process, and the right team. From day one, we focus on the outcomes that matter most to your business.`,
+          body: `${b} approaches ${k} by combining the right process, the right tools, and a team that has solved this problem before. From day one the focus is on the outcomes that matter most to your business, not activity that merely looks productive on a status report.\n\nThe engagement is structured so progress is visible at every stage: clear milestones, honest reporting, and quick course-correction when something isn't working. That structure is what turns good intentions into measurable results — and it's the difference between a project that fizzles out and one that keeps paying back the investment long after launch.`,
         },
         {
           heading: `What makes ${b} different`,
-          body: `Unlike generic solutions, ${b}'s approach to ${k} is tailored to your context. We don't believe in one-size-fits-all — every engagement starts with a deep understanding of your goals, your constraints, and your customers.`,
+          body: `${b}'s approach to ${k} is tailored to your context rather than forced through a one-size-fits-all template. Every engagement begins with a genuine understanding of your goals, your constraints, and your customers, so the plan reflects your reality instead of a generic playbook.\n\nThat difference shows up in the details: recommendations you can actually act on, communication without jargon, and a focus on leaving your team more capable than it was before. The aim isn't to make you dependent on an outside provider — it's to build something that works, document how it works, and hand it over so the results stick.`,
         },
         {
-          heading: `Real results from real clients`,
-          body: `Clients working with ${b} on ${k} report faster time-to-value, higher team confidence, and outcomes that persist long after the engagement ends. Ask us for case studies relevant to your industry.`,
+          heading: `What results to expect`,
+          body: `Teams working with ${b} on ${k} typically report faster time-to-value, higher confidence in their decisions, and outcomes that persist long after the engagement ends. Results naturally vary with your starting point and how fully you engage, so this page avoids inventing specific numbers — ask for case studies relevant to your industry and judge for yourself.\n\nWhat stays consistent is the pattern: clear early wins that build momentum, followed by steady, compounding improvement. Setting realistic expectations up front is part of the work, because a plan you can actually deliver beats an ambitious one that quietly stalls.`,
         },
         {
-          heading: `Get started today`,
-          body: `Ready to tackle ${k} with a team that's done it before? ${b} offers a no-commitment discovery call to understand your situation and share what's worked for organisations like yours.`,
+          heading: `Get started with ${k}`,
+          body: `The simplest way to begin with ${k} is a no-commitment discovery call. ${b} uses it to understand your situation, share what's worked for organisations like yours, and outline a realistic path forward — with no obligation to continue.\n\nFrom there, you'll have a clear picture of the opportunity, the likely effort, and the expected return, so you can decide with full information rather than a sales pitch. Whether or not you move ahead, you'll leave the conversation with a sharper view of where ${k} can take your business.`,
         },
       ];
 
@@ -219,15 +219,15 @@ function buildSectionsForType(
       return [
         {
           heading: `${k} in your area`,
-          body: `${b} provides ${k} to clients across the region. Whether you're in the city centre or a surrounding area, our team is close by and ready to help — with the local knowledge that makes a real difference.`,
+          body: `${b} provides ${k} to clients across the region, combining a local presence with the kind of responsiveness that distance makes difficult. Whether you're in the city centre or a surrounding area, the team is close enough to help quickly and familiar enough with the area to get the details right.\n\nThat local knowledge matters more than it first appears: it shapes everything from realistic timelines to the practical constraints that a remote provider would only discover halfway through. Working with a team that already understands your area means fewer surprises and a smoother path from first call to finished result.`,
         },
         {
           heading: `Why local matters for ${k}`,
-          body: `Working with a local provider for ${k} means faster response times, face-to-face meetings when you need them, and a team that understands the specific conditions and regulations in your area.`,
+          body: `Choosing a local provider for ${k} buys you three things a distant one struggles to match: faster response times, face-to-face meetings when they actually help, and genuine familiarity with the conditions and regulations specific to your area.\n\nProximity also changes the relationship. A local team is easier to reach, quicker to visit, and more accountable, because reputation in a community is hard-won and easily lost. For work where timing, site specifics, or local rules come into play, that closeness is the difference between a provider who reacts and one who's already a step ahead.`,
         },
         {
-          heading: `Our service area`,
-          body: `${b} covers the full region for ${k}. Contact us to confirm coverage for your specific location — we're expanding our service area regularly and may already be working near you.`,
+          heading: `Our ${k} service area`,
+          body: `${b} covers the full surrounding region for ${k}, and the service area continues to expand as demand grows. There's a good chance the team is already working near you — and even where coverage is newer, options are usually available.\n\nThe simplest way to be sure is to get in touch with your location: you'll get a straight answer on coverage and timing rather than a vague maybe. Confirming the service area early avoids wasted time on both sides and lets you plan with confidence from the outset.`,
         },
       ];
 
@@ -235,7 +235,7 @@ function buildSectionsForType(
       return [
         {
           heading: `Everything you need to know about ${k}`,
-          body: `This page answers the most common questions about ${k} — from the basics to the details that matter when you're making a decision. If you can't find what you need, ${b} is happy to help directly.`,
+          body: `${k} raises a predictable set of questions, and this page answers them directly — from the basics to the finer points that matter when you're making a decision. Each answer below is written to stand on its own, so you can scan to the one you need rather than reading top to bottom.\n\nThe goal here is clarity, not sales: honest, specific answers that help you decide whether ${k} is right for your situation. If a question you have isn't covered, ${b} is happy to answer it directly — the list below is the most common, not the limit of what's possible.`,
         },
       ];
 
@@ -243,15 +243,15 @@ function buildSectionsForType(
       return [
         {
           heading: `What's inside this ${k} resource`,
-          body: `This resource gives you a practical, ready-to-use toolkit for ${k}. Everything here has been field-tested by ${b} and refined based on real-world feedback — so you can start using it today, not next quarter.`,
+          body: `This ${k} resource is a practical, ready-to-use toolkit rather than a high-level explainer — designed so you can apply it today, not next quarter. Everything in it has been field-tested by ${b} and refined based on real-world use, so it reflects what actually works rather than what sounds good in theory.\n\nInside you'll find the structure, prompts, and steps needed to put ${k} into practice without starting from a blank page. It's deliberately concrete: less reading, more doing. Skim the overview first to get the shape of it, then use the parts that map to your immediate need.\n\nIt's organised so the early sections give you the essential foundation and the later ones go deeper, which means you get value whether you have ten minutes or an afternoon. Nothing here is filler — each part earns its place by helping you move from intention to action, and you can return to any section as your needs change over time. Keep it somewhere your whole team can find it, so it becomes a shared reference that informs day-to-day decisions rather than a file opened once and quietly forgotten.`,
         },
         {
-          heading: `How to use this resource`,
-          body: `Work through the resource step by step, or jump to the section most relevant to where you are right now. Each section is self-contained so you can adapt it to your context without needing to read everything first.`,
+          heading: `How to use this ${k} resource`,
+          body: `The fastest way to get value from this resource is to work through it in order the first time, then treat it as a reference you return to. Each section is self-contained, so once you know the layout you can jump straight to the part that fits where you are right now.\n\nAdapt freely as you go — change the examples, adjust the steps, and drop anything that doesn't apply to your context. The resource is a starting point, not a rulebook, and it works best when you make it your own rather than following it rigidly.\n\nIf you're working as a team, it helps to assign one person to own the rollout and to agree up front on which parts you'll use and which you'll skip. A short kickoff conversation prevents the most common failure mode — everyone interpreting the resource slightly differently — and turns a static document into a shared way of working that sticks.`,
         },
         {
           heading: `A worked example`,
-          body: `To make this concrete, here's how a typical team uses this ${k} resource in practice. Follow the example from start to finish to see how the pieces fit together — then adapt it for your own situation.`,
+          body: `To make ${k} concrete, it helps to see it applied end to end. A typical team starts by defining the outcome they want, then uses the resource to move from that goal to a clear set of steps — turning an abstract idea into something they can actually execute this week.\n\nFollow the example from start to finish to see how the pieces connect, then swap in your own details. Seeing the full arc once removes most of the guesswork, and from there adapting it to your own situation is straightforward.\n\nPay particular attention to the decisions made along the way, not just the final result — the reasoning is what transfers to your own context, even when the specifics differ. Once you've run through it once, most teams find they can apply the same pattern to the next problem without referring back, which is exactly the point: the resource should make you more capable, not more dependent on it.`,
         },
       ];
 
@@ -259,18 +259,40 @@ function buildSectionsForType(
       return [
         {
           heading: `About ${k}`,
-          body: `${b} covers everything you need to know about ${k} on this page. Explore the sections below to understand the topic, see how it applies to your situation, and find out how to get started.`,
+          body: `${k} is a topic worth understanding properly before acting on it, and this page covers what matters most in one place. The sections below explain the core idea, show how it applies to real situations, and outline how to get started without unnecessary complexity.\n\n${b} has put this together to be genuinely useful rather than exhaustive — focused on the parts that change decisions. Read it through for a complete picture, or move straight to the section that maps to your current question.`,
         },
         {
           heading: `Why ${k} matters`,
-          body: `${k} is an important area for any organisation focused on growth and efficiency. Getting it right early saves time, reduces risk, and puts you in a stronger position as your needs evolve.`,
+          body: `${k} matters because getting it right early compounds: it saves time later, reduces risk, and puts you in a stronger position as your needs evolve. Treating it as an afterthought tends to be expensive in ways that only become obvious once the easy fixes are no longer available.\n\nThe organisations that benefit most are the ones that take ${k} seriously before they're forced to. A modest, deliberate investment now is almost always cheaper than an urgent correction later — which is exactly why it deserves attention while you still have the luxury of planning ahead.`,
         },
         {
-          heading: `Next steps`,
-          body: `Ready to learn more about ${k}? ${b} is here to help. Reach out using the form below or explore our other resources to build on what you've read here.`,
+          heading: `Next steps with ${k}`,
+          body: `The best next step with ${k} depends on where you're starting, but it's rarely "do everything at once." Pick the single most important outcome, get that working, and build from there — momentum from one clear win beats a stalled attempt at a grand plan.\n\n${b} is here to help if you'd like a steer. Reach out using the form below for tailored advice, or explore the related resources to build on what you've read here and turn understanding into action.`,
         },
       ];
   }
+}
+
+/**
+ * Weave brand-verified proof points into the most relevant template section so the keyless
+ * template path carries concrete stats / case studies / awards — the statistical-density and
+ * uniqueness signals AI answer engines reward (audit #2). Strictly real: proof comes from the
+ * Brand Library; no-op when the workspace has no proof points, so nothing is ever fabricated.
+ */
+function injectProof(
+  sections: { heading: string; body: string }[],
+  brand: string,
+  proof: string[],
+): { heading: string; body: string }[] {
+  if (!proof.length || !sections.length) return sections;
+  const idx = sections.findIndex((s) => /why|results?|verdict|choose|different|matters|inside|deliver/i.test(s.heading));
+  const target = idx >= 0 ? idx : sections.length - 1;
+  const b = brand || "We";
+  return sections.map((s, i) =>
+    i === target
+      ? { ...s, body: `${s.body}\n\nThe results back this up — ${b} can point to concrete proof: ${proof.join("; ")}.` }
+      : s,
+  );
 }
 
 function countWords(p: { heroCopy: string; sections: { body: string }[]; faqs: { q: string; a: string }[] }): number {
@@ -318,6 +340,16 @@ function stageFromIntent(intent: SearchIntent): FunnelStage {
   if (intent === "transactional") return "ready-to-buy";
   if (intent === "informational") return "research";
   return "consideration"; // commercial / comparison / navigational / local
+}
+
+/** Confidence for the regex intent fallback — higher when the keyword carries a decisive signal,
+ *  lower for the catch-all "commercial" default (so the UI can flag uncertain classifications). */
+function regexIntentConfidence(keyword: string, intent: SearchIntent): number {
+  const k = keyword.toLowerCase();
+  if (intent === "comparison" && /\b(vs|versus|alternatives?|compare|comparison)\b/.test(k)) return 85;
+  if (intent === "informational" && /\b(how|what|why|guide|tutorial|examples?|tips)\b/.test(k)) return 75;
+  if (intent === "transactional") return 72;
+  return 55; // default "commercial" — least certain
 }
 
 /** A question / "People Also Ask"-style query — a prime AEO (answer-engine) target. */
@@ -587,6 +619,8 @@ export class PageEngineStore implements OnModuleInit {
     wordCount: number;
     createdAt?: string;
     updatedAt?: string;
+    heroImageUrl?: string;
+    heroImageAlt?: string;
   }): SchemaContext {
     const brand = this.brand.current();
     const root = this.siteRoot();
@@ -603,6 +637,11 @@ export class PageEngineStore implements OnModuleInit {
       dateModified: p.updatedAt,
       keywords: p.targetKeywords,
       wordCount: p.wordCount,
+      // Emit the hero image as an ImageObject (Google Images + Article rich results).
+      // Skip inline base64 data: URIs — only real hosted URLs belong in schema.
+      ...(p.heroImageUrl && /^https?:\/\//i.test(p.heroImageUrl)
+        ? { image: { url: p.heroImageUrl, alt: p.heroImageAlt } }
+        : {}),
       lang: "en",
     };
   }
@@ -825,22 +864,57 @@ export class PageEngineStore implements OnModuleInit {
     const ai = content ?? (await draftPageContent(opp.query, opp.recommendedPageType, await this.brandHint(tenantId)));
     const title = opp.query.replace(/\b\w/g, (c) => c.toUpperCase());
     const company = this.brand.current()?.company?.trim();
-    // Meta discipline (SEO): clamp to Google's snippet budgets on a word boundary, so an
-    // over-long LLM/template title or description isn't truncated mid-word in the SERP.
-    const metaTitle = clampTitle(ai?.metaTitle ?? (company ? `${title} | ${company}` : title));
     // Page-type spec drives structure for BOTH the AI and template paths, so a
     // Blog/Service/Comparison page is distinct either way (PRD Phase 1).
     const spec = specFor(opp.recommendedPageType);
-    const metaDescription = clampDescription(
-      ai?.metaDescription ?? `A ${spec.label.toLowerCase()} targeting "${opp.query}", drafted from Brand Memory.`,
+
+    // Deterministic template baseline — always built. It's the floor the LLM draft must beat,
+    // and proof-injected (audit #2) so the keyless path carries real, brand-verified evidence.
+    const lib = await this.library.get(tenantId);
+    const proof = lib.proofPoints
+      .slice(0, 3)
+      .map((p) => (p.label + (p.detail ? ` — ${p.detail}` : "")).trim())
+      .filter(Boolean);
+    const templateSections = injectProof(
+      buildSectionsForType(opp.recommendedPageType, opp.query, company ?? title, opp.intent),
+      company ?? title,
+      proof,
     );
-    // Use type-specific section builder for the template path; LLM path uses ai.sections.
-    const sections = ai?.sections?.length
-      ? ai.sections
-      : buildSectionsForType(opp.recommendedPageType, opp.query, company ?? title, opp.intent);
-    const faqs = ai?.faqs?.length
-      ? ai.faqs
-      : buildFaqsForType(opp.recommendedPageType, opp.query, spec.faqCount);
+    const templateFaqs = buildFaqsForType(opp.recommendedPageType, opp.query, spec.faqCount);
+    const templateHero = `Draft hero for ${opp.query}.`;
+
+    // Quality gate (audit #4): keep the LLM/browser draft only if it's structurally sound
+    // (already enforced in draftPageContent), not thin, and at least as citable as the template
+    // — so the engine never ships content worse than its own deterministic fallback.
+    let useAi = !!ai?.sections?.length;
+    let rejectReason = "";
+    if (useAi && ai) {
+      const minWords = (MIN_WORDS[opp.recommendedPageType] ?? 500) * 0.5;
+      const aiWords = countWords({ heroCopy: ai.heroCopy ?? "", sections: ai.sections, faqs: ai.faqs ?? [] });
+      const aiCit = scoreCitability({
+        heroCopy: ai.heroCopy ?? "",
+        sections: ai.sections,
+        faqs: ai.faqs?.length ? ai.faqs : templateFaqs,
+      }).score;
+      const tplCit = scoreCitability({ heroCopy: templateHero, sections: templateSections, faqs: templateFaqs }).score;
+      if (aiWords < minWords) {
+        useAi = false;
+        rejectReason = `thin draft (${aiWords}w < ${Math.round(minWords)})`;
+      } else if (aiCit < tplCit - 5) {
+        useAi = false;
+        rejectReason = `low citability (${aiCit} vs template ${tplCit})`;
+      }
+    }
+
+    // Meta discipline (SEO): clamp to Google's snippet budgets on a word boundary, so an
+    // over-long LLM/template title or description isn't truncated mid-word in the SERP.
+    const metaTitle = clampTitle((useAi ? ai?.metaTitle : undefined) ?? (company ? `${title} | ${company}` : title));
+    const metaDescription = clampDescription(
+      (useAi ? ai?.metaDescription : undefined) ?? `A ${spec.label.toLowerCase()} targeting "${opp.query}", drafted from Brand Memory.`,
+    );
+    const sections = useAi ? ai!.sections : templateSections;
+    const faqs = useAi ? (ai!.faqs?.length ? ai!.faqs : templateFaqs) : templateFaqs;
+    const heroCopy = useAi ? (ai!.heroCopy ?? templateHero) : templateHero;
     const page: GeneratedPage = {
       id: `pg-gen-${this.seq}`,
       blueprintId: s.blueprints[0]?.id ?? "bp-1",
@@ -851,7 +925,7 @@ export class PageEngineStore implements OnModuleInit {
       status: "draft",
       metaTitle,
       metaDescription,
-      heroCopy: ai?.heroCopy ?? `Draft hero for ${opp.query}.`,
+      heroCopy,
       sections,
       faqs,
       cta: spec.cta,
@@ -861,7 +935,7 @@ export class PageEngineStore implements OnModuleInit {
         opp.query,
         opp.recommendedPageType,
         company ?? title,
-        (await this.library.get(tenantId)).proofPoints,
+        lib.proofPoints,
       ),
       targetKeywords: [opp.query],
       wordCount: 0,
@@ -895,7 +969,12 @@ export class PageEngineStore implements OnModuleInit {
       page.ogImageUrl = placeholder.url;
     }
     s.pages.unshift(page);
-    this.snapshot(tenantId, page, ai ? "AI-generated draft" : "Template draft", "ai");
+    this.snapshot(
+      tenantId,
+      page,
+      useAi ? "AI-generated draft" : ai ? `Template draft (LLM draft rejected: ${rejectReason})` : "Template draft",
+      "ai",
+    );
     opp.status = "approved";
     this.save(tenantId, T.pages, page.id, page);
     this.save(tenantId, T.opps, opp.id, opp);
@@ -1363,6 +1442,26 @@ export class PageEngineStore implements OnModuleInit {
     return created;
   }
 
+  /** Find an existing page this keyword would cannibalize — exact target-keyword match OR strong
+   *  token overlap (Jaccard ≥ 0.5), i.e. the two would compete for the same query. Returns the
+   *  first such page (topically-related-but-distinct keywords, low overlap, are NOT flagged). */
+  private cannibalizingPage(tenantId: string, keyword: string): GeneratedPage | undefined {
+    const kl = keyword.toLowerCase();
+    const kwTokens = new Set(keywordTokens(keyword));
+    return this.st(tenantId).pages.find((p) =>
+      p.targetKeywords.some((t) => {
+        const tl = t.toLowerCase();
+        if (tl === kl) return true; // exact duplicate
+        const tTokens = new Set(keywordTokens(t));
+        if (kwTokens.size === 0 || tTokens.size === 0) return false;
+        let inter = 0;
+        for (const x of kwTokens) if (tTokens.has(x)) inter++;
+        const union = new Set([...kwTokens, ...tTokens]).size;
+        return union > 0 && inter / union >= 0.5; // strong overlap → competes for the same query
+      }),
+    );
+  }
+
   /** Real keyword idea (DataForSEO or AI-search) → scored opportunity. */
   private oppFromIdea(
     tenantId: string,
@@ -1374,6 +1473,7 @@ export class PageEngineStore implements OnModuleInit {
     this.seq += 1;
     const intent = intentOverride ?? classified?.intent ?? classifyKwIntent(idea.keyword);
     const funnelStage = classified?.stage ?? stageFromIntent(intent);
+    const intentConfidence = classified?.confidence ?? regexIntentConfidence(idea.keyword, intent);
     const question = isQuestionKeyword(idea.keyword);
     const commercialValue = clampN((idea.cpc > 0 ? Math.min(idea.cpc * 8, 55) : idea.competition * 55) + 25, 1, 99);
     const confidence = clampN(60 + (idea.searchVolume > 100 ? 15 : 0) + (idea.difficulty < 40 ? 15 : 0), 1, 99);
@@ -1383,10 +1483,12 @@ export class PageEngineStore implements OnModuleInit {
       src === "dataforseo" ? "DataForSEO" : src === "ai-search" ? "AI-search demand" : src === "autocomplete" ? "Google Autocomplete" : "Long-tail expansion";
     // Question/AEO keywords → FAQ; otherwise the intent map (comparison/guide/landing/…).
     const recommendedPageType = question ? "faq" : PAGE_TYPE_BY_INTENT[intent] ?? "landing";
-    const evidence =
+    const cannibal = this.cannibalizingPage(tenantId, idea.keyword);
+    const baseEvidence =
       src === "dataforseo"
         ? `DataForSEO: ${idea.searchVolume.toLocaleString()} searches/mo · difficulty ${idea.difficulty} · CPC $${idea.cpc.toFixed(2)}.`
         : `${srcLabel} · est. ${idea.searchVolume.toLocaleString()} searches/mo · difficulty ${idea.difficulty}${question ? " · question (AEO)" : ""}.`;
+    const evidence = cannibal ? `${baseEvidence} ⚠ Overlaps existing page "${cannibal.title}" — may cannibalize it.` : baseEvidence;
     return {
       id: `kw-disc-${this.seq}`,
       query: idea.keyword.toLowerCase(),
@@ -1399,13 +1501,15 @@ export class PageEngineStore implements OnModuleInit {
       commercialValue,
       cpc: idea.cpc > 0 ? idea.cpc : undefined,
       confidence,
+      intentConfidence,
       score,
       question,
       recommendedPageType,
       competitorUrls: [],
       evidence,
       status: "new",
-      duplicate: this.st(tenantId).pages.some((p) => p.targetKeywords.some((k) => k.toLowerCase() === idea.keyword.toLowerCase())),
+      duplicate: !!cannibal,
+      cannibalizesPageId: cannibal?.id,
       createdAt: this.now,
     };
   }
@@ -1420,6 +1524,8 @@ export class PageEngineStore implements OnModuleInit {
     const volume = 300 + (h % 9) * 600;
     const difficulty = 25 + (h % 50);
     const commercialValue = 55 + (h % 40);
+    const cannibal = this.cannibalizingPage(tenantId, seed);
+    const baseEvidence = `Seed-derived opportunity for "${seed}" — validate volume with the research provider.`;
     return {
       id: `kw-disc-${this.seq}`,
       query: seed.toLowerCase(),
@@ -1431,13 +1537,16 @@ export class PageEngineStore implements OnModuleInit {
       difficulty,
       commercialValue,
       confidence: 70 + (h % 25),
+      // Seed path has no LLM classification — confidence comes from the regex heuristic.
+      intentConfidence: regexIntentConfidence(seed, intent),
       score: opportunityScore({ volume, difficulty, commercialValue }),
       question,
       recommendedPageType: question ? "faq" : PAGE_TYPE_BY_INTENT[intent] ?? "landing",
       competitorUrls: [],
-      evidence: `Seed-derived opportunity for "${seed}" — validate volume with the research provider.`,
+      evidence: cannibal ? `${baseEvidence} ⚠ Overlaps existing page "${cannibal.title}" — may cannibalize it.` : baseEvidence,
       status: "new",
-      duplicate: this.st(tenantId).pages.some((p) => p.targetKeywords.some((k) => k.toLowerCase() === seed.toLowerCase())),
+      duplicate: !!cannibal,
+      cannibalizesPageId: cannibal?.id,
       createdAt: this.now,
     };
   }
