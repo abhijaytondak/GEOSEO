@@ -95,7 +95,7 @@ export async function safeFetchText(raw: string, opts: { maxBytes?: number; time
       const res = await fetch(current, {
         redirect: "manual", // follow manually so each hop is re-checked below
         signal: controller.signal,
-        headers: { "user-agent": "GEOSEO-ThemeScanner/1.0", accept: "text/html" },
+        headers: { "user-agent": "Citensity-ThemeScanner/1.0", accept: "text/html" },
       });
 
       if (res.status >= 300 && res.status < 400) {

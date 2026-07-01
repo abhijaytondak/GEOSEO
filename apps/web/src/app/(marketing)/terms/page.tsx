@@ -21,13 +21,13 @@ export default function TermsPage() {
       kicker="Legal"
       path="/terms"
       updated="July 1, 2026"
-      intro="These terms govern your use of the GEOSEO website and product. By using GEOSEO, you agree to them."
+      intro="These terms govern your use of the Citensity website and product. By using Citensity, you agree to them."
       sections={[
         {
-          heading: "Using GEOSEO",
+          heading: "Using Citensity",
           body: (
             <p>
-              GEOSEO provides tools for search and AI-answer optimization — generating and publishing content,
+              Citensity provides tools for search and AI-answer optimization — generating and publishing content,
               capturing leads, and reporting performance. You&apos;re responsible for the accuracy of the information
               you provide and for how you use the content the product helps you create.
             </p>
@@ -37,7 +37,7 @@ export default function TermsPage() {
           heading: "Acceptable use",
           body: (
             <ul>
-              <li>Don&apos;t use GEOSEO to publish unlawful, deceptive, or infringing content.</li>
+              <li>Don&apos;t use Citensity to publish unlawful, deceptive, or infringing content.</li>
               <li>Don&apos;t attempt to disrupt, reverse-engineer, or gain unauthorized access to the service.</li>
               <li>Don&apos;t use the product to generate spam or misrepresent your business.</li>
             </ul>
@@ -48,7 +48,7 @@ export default function TermsPage() {
           body: (
             <p>
               You retain ownership of the brand information you provide and the content you publish. You grant us the
-              limited rights needed to operate the service for you. GEOSEO&apos;s own software, brand, and site content
+              limited rights needed to operate the service for you. Citensity&apos;s own software, brand, and site content
               remain ours.
             </p>
           ),
@@ -57,7 +57,7 @@ export default function TermsPage() {
           heading: "Availability & disclaimers",
           body: (
             <p>
-              GEOSEO is offered on an &quot;as is&quot; and &quot;as available&quot; basis. Search and AI-answer
+              Citensity is offered on an &quot;as is&quot; and &quot;as available&quot; basis. Search and AI-answer
               rankings depend on third parties (Google, AI engines) that we don&apos;t control, so we can&apos;t
               guarantee specific rankings, traffic, or results. We work hard to keep the service reliable but
               don&apos;t warrant uninterrupted availability.
@@ -68,7 +68,7 @@ export default function TermsPage() {
           heading: "Limitation of liability",
           body: (
             <p>
-              To the maximum extent permitted by law, GEOSEO isn&apos;t liable for indirect, incidental, or
+              To the maximum extent permitted by law, Citensity isn&apos;t liable for indirect, incidental, or
               consequential damages arising from your use of the service.
             </p>
           ),

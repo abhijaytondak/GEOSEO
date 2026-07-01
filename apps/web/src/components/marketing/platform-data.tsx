@@ -42,10 +42,10 @@ export const PLATFORM: FeaturePageData[] = [
     eyebrow: "Platform · Brand Memory",
     title: "One source of truth for the AI era.",
     subtitle:
-      "Brand Memory is a structured profile of your business — products, audience, proof, and voice — that grounds every page and answer GEOSEO generates, so nothing is ever fabricated.",
-    metaTitle: "Brand Memory — grounded AI content | GEOSEO",
+      "Brand Memory is a structured profile of your business — products, audience, proof, and voice — that grounds every page and answer Citensity generates, so nothing is ever fabricated.",
+    metaTitle: "Brand Memory — grounded AI content | Citensity",
     metaDescription:
-      "Brand Memory is a structured source of truth — products, personas, proof, and voice — extracted from your site to ground every page GEOSEO generates. No fabricated claims.",
+      "Brand Memory is a structured source of truth — products, personas, proof, and voice — extracted from your site to ground every page Citensity generates. No fabricated claims.",
     sections: [
       {
         kind: "callout",
@@ -102,7 +102,7 @@ export const PLATFORM: FeaturePageData[] = [
     title: "From a topic to a published, optimized page in minutes.",
     subtitle:
       "Research a buyer-intent topic, draft a GEO + SEO page grounded in Brand Memory, and publish to your CMS — with structured data, sitemap, and llms.txt generated automatically.",
-    metaTitle: "Page Creation Engine — automated SEO + GEO pages | GEOSEO",
+    metaTitle: "Page Creation Engine — automated SEO + GEO pages | Citensity",
     metaDescription:
       "Generate and publish GEO + SEO pages grounded in Brand Memory — with JSON-LD, sitemap, and llms.txt — to WordPress, Webflow, Shopify, or a managed subdirectory.",
     sections: [
@@ -171,7 +171,7 @@ export const PLATFORM: FeaturePageData[] = [
     title: "Every visitor, scored and routed.",
     subtitle:
       "See every visitor your pages attract, auto-filter spam, score by fit and intent, and route only the leads that matter — straight to the right person on your team.",
-    metaTitle: "Leads Dashboard — score & route inbound leads | GEOSEO",
+    metaTitle: "Leads Dashboard — score & route inbound leads | Citensity",
     metaDescription:
       "Capture visitors from every page, filter spam, score by fit and intent with explainable reasons, route by rules, and follow up with AI-drafted emails. CRM sync included.",
     sections: [
@@ -241,20 +241,20 @@ export const PLATFORM: FeaturePageData[] = [
     title: "Rankings and AI citations, in one place.",
     subtitle:
       "Track what AI bots and human visitors do — search rankings, AI-engine citations, page-level ROI, and the leads each page produces — so you always know what to fix next.",
-    metaTitle: "Analytics — AI citations + SEO performance | GEOSEO",
+    metaTitle: "Analytics — AI citations + SEO performance | Citensity",
     metaDescription:
       "Track AI-engine citations, search rankings, AI-bot crawls, and page-level ROI with lead attribution — the visibility Google Analytics can't show you.",
     sections: [
       {
         kind: "callout",
         title: "AI visibility is invisible in your analytics.",
-        body: "You can't improve what you can't see being cited. GEOSEO surfaces AI-engine citations and bot activity alongside classic SEO performance — and ties it all to pipeline.",
+        body: "You can't improve what you can't see being cited. Citensity surfaces AI-engine citations and bot activity alongside classic SEO performance — and ties it all to pipeline.",
       },
       {
         kind: "split",
         eyebrow: "Finally measurable",
         title: "The metrics the AI era added.",
-        body: "Classic analytics stops at the click. GEOSEO tracks the layer above it — who's citing you, which bots are reading you, and what it's worth.",
+        body: "Classic analytics stops at the click. Citensity tracks the layer above it — who's citing you, which bots are reading you, and what it's worth.",
         bullets: [
           "AI-engine citations across ChatGPT, Perplexity & more",
           "AI-bot crawls (GPTBot, PerplexityBot, Google-Extended)",
@@ -300,7 +300,7 @@ export const PLATFORM: FeaturePageData[] = [
     title: "Your website's protocol for the AI era.",
     subtitle:
       "A clean, fast, machine-readable surface — JSON-LD, llms.txt, and answer-shaped content — that makes your pages easy for AI engines to read, trust, and cite.",
-    metaTitle: "AI Feed — make your site readable to AI engines | GEOSEO",
+    metaTitle: "AI Feed — make your site readable to AI engines | Citensity",
     metaDescription:
       "The AI Feed publishes fast, structured pages with JSON-LD and llms.txt so AI crawlers can read and cite you — plus bot-hit tracking to prove it's working.",
     sections: [
@@ -379,14 +379,14 @@ export const PLATFORM: FeaturePageData[] = [
     title: "Backlinks, refreshes, and optimizations on autopilot.",
     subtitle:
       "Plugs into any site. Continuously find backlink opportunities, refresh aging pages, and run the optimizations that compound authority over time.",
-    metaTitle: "Content & Authority — backlinks + refreshes on autopilot | GEOSEO",
+    metaTitle: "Content & Authority — backlinks + refreshes on autopilot | Citensity",
     metaDescription:
       "Discover backlink opportunities, analyze competitors, draft outreach, and auto-refresh aging pages — the continuous SEO work that compounds domain authority.",
     sections: [
       {
         kind: "callout",
         title: "SEO isn't a one-time project.",
-        body: "Rankings decay, competitors move, and manual upkeep doesn't scale. GEOSEO runs the compounding authority work continuously, in the background — so your gains hold and grow.",
+        body: "Rankings decay, competitors move, and manual upkeep doesn't scale. Citensity runs the compounding authority work continuously, in the background — so your gains hold and grow.",
       },
       {
         kind: "steps",
@@ -409,7 +409,7 @@ export const PLATFORM: FeaturePageData[] = [
         kind: "split",
         eyebrow: "Compounding, not one-off",
         title: "The work that pays off for years.",
-        body: "Authority is the moat AI engines weigh most heavily. GEOSEO does the unglamorous, compounding work on a schedule.",
+        body: "Authority is the moat AI engines weigh most heavily. Citensity does the unglamorous, compounding work on a schedule.",
         bullets: [
           "Backlink opportunity discovery",
           "Competitor gap analysis",
@@ -447,7 +447,7 @@ export const SOLUTIONS: FeaturePageData[] = [
     title: "Get qualified leads from AI search engines.",
     subtitle:
       "Be the brand ChatGPT, Perplexity, and Google AI Overviews recommend — then turn that visibility into real pipeline.",
-    metaTitle: "AI Search Agent — get cited & convert in AI search | GEOSEO",
+    metaTitle: "AI Search Agent — get cited & convert in AI search | Citensity",
     metaDescription:
       "Win the answer in ChatGPT, Perplexity, and AI Overviews: Brand Memory grounding, cited-ready pages, AI-citation tracking, and built-in lead capture.",
     sections: [
@@ -479,7 +479,7 @@ export const SOLUTIONS: FeaturePageData[] = [
         kind: "compare",
         title: "GEO vs. the old playbook",
         subtitle: "Traditional SEO optimizes for a results page buyers increasingly skip.",
-        columns: ["GEOSEO (GEO)", "Traditional SEO"],
+        columns: ["Citensity (GEO)", "Traditional SEO"],
         highlight: 0,
         rows: [
           { label: "Goal", cells: ["Be the cited answer", "Rank in the blue links"] },
@@ -515,7 +515,7 @@ export const SOLUTIONS: FeaturePageData[] = [
     title: "Turn more visitors into qualified conversations.",
     subtitle:
       "Capture, score, and follow up with the visitors your content attracts — so more of them become real conversations with your team.",
-    metaTitle: "Lead Conversion — capture, score & follow up | GEOSEO",
+    metaTitle: "Lead Conversion — capture, score & follow up | Citensity",
     metaDescription:
       "Convert page visitors into pipeline: journey tracking, explainable scoring, routing rules, AI-drafted follow-ups, a conversion audit, and CRM sync.",
     sections: [
@@ -585,15 +585,15 @@ export const SOLUTIONS: FeaturePageData[] = [
     title: "Qualified leads from paid — coming soon.",
     subtitle:
       "We're extending the same Brand Memory and lead engine to paid campaigns, so your ads convert as well as your organic pages. Join the waitlist to get early access.",
-    metaTitle: "Paid Boost (coming soon) — qualified leads from paid | GEOSEO",
+    metaTitle: "Paid Boost (coming soon) — qualified leads from paid | Citensity",
     metaDescription:
-      "Paid Boost is on the GEOSEO roadmap: bring Brand Memory grounding and the lead engine to paid campaigns. Join the waitlist for early access.",
+      "Paid Boost is on the Citensity roadmap: bring Brand Memory grounding and the lead engine to paid campaigns. Join the waitlist for early access.",
     sections: [
       {
         kind: "callout",
         eyebrow: "On the roadmap",
         title: "Paid traffic deserves the same engine.",
-        body: "Ads send expensive clicks to pages that aren't grounded or built to convert. Paid Boost will bring GEOSEO's grounding and lead engine to paid — without a separate tool. It's in active development.",
+        body: "Ads send expensive clicks to pages that aren't grounded or built to convert. Paid Boost will bring Citensity's grounding and lead engine to paid — without a separate tool. It's in active development.",
       },
       {
         kind: "split",

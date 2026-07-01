@@ -51,7 +51,7 @@ export function BrandHero({
     );
   }
 
-  const base = hexToRgb(primary) ?? { r: 108, g: 76, b: 241 }; // GEOSEO violet fallback
+  const base = hexToRgb(primary) ?? { r: 108, g: 76, b: 241 }; // Citensity violet fallback
   const h = hash(title);
   const c1 = shade(base, 0.08);
   const c2 = shade(base, 0.42);

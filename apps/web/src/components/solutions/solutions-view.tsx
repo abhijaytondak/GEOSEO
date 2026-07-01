@@ -23,7 +23,7 @@ export function SolutionsView({ solutions }: { solutions: SolutionReadiness[] })
   return (
     <div className="space-y-5">
       <div className="rounded-2xl border border-warning/30 bg-warning/5 p-4 text-body text-foreground">
-        <span className="font-semibold">Internal readiness — sell honestly.</span> This page reflects what GEOSEO can
+        <span className="font-semibold">Internal readiness — sell honestly.</span> This page reflects what Citensity can
         actually do today so sales and marketing copy never overclaims. Statuses update as features ship.
       </div>
 

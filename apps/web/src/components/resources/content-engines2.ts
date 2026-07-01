@@ -3,7 +3,7 @@ import type { Article } from "@/components/resources/content-types";
 export const BATCH_ENGINES2: Record<string, Article> = {
   "how-to-rank-in-meta-ai": {
     slug: "how-to-rank-in-meta-ai",
-    metaTitle: "How to Get Cited in Meta AI | GEOSEO",
+    metaTitle: "How to Get Cited in Meta AI | Citensity",
     metaDescription:
       "Meta AI reaches billions across WhatsApp, Instagram, and Facebook. Here's how to make your content citable when people ask Meta AI questions - the GEO fundamentals applied to Meta's assistant.",
     updated: "2026-07-01",
@@ -63,7 +63,7 @@ export const BATCH_ENGINES2: Record<string, Article> = {
 
   "how-to-rank-in-grok": {
     slug: "how-to-rank-in-grok",
-    metaTitle: "How to Get Cited in Grok (X's AI) | GEOSEO",
+    metaTitle: "How to Get Cited in Grok (X's AI) | Citensity",
     metaDescription:
       "Grok, X's AI assistant, has real-time access to the platform's conversation. Here's how to be citable in Grok - GEO fundamentals plus the real-time, discussion-driven nature of X.",
     updated: "2026-07-01",
@@ -123,7 +123,7 @@ export const BATCH_ENGINES2: Record<string, Article> = {
 
   "how-to-get-cited-by-deepseek": {
     slug: "how-to-get-cited-by-deepseek",
-    metaTitle: "How to Get Cited by DeepSeek | GEOSEO",
+    metaTitle: "How to Get Cited by DeepSeek | Citensity",
     metaDescription:
       "DeepSeek's models power a growing number of assistants and apps. Here's how to be citable when DeepSeek-powered tools answer questions - the GEO fundamentals, applied.",
     updated: "2026-07-01",
@@ -184,7 +184,7 @@ export const BATCH_ENGINES2: Record<string, Article> = {
 
   "geo-for-amazon-rufus": {
     slug: "geo-for-amazon-rufus",
-    metaTitle: "GEO for Amazon Rufus (Shopping AI) | GEOSEO",
+    metaTitle: "GEO for Amazon Rufus (Shopping AI) | Citensity",
     metaDescription:
       "Amazon's Rufus answers shopping questions inside Amazon. Here's how product content, reviews, and structured details influence what Rufus surfaces - GEO applied to the shopping-assistant surface.",
     updated: "2026-07-01",
@@ -243,7 +243,7 @@ export const BATCH_ENGINES2: Record<string, Article> = {
 
   "geo-for-apple-intelligence": {
     slug: "geo-for-apple-intelligence",
-    metaTitle: "GEO for Apple Intelligence & Siri | GEOSEO",
+    metaTitle: "GEO for Apple Intelligence & Siri | Citensity",
     metaDescription:
       "Apple Intelligence and Siri answer questions across iPhone and Mac, often drawing on partner engines. Here's how to be citable in Apple's AI surface - the fundamentals plus its ecosystem reality.",
     updated: "2026-07-01",
@@ -302,7 +302,7 @@ export const BATCH_ENGINES2: Record<string, Article> = {
 
   "geo-for-voice-assistants": {
     slug: "geo-for-voice-assistants",
-    metaTitle: "GEO for Voice Assistants (Alexa, Google Assistant) | GEOSEO",
+    metaTitle: "GEO for Voice Assistants (Alexa, Google Assistant) | Citensity",
     metaDescription:
       "Voice assistants read a single spoken answer aloud - there's no page of results. Here's how to win the one answer voice assistants speak, with concise, authoritative, question-shaped content.",
     updated: "2026-07-01",
@@ -361,7 +361,7 @@ export const BATCH_ENGINES2: Record<string, Article> = {
 
   "how-ai-engines-differ-in-what-they-cite": {
     slug: "how-ai-engines-differ-in-what-they-cite",
-    metaTitle: "How AI Engines Differ in What They Cite | GEOSEO",
+    metaTitle: "How AI Engines Differ in What They Cite | Citensity",
     metaDescription:
       "ChatGPT, Perplexity, Gemini, and others don't cite identically. Here's how AI engines differ in sourcing behavior - and why the same strong fundamentals still win across all of them.",
     updated: "2026-07-01",
@@ -416,7 +416,7 @@ export const BATCH_ENGINES2: Record<string, Article> = {
 
   "how-to-rank-in-brave-leo": {
     slug: "how-to-rank-in-brave-leo",
-    metaTitle: "How to Get Cited in Brave's AI (Leo) | GEOSEO",
+    metaTitle: "How to Get Cited in Brave's AI (Leo) | Citensity",
     metaDescription:
       "Brave's AI assistant answers using Brave's independent search index. Here's how to be citable in Brave's AI - the fundamentals plus the value of an independent, privacy-focused index.",
     updated: "2026-07-01",
@@ -475,7 +475,7 @@ export const BATCH_ENGINES2: Record<string, Article> = {
 
   "how-to-rank-in-you-com": {
     slug: "how-to-rank-in-you-com",
-    metaTitle: "How to Get Cited in You.com | GEOSEO",
+    metaTitle: "How to Get Cited in You.com | Citensity",
     metaDescription:
       "You.com is an AI-first search engine that cites sources in its answers. Here's how to be citable in You.com - the standard GEO fundamentals applied to a citation-forward AI search engine.",
     updated: "2026-07-01",
@@ -534,7 +534,7 @@ export const BATCH_ENGINES2: Record<string, Article> = {
 
   "multi-engine-geo-strategy": {
     slug: "multi-engine-geo-strategy",
-    metaTitle: "Multi-Engine GEO Strategy: Win Across All AI Search | GEOSEO",
+    metaTitle: "Multi-Engine GEO Strategy: Win Across All AI Search | Citensity",
     metaDescription:
       "You can't optimize for each AI engine separately - there are too many. Here's the multi-engine GEO strategy: build universally citable content once, then track and close gaps per engine.",
     updated: "2026-07-01",

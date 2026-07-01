@@ -90,7 +90,7 @@ export function IntegrationPage({ data }: { data: IntegrationData }) {
       <section className="bg-background pt-16">
         <div className="mx-auto max-w-3xl px-5 sm:px-6">
           <Reveal>
-            <h2 className={cn(DISPLAY, "text-2xl text-foreground sm:text-3xl")}>What GEOSEO publishes to {data.name}</h2>
+            <h2 className={cn(DISPLAY, "text-2xl text-foreground sm:text-3xl")}>What Citensity publishes to {data.name}</h2>
             <ul className="mt-6 space-y-3">
               {data.publishes.map((p) => (
                 <li key={p} className="flex items-start gap-3 text-[15px] text-foreground">

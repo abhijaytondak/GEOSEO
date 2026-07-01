@@ -3,7 +3,7 @@ import type { Article } from "@/components/resources/content-types";
 export const BATCH_FORMATS: Record<string, Article> = {
   "listicles-that-get-cited": {
     slug: "listicles-that-get-cited",
-    metaTitle: "How to Write Listicles That Get Cited by AI | GEOSEO",
+    metaTitle: "How to Write Listicles That Get Cited by AI | Citensity",
     metaDescription:
       "'Best X' and list posts are some of the most-cited content in AI answers. Here's how to structure a listicle so an engine lifts your picks - clear criteria, scannable entries, and honest reasoning.",
     updated: "2026-06-30",
@@ -62,7 +62,7 @@ export const BATCH_FORMATS: Record<string, Article> = {
 
   "glossary-pages-for-geo": {
     slug: "glossary-pages-for-geo",
-    metaTitle: "Glossary & Definition Pages for GEO | GEOSEO",
+    metaTitle: "Glossary & Definition Pages for GEO | Citensity",
     metaDescription:
       "Definition queries ('what is X') are pure citation opportunities. Here's how to build glossary and definition pages that AI engines lift as the canonical answer.",
     updated: "2026-06-30",
@@ -121,7 +121,7 @@ export const BATCH_FORMATS: Record<string, Article> = {
 
   "how-to-structure-a-pricing-page-for-geo": {
     slug: "how-to-structure-a-pricing-page-for-geo",
-    metaTitle: "How to Structure a Pricing Page for GEO | GEOSEO",
+    metaTitle: "How to Structure a Pricing Page for GEO | Citensity",
     metaDescription:
       "'How much does X cost' is a high-intent AI query - but most pricing pages hide the answer. Here's how to structure a pricing page so AI engines can cite your pricing and you win the buyer.",
     updated: "2026-06-30",
@@ -180,7 +180,7 @@ export const BATCH_FORMATS: Record<string, Article> = {
 
   "product-pages-for-ai-search": {
     slug: "product-pages-for-ai-search",
-    metaTitle: "Optimizing Product Pages for AI Search | GEOSEO",
+    metaTitle: "Optimizing Product Pages for AI Search | Citensity",
     metaDescription:
       "AI engines increasingly recommend specific products. Here's how to structure product pages - specs, use-cases, and Product schema - so engines cite yours in shopping answers.",
     updated: "2026-06-30",
@@ -239,7 +239,7 @@ export const BATCH_FORMATS: Record<string, Article> = {
 
   "about-pages-and-eeat": {
     slug: "about-pages-and-eeat",
-    metaTitle: "About Pages and E-E-A-T for AI Search | GEOSEO",
+    metaTitle: "About Pages and E-E-A-T for AI Search | Citensity",
     metaDescription:
       "Your About page is an E-E-A-T signal engines actually read. Here's how to write one that establishes who you are, why you're credible, and makes your whole site more citable.",
     updated: "2026-06-30",
@@ -298,7 +298,7 @@ export const BATCH_FORMATS: Record<string, Article> = {
 
   "author-bios-and-eeat": {
     slug: "author-bios-and-eeat",
-    metaTitle: "Author Bios and E-E-A-T for AI Search | GEOSEO",
+    metaTitle: "Author Bios and E-E-A-T for AI Search | Citensity",
     metaDescription:
       "Named, credentialed authors make content more citable - especially for health, finance, and other high-trust topics. Here's how to build author bios that strengthen E-E-A-T.",
     updated: "2026-06-30",
@@ -357,7 +357,7 @@ export const BATCH_FORMATS: Record<string, Article> = {
 
   "case-studies-for-geo": {
     slug: "case-studies-for-geo",
-    metaTitle: "Case Studies for GEO: Proof That Gets Cited | GEOSEO",
+    metaTitle: "Case Studies for GEO: Proof That Gets Cited | Citensity",
     metaDescription:
       "Case studies are proof engines and buyers trust - if they're specific and verifiable. Here's how to write case studies with the concrete results and detail that earn AI citations.",
     updated: "2026-06-30",
@@ -416,7 +416,7 @@ export const BATCH_FORMATS: Record<string, Article> = {
 
   "how-to-content-for-ai-search": {
     slug: "how-to-content-for-ai-search",
-    metaTitle: "How-To Content for AI Search (+ HowTo Schema) | GEOSEO",
+    metaTitle: "How-To Content for AI Search (+ HowTo Schema) | Citensity",
     metaDescription:
       "Step-by-step 'how to' content is among the most-cited in AI answers. Here's how to structure tutorials - clear ordered steps, prerequisites, and HowTo schema - so engines lift your instructions.",
     updated: "2026-06-30",
@@ -475,7 +475,7 @@ export const BATCH_FORMATS: Record<string, Article> = {
 
   "landing-pages-for-ai-search": {
     slug: "landing-pages-for-ai-search",
-    metaTitle: "Landing Pages for AI Search Traffic | GEOSEO",
+    metaTitle: "Landing Pages for AI Search Traffic | Citensity",
     metaDescription:
       "AI-referred visitors arrive pre-informed and high-intent. Here's how to design landing pages that convert AI-search traffic - matching the answer they came from and removing friction.",
     updated: "2026-06-30",
@@ -534,7 +534,7 @@ export const BATCH_FORMATS: Record<string, Article> = {
 
   "video-content-and-geo": {
     slug: "video-content-and-geo",
-    metaTitle: "Video Content and GEO: Making Video Citable | GEOSEO",
+    metaTitle: "Video Content and GEO: Making Video Citable | Citensity",
     metaDescription:
       "AI engines can't watch video, but they can read transcripts. Here's how to make your video content citable - transcripts, summaries, and structured pages that surface the knowledge inside.",
     updated: "2026-06-30",

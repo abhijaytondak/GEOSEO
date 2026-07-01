@@ -16,7 +16,7 @@ interface Testimonial {
 }
 
 /**
- * Social proof. GEOSEO is onboarding founding customers, so these are clearly-labelled
+ * Social proof. Citensity is onboarding founding customers, so these are clearly-labelled
  * ILLUSTRATIVE placeholders, not fabricated customer claims. Swap in real, attributed
  * quotes (with name + company) as they come in and drop the `placeholder` flag — the
  * "Illustrative" chip and disclaimer disappear automatically once none remain.
@@ -24,7 +24,7 @@ interface Testimonial {
 const TESTIMONIALS: Testimonial[] = [
   {
     quote:
-      "We went from invisible in AI answers to being named alongside the category leaders. The pages GEOSEO publishes are the ones getting cited.",
+      "We went from invisible in AI answers to being named alongside the category leaders. The pages Citensity publishes are the ones getting cited.",
     name: "Head of Growth",
     role: "B2B SaaS (founding customer)",
     initials: "HG",
@@ -62,7 +62,7 @@ export function Testimonials() {
               What founding customers <span className={GRAD}>are seeing.</span>
             </h2>
             <p className="mt-4 text-lg text-muted-foreground">
-              We&apos;re onboarding our first cohort now. Here&apos;s the kind of outcome GEOSEO is built to deliver.
+              We&apos;re onboarding our first cohort now. Here&apos;s the kind of outcome Citensity is built to deliver.
             </p>
           </div>
         </Reveal>

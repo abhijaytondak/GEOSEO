@@ -21,7 +21,7 @@ export default function PrivacyPage() {
       kicker="Legal"
       path="/privacy"
       updated="July 1, 2026"
-      intro="This policy explains what information GEOSEO collects, how we use it, who we share it with, and the choices you have."
+      intro="This policy explains what information Citensity collects, how we use it, who we share it with, and the choices you have."
       sections={[
         {
           heading: "Information we collect",
@@ -37,7 +37,7 @@ export default function PrivacyPage() {
           heading: "How we use it",
           body: (
             <p>
-              We use your information to provide and improve GEOSEO — responding to audit/demo requests, operating
+              We use your information to provide and improve Citensity — responding to audit/demo requests, operating
               your workspace, and understanding aggregate usage. We do <strong>not</strong> sell your personal data.
             </p>
           ),

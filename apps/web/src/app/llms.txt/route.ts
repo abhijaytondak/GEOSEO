@@ -7,13 +7,13 @@ import { ALL_FEATURE_PAGES, featureHref } from "@/components/marketing/platform-
 // MISS). In demo mode the route returns before any fetch → fully cacheable.
 export const revalidate = 300;
 
-/** Demo deployments have no real tenant — expose the GEOSEO product identity + marketing
+/** Demo deployments have no real tenant — expose the Citensity product identity + marketing
  *  pages, never the demo workspace's brand or sample feed URLs (audit critical #1). */
 const DEMO = process.env.NEXT_PUBLIC_GEOSEO_MODE === "demo";
 
 /**
  * llms.txt — AI-crawler guidance listing citation-ready pages. (PRD §7.7.)
- * In demo mode it presents the GEOSEO product + marketing pages. In a real deployment it
+ * In demo mode it presents the Citensity product + marketing pages. In a real deployment it
  * is built from the workspace's own Brand Memory and published /feeds pages.
  */
 export async function GET() {

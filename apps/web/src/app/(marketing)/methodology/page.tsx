@@ -4,7 +4,7 @@ import { LegalPage } from "@/components/marketing/legal-page";
 import { SITE_URL, BRAND } from "@/components/marketing/data";
 
 const DESCRIPTION =
-  "GEOSEO methodology — how we ground content in real brand facts, write answer-first pages, score citation-worthiness, and measure results in Google Search Console. No fabricated stats, no thin pages.";
+  "Citensity methodology — how we ground content in real brand facts, write answer-first pages, score citation-worthiness, and measure results in Google Search Console. No fabricated stats, no thin pages.";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
@@ -22,7 +22,7 @@ export default function MethodologyPage() {
       kicker="How it works"
       path="/methodology"
       updated="July 1, 2026"
-      intro="How GEOSEO produces content that ranks in Google and gets cited by AI answer engines — and the guardrails that keep it accurate. This is the playbook, in the open."
+      intro="How Citensity produces content that ranks in Google and gets cited by AI answer engines — and the guardrails that keep it accurate. This is the playbook, in the open."
       sections={[
         {
           heading: "1. Ground everything in Brand Memory",

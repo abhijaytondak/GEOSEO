@@ -3,7 +3,7 @@ import type { Article } from "@/components/resources/content-types";
 export const BATCH_VERTICALS2: Record<string, Article> = {
   "geo-for-law-firms": {
     slug: "geo-for-law-firms",
-    metaTitle: "GEO for Law Firms: An AI-Citation Playbook | GEOSEO",
+    metaTitle: "GEO for Law Firms: An AI-Citation Playbook | Citensity",
     metaDescription:
       "GEO for law firms: get cited when people ask AI engines legal questions, without overstepping ethics rules. Practice-area and situation pages that earn trust.",
     updated: "2026-06-26",
@@ -75,7 +75,7 @@ export const BATCH_VERTICALS2: Record<string, Article> = {
 
   "geo-for-insurance": {
     slug: "geo-for-insurance",
-    metaTitle: "GEO for Insurance: Get Cited in AI Answers | GEOSEO",
+    metaTitle: "GEO for Insurance: Get Cited in AI Answers | Citensity",
     metaDescription:
       "GEO for insurance carriers, brokers, and agencies: get cited when people ask AI engines coverage, claims, and 'how much' questions - accurately and compliantly.",
     updated: "2026-06-26",
@@ -147,7 +147,7 @@ export const BATCH_VERTICALS2: Record<string, Article> = {
 
   "geo-for-travel-and-hospitality": {
     slug: "geo-for-travel-and-hospitality",
-    metaTitle: "GEO for Travel & Hospitality | GEOSEO",
+    metaTitle: "GEO for Travel & Hospitality | Citensity",
     metaDescription:
       "GEO for travel and hospitality: get cited when people plan trips with AI engines - 'best time to visit', 'where to stay in', itineraries, and booking decisions.",
     updated: "2026-06-26",
@@ -219,7 +219,7 @@ export const BATCH_VERTICALS2: Record<string, Article> = {
 
   "geo-for-recruiting-and-hr": {
     slug: "geo-for-recruiting-and-hr",
-    metaTitle: "GEO for Recruiting & HR Tech | GEOSEO",
+    metaTitle: "GEO for Recruiting & HR Tech | Citensity",
     metaDescription:
       "GEO for recruiting and HR tech: get cited when buyers and candidates ask AI engines about hiring tools, HR processes, and 'best ATS/HRIS for' questions.",
     updated: "2026-06-26",
@@ -291,7 +291,7 @@ export const BATCH_VERTICALS2: Record<string, Article> = {
 
   "geo-for-developer-tools": {
     slug: "geo-for-developer-tools",
-    metaTitle: "GEO for Developer Tools & APIs | GEOSEO",
+    metaTitle: "GEO for Developer Tools & APIs | Citensity",
     metaDescription:
       "GEO for developer tools: get cited when engineers ask AI coding assistants and search engines how to do something - docs, comparisons, and accurate code examples.",
     updated: "2026-06-26",
@@ -363,7 +363,7 @@ export const BATCH_VERTICALS2: Record<string, Article> = {
 
   "geo-for-consultants": {
     slug: "geo-for-consultants",
-    metaTitle: "GEO for Independent Consultants | GEOSEO",
+    metaTitle: "GEO for Independent Consultants | Citensity",
     metaDescription:
       "GEO for independent consultants and solo experts: get cited in AI answers on your niche so prospects find you, without a big team, budget, or content machine.",
     updated: "2026-06-26",
@@ -435,7 +435,7 @@ export const BATCH_VERTICALS2: Record<string, Article> = {
 
   "does-geo-work-for-small-businesses": {
     slug: "does-geo-work-for-small-businesses",
-    metaTitle: "Does GEO Work for Small Businesses? | GEOSEO",
+    metaTitle: "Does GEO Work for Small Businesses? | Citensity",
     metaDescription:
       "Does GEO work for small businesses? Yes - and often better than for big brands, because AI answers reward specific, niche expertise over sheer size and budget.",
     updated: "2026-06-26",
@@ -500,7 +500,7 @@ export const BATCH_VERTICALS2: Record<string, Article> = {
 
   "how-long-does-geo-take-to-work": {
     slug: "how-long-does-geo-take-to-work",
-    metaTitle: "How Long Does GEO Take to Show Results? | GEOSEO",
+    metaTitle: "How Long Does GEO Take to Show Results? | Citensity",
     metaDescription:
       "How long does GEO take to work? Expect early citation signals in weeks and meaningful momentum over 2-4 months - faster than classic SEO, but not instant.",
     updated: "2026-06-26",
@@ -572,7 +572,7 @@ export const BATCH_VERTICALS2: Record<string, Article> = {
 
   "is-geo-worth-it": {
     slug: "is-geo-worth-it",
-    metaTitle: "Is GEO Worth It? An Honest Assessment | GEOSEO",
+    metaTitle: "Is GEO Worth It? An Honest Assessment | Citensity",
     metaDescription:
       "Is GEO worth it? An honest take: for most businesses whose buyers use AI search, yes - but the return depends on your audience, niche, and willingness to do it well.",
     updated: "2026-06-26",
@@ -644,7 +644,7 @@ export const BATCH_VERTICALS2: Record<string, Article> = {
 
   "can-you-do-geo-without-a-blog": {
     slug: "can-you-do-geo-without-a-blog",
-    metaTitle: "Can You Do GEO Without a Blog? | GEOSEO",
+    metaTitle: "Can You Do GEO Without a Blog? | Citensity",
     metaDescription:
       "Can you do GEO without a blog? Yes - product, docs, comparison, FAQ, and category pages can earn AI citations. A blog helps but is not required for GEO.",
     updated: "2026-06-26",
@@ -710,7 +710,7 @@ export const BATCH_VERTICALS2: Record<string, Article> = {
 
   "how-much-content-do-you-need-for-geo": {
     slug: "how-much-content-do-you-need-for-geo",
-    metaTitle: "How Much Content Do You Need for GEO? | GEOSEO",
+    metaTitle: "How Much Content Do You Need for GEO? | Citensity",
     metaDescription:
       "How much content do you need for GEO? Less than you think - a focused set of excellent answer pages beats high-volume thin content, which can actively hurt you.",
     updated: "2026-06-26",
@@ -782,7 +782,7 @@ export const BATCH_VERTICALS2: Record<string, Article> = {
 
   "what-pages-should-you-optimize-first-for-geo": {
     slug: "what-pages-should-you-optimize-first-for-geo",
-    metaTitle: "Which Pages to Optimize First for GEO | GEOSEO",
+    metaTitle: "Which Pages to Optimize First for GEO | Citensity",
     metaDescription:
       "Which pages should you optimize first for GEO? Start with high-intent, decision-stage pages - comparisons, product, and the questions closest to a purchase.",
     updated: "2026-06-26",

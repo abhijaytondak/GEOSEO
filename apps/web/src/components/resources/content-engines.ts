@@ -2,7 +2,7 @@ import type { Article } from "@/components/resources/content-types";
 export const BATCH_ENGINES: Record<string, Article> = {
   "how-to-rank-in-perplexity": {
     slug: "how-to-rank-in-perplexity",
-    metaTitle: "How to Rank in Perplexity | GEOSEO",
+    metaTitle: "How to Rank in Perplexity | Citensity",
     metaDescription:
       "To rank in Perplexity, be crawlable, answer the question directly near the top, and earn corroboration from sources Perplexity already trusts.",
     updated: "2026-06-25",
@@ -64,7 +64,7 @@ export const BATCH_ENGINES: Record<string, Article> = {
 
   "how-to-appear-in-google-ai-overviews": {
     slug: "how-to-appear-in-google-ai-overviews",
-    metaTitle: "How to Appear in Google AI Overviews | GEOSEO",
+    metaTitle: "How to Appear in Google AI Overviews | Citensity",
     metaDescription:
       "To appear in Google AI Overviews, earn strong organic relevance, answer the query directly in extractable passages, and demonstrate real expertise and trust.",
     updated: "2026-06-25",
@@ -126,7 +126,7 @@ export const BATCH_ENGINES: Record<string, Article> = {
 
   "how-to-rank-in-gemini": {
     slug: "how-to-rank-in-gemini",
-    metaTitle: "How to Get Cited in Google Gemini | GEOSEO",
+    metaTitle: "How to Get Cited in Google Gemini | Citensity",
     metaDescription:
       "To get cited in Gemini, be crawlable by Google, rank well for the query, answer it directly in extractable passages, and earn cross-source corroboration.",
     updated: "2026-06-25",
@@ -188,7 +188,7 @@ export const BATCH_ENGINES: Record<string, Article> = {
 
   "how-to-rank-in-copilot": {
     slug: "how-to-rank-in-copilot",
-    metaTitle: "How to Appear in Microsoft Copilot Answers | GEOSEO",
+    metaTitle: "How to Appear in Microsoft Copilot Answers | Citensity",
     metaDescription:
       "To appear in Microsoft Copilot answers, be visible in Bing, answer the query directly, and earn the authority and freshness Copilot draws on when citing sources.",
     updated: "2026-06-25",
@@ -250,7 +250,7 @@ export const BATCH_ENGINES: Record<string, Article> = {
 
   "how-to-get-cited-by-claude": {
     slug: "how-to-get-cited-by-claude",
-    metaTitle: "How to Get Cited by Claude | GEOSEO",
+    metaTitle: "How to Get Cited by Claude | Citensity",
     metaDescription:
       "To get cited by Claude, be crawlable, publish clear and well-sourced answers, and earn the corroborated authority Claude relies on when it grounds responses in the web.",
     updated: "2026-06-25",
@@ -312,7 +312,7 @@ export const BATCH_ENGINES: Record<string, Article> = {
 
   "chatgpt-search-optimization": {
     slug: "chatgpt-search-optimization",
-    metaTitle: "ChatGPT Search Optimization: A Practical Guide | GEOSEO",
+    metaTitle: "ChatGPT Search Optimization: A Practical Guide | Citensity",
     metaDescription:
       "ChatGPT Search optimization means being crawlable by OpenAI's bots, answering questions directly, and earning the authority and freshness that make ChatGPT cite you.",
     updated: "2026-06-25",
@@ -376,7 +376,7 @@ export const BATCH_ENGINES: Record<string, Article> = {
 
   "what-content-perplexity-cites": {
     slug: "what-content-perplexity-cites",
-    metaTitle: "What Content Perplexity Cites Most | GEOSEO",
+    metaTitle: "What Content Perplexity Cites Most | Citensity",
     metaDescription:
       "Perplexity cites specific, fresh, well-attributed content that answers the exact question directly. Here are the content traits that earn citations most often.",
     updated: "2026-06-25",
@@ -436,7 +436,7 @@ export const BATCH_ENGINES: Record<string, Article> = {
 
   "gptbot-and-ai-crawlers": {
     slug: "gptbot-and-ai-crawlers",
-    metaTitle: "GPTBot and AI Crawlers: What to Allow | GEOSEO",
+    metaTitle: "GPTBot and AI Crawlers: What to Allow | Citensity",
     metaDescription:
       "GPTBot, OAI-SearchBot, ClaudeBot, PerplexityBot, and Google-Extended each do different jobs. Here is what each AI crawler does and what to allow.",
     updated: "2026-06-25",
@@ -500,7 +500,7 @@ export const BATCH_ENGINES: Record<string, Article> = {
 
   "how-ai-engines-pick-brands-to-recommend": {
     slug: "how-ai-engines-pick-brands-to-recommend",
-    metaTitle: "How AI Engines Pick Brands to Recommend | GEOSEO",
+    metaTitle: "How AI Engines Pick Brands to Recommend | Citensity",
     metaDescription:
       "AI engines recommend brands they can retrieve, understand as a clear entity, and trust through corroboration. Here is how the selection actually works.",
     updated: "2026-06-25",
@@ -562,7 +562,7 @@ export const BATCH_ENGINES: Record<string, Article> = {
 
   "what-is-llms-txt": {
     slug: "what-is-llms-txt",
-    metaTitle: "What Is llms.txt, and Do You Need It? | GEOSEO",
+    metaTitle: "What Is llms.txt, and Do You Need It? | Citensity",
     metaDescription:
       "llms.txt is a proposed file that points AI systems to your most important content in clean Markdown. Here is what it does, its limits, and whether you need it.",
     updated: "2026-06-25",
@@ -624,7 +624,7 @@ export const BATCH_ENGINES: Record<string, Article> = {
 
   "answer-shaped-content": {
     slug: "answer-shaped-content",
-    metaTitle: "How to Write Answer-Shaped Content | GEOSEO",
+    metaTitle: "How to Write Answer-Shaped Content | Citensity",
     metaDescription:
       "Answer-shaped content leads with a direct, self-contained answer to a specific question, then supports it with evidence - the format AI engines extract and cite.",
     updated: "2026-06-25",
@@ -685,7 +685,7 @@ export const BATCH_ENGINES: Record<string, Article> = {
 
   "entity-seo-explained": {
     slug: "entity-seo-explained",
-    metaTitle: "Entity SEO: How to Be Understood by AI | GEOSEO",
+    metaTitle: "Entity SEO: How to Be Understood by AI | Citensity",
     metaDescription:
       "Entity SEO makes search and AI engines understand your brand as a clear, consistent concept - not just keywords. Here is how to build a strong entity.",
     updated: "2026-06-25",
@@ -747,7 +747,7 @@ export const BATCH_ENGINES: Record<string, Article> = {
 
   "eeat-for-ai-search": {
     slug: "eeat-for-ai-search",
-    metaTitle: "E-E-A-T for AI Search: Signals That Earn Citations | GEOSEO",
+    metaTitle: "E-E-A-T for AI Search: Signals That Earn Citations | Citensity",
     metaDescription:
       "E-E-A-T (Experience, Expertise, Authoritativeness, Trust) shapes which sources AI engines are willing to cite. Here are the signals that earn citations.",
     updated: "2026-06-25",
@@ -809,7 +809,7 @@ export const BATCH_ENGINES: Record<string, Article> = {
 
   "content-structure-for-ai-citations": {
     slug: "content-structure-for-ai-citations",
-    metaTitle: "How to Structure Content So AI Cites It | GEOSEO",
+    metaTitle: "How to Structure Content So AI Cites It | Citensity",
     metaDescription:
       "Structure content for AI citations with answer-first passages, question-style headings, clean semantic HTML, and one idea per section so engines can extract you.",
     updated: "2026-06-25",
@@ -870,7 +870,7 @@ export const BATCH_ENGINES: Record<string, Article> = {
 
   "faq-schema-for-ai": {
     slug: "faq-schema-for-ai",
-    metaTitle: "FAQ Schema for AI Answers: When and How | GEOSEO",
+    metaTitle: "FAQ Schema for AI Answers: When and How | Citensity",
     metaDescription:
       "FAQ schema marks up genuine question-and-answer pairs so engines can parse them cleanly. Here is when it helps AI answers, when to skip it, and how to do it right.",
     updated: "2026-06-25",

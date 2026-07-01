@@ -55,7 +55,7 @@ export async function POST(req: Request) {
   // Notify a webhook if configured (the durable capture path for the demo deploy).
   const hook = process.env.LEAD_WEBHOOK_URL;
   if (hook) {
-    const summary = `🟣 New GEOSEO lead: ${lead.email}${lead.company ? ` · ${lead.company}` : ""}${lead.website ? ` · ${lead.website}` : ""}`;
+    const summary = `🟣 New Citensity lead: ${lead.email}${lead.company ? ` · ${lead.company}` : ""}${lead.website ? ` · ${lead.website}` : ""}`;
     try {
       await fetch(hook, {
         method: "POST",
@@ -76,7 +76,7 @@ export async function POST(req: Request) {
   const emailTo = process.env.LEAD_EMAIL_TO ?? "rajputabhijay1@gmail.com";
   const resendKey = process.env.RESEND_API_KEY;
   if (emailTo) {
-    const subject = `New GEOSEO lead: ${lead.email}${lead.company ? ` (${lead.company})` : ""}`;
+    const subject = `New Citensity lead: ${lead.email}${lead.company ? ` (${lead.company})` : ""}`;
     try {
       if (resendKey) {
         const esc = (v: string) => v.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -92,11 +92,11 @@ export async function POST(req: Request) {
           method: "POST",
           headers: { authorization: `Bearer ${resendKey}`, "content-type": "application/json" },
           body: JSON.stringify({
-            from: process.env.LEAD_EMAIL_FROM || "GEOSEO Leads <onboarding@resend.dev>",
+            from: process.env.LEAD_EMAIL_FROM || "Citensity Leads <onboarding@resend.dev>",
             to: [emailTo],
             reply_to: lead.email,
             subject,
-            html: `<h2 style="font-family:system-ui,sans-serif">New GEOSEO marketing lead</h2><table cellpadding="6" style="border-collapse:collapse;font-family:system-ui,sans-serif;font-size:14px">${rows
+            html: `<h2 style="font-family:system-ui,sans-serif">New Citensity marketing lead</h2><table cellpadding="6" style="border-collapse:collapse;font-family:system-ui,sans-serif;font-size:14px">${rows
               .map(([k, v]) => `<tr><td style="color:#6b7280">${k}</td><td><strong>${esc(String(v))}</strong></td></tr>`)
               .join("")}</table>`,
           }),

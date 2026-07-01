@@ -18,7 +18,7 @@ import { Faq } from "@/components/marketing/faq";
 import { FAQS, SITE_URL, BRAND, TAGLINE } from "@/components/marketing/data";
 
 const DESCRIPTION =
-  "GEOSEO is the Generative Engine Optimization platform that learns your brand and continuously creates and publishes pages engineered to rank in Google and get cited by ChatGPT, Perplexity, and AI Overviews — then captures the leads.";
+  "Citensity is the Generative Engine Optimization platform that learns your brand and continuously creates and publishes pages engineered to rank in Google and get cited by ChatGPT, Perplexity, and AI Overviews — then captures the leads.";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),

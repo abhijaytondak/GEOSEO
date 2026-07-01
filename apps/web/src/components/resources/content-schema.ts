@@ -3,7 +3,7 @@ import type { Article } from "@/components/resources/content-types";
 export const BATCH_SCHEMA: Record<string, Article> = {
   "product-schema-for-ai": {
     slug: "product-schema-for-ai",
-    metaTitle: "Product Schema for AI Search: Implementation Guide | GEOSEO",
+    metaTitle: "Product Schema for AI Search: Implementation Guide | Citensity",
     metaDescription:
       "Product structured data makes your product facts machine-readable for AI shopping answers. Here's what Product schema is, the key properties, and how to implement it without common errors.",
     updated: "2026-07-01",
@@ -62,7 +62,7 @@ export const BATCH_SCHEMA: Record<string, Article> = {
 
   "howto-schema-guide": {
     slug: "howto-schema-guide",
-    metaTitle: "HowTo Schema Guide for AI Search | GEOSEO",
+    metaTitle: "HowTo Schema Guide for AI Search | Citensity",
     metaDescription:
       "HowTo structured data marks up step-by-step instructions so engines understand your tutorial as a procedure. Here's what HowTo schema is, its key properties, and when to use it.",
     updated: "2026-07-01",
@@ -121,7 +121,7 @@ export const BATCH_SCHEMA: Record<string, Article> = {
 
   "review-schema-for-ai": {
     slug: "review-schema-for-ai",
-    metaTitle: "Review & Rating Schema for AI Search | GEOSEO",
+    metaTitle: "Review & Rating Schema for AI Search | Citensity",
     metaDescription:
       "Review and aggregateRating schema make genuine ratings machine-readable - but misuse is heavily penalized. Here's how to implement review structured data correctly and honestly.",
     updated: "2026-07-01",
@@ -180,7 +180,7 @@ export const BATCH_SCHEMA: Record<string, Article> = {
 
   "event-schema-for-ai": {
     slug: "event-schema-for-ai",
-    metaTitle: "Event Schema for AI Search | GEOSEO",
+    metaTitle: "Event Schema for AI Search | Citensity",
     metaDescription:
       "Event structured data makes dates, locations, and ticket info machine-readable so engines can answer 'when is X' and surface your event. Here's how to implement Event schema correctly.",
     updated: "2026-07-01",
@@ -239,7 +239,7 @@ export const BATCH_SCHEMA: Record<string, Article> = {
 
   "localbusiness-schema-guide": {
     slug: "localbusiness-schema-guide",
-    metaTitle: "LocalBusiness Schema Guide for AI Search | GEOSEO",
+    metaTitle: "LocalBusiness Schema Guide for AI Search | Citensity",
     metaDescription:
       "LocalBusiness schema makes your name, address, hours, and location machine-readable - essential for 'near me' AI answers. Here's how to implement it and keep it consistent.",
     updated: "2026-07-01",
@@ -298,7 +298,7 @@ export const BATCH_SCHEMA: Record<string, Article> = {
 
   "organization-schema-for-ai": {
     slug: "organization-schema-for-ai",
-    metaTitle: "Organization Schema for AI Search | GEOSEO",
+    metaTitle: "Organization Schema for AI Search | Citensity",
     metaDescription:
       "Organization schema defines your brand as an entity engines can recognize and trust. Here's how to implement it - logo, profiles, and identifiers that strengthen your entity and E-E-A-T.",
     updated: "2026-07-01",
@@ -357,7 +357,7 @@ export const BATCH_SCHEMA: Record<string, Article> = {
 
   "breadcrumb-schema-explained": {
     slug: "breadcrumb-schema-explained",
-    metaTitle: "Breadcrumb Schema Explained for AI Search | GEOSEO",
+    metaTitle: "Breadcrumb Schema Explained for AI Search | Citensity",
     metaDescription:
       "BreadcrumbList schema tells engines where a page sits in your site's hierarchy. Here's what it does, how to implement it, and why it helps engines understand your content structure.",
     updated: "2026-07-01",
@@ -410,7 +410,7 @@ export const BATCH_SCHEMA: Record<string, Article> = {
 
   "article-schema-for-ai": {
     slug: "article-schema-for-ai",
-    metaTitle: "Article Schema for AI Search | GEOSEO",
+    metaTitle: "Article Schema for AI Search | Citensity",
     metaDescription:
       "Article schema marks up your content's headline, author, and dates - reinforcing authorship and freshness signals engines use. Here's how to implement Article structured data well.",
     updated: "2026-07-01",
@@ -469,7 +469,7 @@ export const BATCH_SCHEMA: Record<string, Article> = {
 
   "video-schema-for-ai": {
     slug: "video-schema-for-ai",
-    metaTitle: "Video Schema (VideoObject) for AI Search | GEOSEO",
+    metaTitle: "Video Schema (VideoObject) for AI Search | Citensity",
     metaDescription:
       "VideoObject schema tells engines what your video is about, including transcript and key moments. Here's how to implement video structured data so engines understand and surface your video.",
     updated: "2026-07-01",
@@ -528,7 +528,7 @@ export const BATCH_SCHEMA: Record<string, Article> = {
 
   "testing-and-validating-structured-data": {
     slug: "testing-and-validating-structured-data",
-    metaTitle: "Testing & Validating Structured Data | GEOSEO",
+    metaTitle: "Testing & Validating Structured Data | Citensity",
     metaDescription:
       "Invalid schema simply won't be used. Here's how to test and validate your structured data - the tools, what to check, and how to catch the mismatches that get markup ignored.",
     updated: "2026-07-01",

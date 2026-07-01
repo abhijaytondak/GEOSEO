@@ -9,7 +9,7 @@ const DISPLAY = "[font-family:var(--font-display)] font-semibold tracking-tight"
 const GRAD = "bg-gradient-to-r from-brand to-info bg-clip-text text-transparent";
 
 const DESCRIPTION =
-  "See GEOSEO on your own site. Get a free AI-visibility audit and a walkthrough of how to get cited by AI engines, rank in Google, and capture the leads.";
+  "See Citensity on your own site. Get a free AI-visibility audit and a walkthrough of how to get cited by AI engines, rank in Google, and capture the leads.";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
@@ -40,7 +40,7 @@ export default function DemoPage() {
               <span className="size-1.5 rounded-full bg-brand shadow-[0_0_8px_var(--brand)]" /> Book a demo
             </span>
             <h1 className={cn(DISPLAY, "mt-6 text-4xl leading-[1.05] text-foreground sm:text-5xl")}>
-              See GEOSEO on <span className={GRAD}>your own site.</span>
+              See Citensity on <span className={GRAD}>your own site.</span>
             </h1>
             <p className="mt-5 max-w-md text-lg leading-relaxed text-muted-foreground">
               Drop in your website and we&apos;ll run your free AI-visibility audit — then walk you through exactly how

@@ -28,7 +28,7 @@ export const metadata: Metadata = {
   // Resolves relative OG/Twitter image URLs during static generation (fixes the
   // "metadataBase not set, using http://localhost:3000" build warning).
   metadataBase: new URL(SITE_URL),
-  title: "GEOSEO — Authority & SEO Optimization Engine",
+  title: "Citensity — Authority & SEO Optimization Engine",
   description:
     "Automated backlink acquisition, domain authority growth, and continuous SEO optimization — surfaced in a world-class dashboard.",
   ...(googleSiteVerification ? { verification: { google: googleSiteVerification } } : {}),

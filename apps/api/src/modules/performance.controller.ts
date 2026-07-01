@@ -273,7 +273,7 @@ export class PerformanceController {
   async report(@Req() req: TenantRequest, @Query("range") range = "30d", @Query("title") titleOverride?: string) {
     const tenantId = resolveTenantId(req);
     const profile = this.settings.get().profile;
-    const brandName = process.env.REPORT_BRAND_NAME ?? profile.workspaceName ?? "GEOSEO";
+    const brandName = process.env.REPORT_BRAND_NAME ?? profile.workspaceName ?? "Citensity";
     const logoUrl = process.env.REPORT_LOGO_URL ?? "";
     const reportTitle = titleOverride ?? `SEO Performance Report`;
     const dateLabel = new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
@@ -365,7 +365,7 @@ export class PerformanceController {
   </table>
 
   <div class="footer">
-    <span>${esc(brandName)} · GEOSEO Platform</span>
+    <span>${esc(brandName)} · Citensity Platform</span>
     <span class="no-print"><button onclick="window.print()" style="background:#0f172a;color:#fff;border:none;padding:6px 14px;border-radius:6px;font-size:12px;cursor:pointer">Save as PDF</button></span>
     <span>Page 1 of 1</span>
   </div>

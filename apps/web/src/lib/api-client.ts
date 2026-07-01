@@ -1,5 +1,5 @@
 /**
- * Typed client for the GEOSEO API (apps/api, v1).
+ * Typed client for the Citensity API (apps/api, v1).
  *
  * - Server (RSC): calls the API directly via API_INTERNAL_URL (default :4000).
  * - Client (browser): calls the relative /api/v1 path, which the Next rewrite

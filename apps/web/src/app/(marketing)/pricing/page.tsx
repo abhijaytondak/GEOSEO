@@ -10,7 +10,7 @@ const DISPLAY = "[font-family:var(--font-display)] font-semibold tracking-tight"
 const GRAD = "bg-gradient-to-r from-brand to-info bg-clip-text text-transparent";
 
 const DESCRIPTION =
-  "GEOSEO pricing — founding-customer plans for getting cited by AI engines, ranking in Google, and capturing the leads. Start with a free AI-visibility audit.";
+  "Citensity pricing — founding-customer plans for getting cited by AI engines, ranking in Google, and capturing the leads. Start with a free AI-visibility audit.";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),

@@ -17,7 +17,7 @@ const DEMO = process.env.NEXT_PUBLIC_GEOSEO_MODE === "demo";
 
 /** Sitemap: marketing landing + platform/solution pages (top priority) + published
  *  /feeds pages (PRD §7.7). Feed URLs use the workspace's own domain (Brand Memory).
- *  In demo mode only the GEOSEO marketing routes are emitted — no demo feed URLs. */
+ *  In demo mode only the Citensity marketing routes are emitted — no demo feed URLs. */
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const [pages, brand] = await Promise.all([
     DEMO ? Promise.resolve([]) : pageEngineApi.getPublishedPages().catch(() => []),

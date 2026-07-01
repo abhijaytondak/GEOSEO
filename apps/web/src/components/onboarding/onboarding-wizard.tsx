@@ -297,7 +297,7 @@ export function OnboardingWizard() {
       });
       setAnalyzing(true);
       await api.runBrandAnalysis().catch(() => undefined);
-      notify({ kind: "success", title: "Workspace ready", message: `${brand.company || domain} is live on GEOSEO.` });
+      notify({ kind: "success", title: "Workspace ready", message: `${brand.company || domain} is live on Citensity.` });
     } catch (err) {
       notify({ kind: "error", title: "Couldn't finalize setup", message: err instanceof Error ? err.message : "Try again." });
     } finally {
@@ -331,7 +331,7 @@ export function OnboardingWizard() {
           <span className="grid size-7 place-items-center rounded-lg bg-background">
             <span className="size-3 rounded-full ring-2 ring-foreground" style={{ background: "var(--foreground)" }} />
           </span>
-          GEOSEO
+          Citensity
         </div>
         <nav aria-label="Onboarding progress" className="relative z-10 my-auto py-8">
           <div className="mb-4 text-micro font-semibold uppercase text-white/55">Visibility audit</div>
@@ -380,7 +380,7 @@ export function OnboardingWizard() {
         <span className="grid size-6 place-items-center rounded-md bg-background">
           <span className="size-2.5 rounded-full" style={{ background: "var(--foreground)" }} />
         </span>
-        <span className="text-h-card font-semibold tracking-tight">GEOSEO</span>
+        <span className="text-h-card font-semibold tracking-tight">Citensity</span>
         {step < 5 && (
           <span
             className="ml-auto flex items-center gap-2 text-micro font-medium text-white/75"
@@ -663,7 +663,7 @@ export function OnboardingWizard() {
 
             <div className="mt-5">
               <div className="font-mono text-[10.5px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">Connect access — unlocks live data</div>
-              <p className="mt-1 text-[12px] text-muted-foreground">Pick what to connect so GEOSEO can analyse your real search, traffic, and pipeline. You&apos;ll authorize each after setup.</p>
+              <p className="mt-1 text-[12px] text-muted-foreground">Pick what to connect so Citensity can analyse your real search, traffic, and pipeline. You&apos;ll authorize each after setup.</p>
               <div className="mt-2.5 space-y-2.5">
                 {([
                   { id: "search-console", label: "Google Search Console", hint: "Real rankings, impressions & clicks" },
@@ -754,7 +754,7 @@ export function OnboardingWizard() {
           <div>
             <h2 className="text-[28px] font-bold leading-tight tracking-[-0.02em] text-foreground">Your first opportunities</h2>
             <p className="mt-2 text-[15px] text-muted-foreground">
-              GEOSEO found <span className="font-semibold text-foreground">{discovered.length}</span> buyer-intent opportunities. Finish setup to open your dashboard.
+              Citensity found <span className="font-semibold text-foreground">{discovered.length}</span> buyer-intent opportunities. Finish setup to open your dashboard.
             </p>
             <ul className="mt-5 space-y-2.5">
               {discovered.slice(0, 4).map((o) => (
@@ -791,7 +791,7 @@ export function OnboardingWizard() {
               <Check className="size-4" /> Workspace ready
             </div>
             <h2 className="mt-3 text-[28px] font-bold leading-tight tracking-[-0.02em] text-foreground">
-              {brand.company || domain} is live on GEOSEO
+              {brand.company || domain} is live on Citensity
             </h2>
             <p className="mt-2 text-[15px] text-muted-foreground">Here&apos;s what we set up — pick where to go next.</p>
 

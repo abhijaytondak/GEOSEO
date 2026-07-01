@@ -3,7 +3,7 @@ import type { Article } from "@/components/resources/content-types";
 export const BATCH_FOUNDATIONS: Record<string, Article> = {
   "technical-seo-checklist": {
     slug: "technical-seo-checklist",
-    metaTitle: "Technical SEO Checklist for 2026 | GEOSEO",
+    metaTitle: "Technical SEO Checklist for 2026 | Citensity",
     metaDescription:
       "A practical technical SEO checklist for 2026: crawlability, indexing, speed, structured data, and the machine-readability that AI answer engines now require.",
     updated: "2026-06-25",
@@ -84,7 +84,7 @@ export const BATCH_FOUNDATIONS: Record<string, Article> = {
 
   "what-is-programmatic-seo": {
     slug: "what-is-programmatic-seo",
-    metaTitle: "What Is Programmatic SEO (Done Right)? | GEOSEO",
+    metaTitle: "What Is Programmatic SEO (Done Right)? | Citensity",
     metaDescription:
       "Programmatic SEO generates many pages from a data source and a template. Done right it serves real intent; done wrong it's thin scaled content. Here's the line.",
     updated: "2026-06-25",
@@ -160,7 +160,7 @@ export const BATCH_FOUNDATIONS: Record<string, Article> = {
 
   "keyword-research-for-ai-search": {
     slug: "keyword-research-for-ai-search",
-    metaTitle: "Keyword Research for the AI-Search Era | GEOSEO",
+    metaTitle: "Keyword Research for the AI-Search Era | Citensity",
     metaDescription:
       "Keyword research still matters in AI search - but the unit shifts from keywords to the questions people ask engines. Here's how to research for citations.",
     updated: "2026-06-25",
@@ -228,7 +228,7 @@ export const BATCH_FOUNDATIONS: Record<string, Article> = {
 
   "search-intent-explained": {
     slug: "search-intent-explained",
-    metaTitle: "Search Intent: The 4 Types Explained | GEOSEO",
+    metaTitle: "Search Intent: The 4 Types Explained | Citensity",
     metaDescription:
       "Search intent is the goal behind a query. The four types - informational, navigational, commercial, transactional - decide what content actually satisfies it.",
     updated: "2026-06-25",
@@ -248,7 +248,7 @@ export const BATCH_FOUNDATIONS: Record<string, Article> = {
         body: ["Almost every query maps to one dominant goal. Identify it and the right content format becomes obvious."],
         bullets: [
           "Informational: 'what is X', 'how does Y work' - the person wants to understand. Serve a clear explanation.",
-          "Navigational: 'Acme login', 'GEOSEO pricing' - they want a specific destination. Serve the exact page.",
+          "Navigational: 'Acme login', 'Citensity pricing' - they want a specific destination. Serve the exact page.",
           "Commercial: 'best X', 'X vs Y', 'X alternatives' - they're comparing before deciding. Serve comparisons and evidence.",
           "Transactional: 'buy X', 'X free trial', 'book a demo' - they're ready to act. Serve a frictionless path to the action.",
         ],
@@ -301,7 +301,7 @@ export const BATCH_FOUNDATIONS: Record<string, Article> = {
 
   "content-refresh-strategy": {
     slug: "content-refresh-strategy",
-    metaTitle: "A Content Refresh Strategy That Holds | GEOSEO",
+    metaTitle: "A Content Refresh Strategy That Holds | Citensity",
     metaDescription:
       "Content decays as facts age and competitors improve. A disciplined refresh strategy - update, consolidate, or prune - holds rankings and AI citations over time.",
     updated: "2026-06-25",
@@ -373,7 +373,7 @@ export const BATCH_FOUNDATIONS: Record<string, Article> = {
 
   "backlinks-still-matter": {
     slug: "backlinks-still-matter",
-    metaTitle: "Do Backlinks Still Matter for AI Search? | GEOSEO",
+    metaTitle: "Do Backlinks Still Matter for AI Search? | Citensity",
     metaDescription:
       "Backlinks still matter - they remain a core authority signal that helps AI engines decide which sources to trust and cite. Quality and relevance beat volume.",
     updated: "2026-06-25",
@@ -448,7 +448,7 @@ export const BATCH_FOUNDATIONS: Record<string, Article> = {
 
   "sitemaps-and-indexing": {
     slug: "sitemaps-and-indexing",
-    metaTitle: "Sitemaps and Indexing: The Fundamentals | GEOSEO",
+    metaTitle: "Sitemaps and Indexing: The Fundamentals | Citensity",
     metaDescription:
       "A sitemap lists the pages you want found; indexing is whether engines store them. Get both right so your important pages can be ranked and cited.",
     updated: "2026-06-25",
@@ -521,7 +521,7 @@ export const BATCH_FOUNDATIONS: Record<string, Article> = {
 
   "canonical-tags-explained": {
     slug: "canonical-tags-explained",
-    metaTitle: "Canonical Tags, Explained Simply | GEOSEO",
+    metaTitle: "Canonical Tags, Explained Simply | Citensity",
     metaDescription:
       "A canonical tag tells engines which version of duplicate or similar pages is the master. Used right it consolidates ranking signals; used wrong it hides pages.",
     updated: "2026-06-25",
@@ -589,7 +589,7 @@ export const BATCH_FOUNDATIONS: Record<string, Article> = {
 
   "core-web-vitals-2026": {
     slug: "core-web-vitals-2026",
-    metaTitle: "Core Web Vitals in 2026: What to Fix | GEOSEO",
+    metaTitle: "Core Web Vitals in 2026: What to Fix | Citensity",
     metaDescription:
       "Core Web Vitals measure loading, interactivity, and visual stability: LCP, INP, and CLS. Here's what each means and which to fix first for rankings and crawlability.",
     updated: "2026-06-25",
@@ -661,7 +661,7 @@ export const BATCH_FOUNDATIONS: Record<string, Article> = {
 
   "duplicate-content-and-ai": {
     slug: "duplicate-content-and-ai",
-    metaTitle: "Duplicate Content in the Age of AI | GEOSEO",
+    metaTitle: "Duplicate Content in the Age of AI | Citensity",
     metaDescription:
       "Duplicate content rarely earns a penalty - it splits signals and confuses engines about which version to rank or cite. Here's how to consolidate and stay clear.",
     updated: "2026-06-25",
@@ -736,7 +736,7 @@ export const BATCH_FOUNDATIONS: Record<string, Article> = {
 
   "long-tail-keywords-and-ai": {
     slug: "long-tail-keywords-and-ai",
-    metaTitle: "Long-Tail Keywords and Conversational AI | GEOSEO",
+    metaTitle: "Long-Tail Keywords and Conversational AI | Citensity",
     metaDescription:
       "Long-tail keywords are specific, low-volume queries with high intent - and they map almost perfectly onto the conversational questions people ask AI engines.",
     updated: "2026-06-25",
@@ -804,7 +804,7 @@ export const BATCH_FOUNDATIONS: Record<string, Article> = {
 
   "turn-ai-traffic-into-leads": {
     slug: "turn-ai-traffic-into-leads",
-    metaTitle: "Turn AI-Search Traffic Into Leads | GEOSEO",
+    metaTitle: "Turn AI-Search Traffic Into Leads | Citensity",
     metaDescription:
       "AI-search visitors arrive informed and high-intent but in fewer numbers. Here's how to convert that traffic into leads without disrupting the experience.",
     updated: "2026-06-25",
@@ -871,7 +871,7 @@ export const BATCH_FOUNDATIONS: Record<string, Article> = {
 
   "lead-capture-on-content-pages": {
     slug: "lead-capture-on-content-pages",
-    metaTitle: "Lead Capture on Content Pages, Done Right | GEOSEO",
+    metaTitle: "Lead Capture on Content Pages, Done Right | Citensity",
     metaDescription:
       "Lead capture and a good reading experience aren't enemies. Here's how to convert content-page visitors with relevant, well-timed offers that don't kill UX.",
     updated: "2026-06-25",
@@ -938,7 +938,7 @@ export const BATCH_FOUNDATIONS: Record<string, Article> = {
 
   "lead-scoring-basics": {
     slug: "lead-scoring-basics",
-    metaTitle: "Lead Scoring Basics for Inbound Teams | GEOSEO",
+    metaTitle: "Lead Scoring Basics for Inbound Teams | Citensity",
     metaDescription:
       "Lead scoring ranks leads by how likely they are to convert, using fit and engagement signals. Here's how to build a simple, honest scoring model that works.",
     updated: "2026-06-25",
@@ -1011,7 +1011,7 @@ export const BATCH_FOUNDATIONS: Record<string, Article> = {
 
   "cro-for-organic-landing-pages": {
     slug: "cro-for-organic-landing-pages",
-    metaTitle: "CRO for Organic Landing Pages | GEOSEO",
+    metaTitle: "CRO for Organic Landing Pages | Citensity",
     metaDescription:
       "Conversion rate optimization for organic and AI-referred landing pages: match intent, deliver value fast, reduce friction, and test changes that actually move the needle.",
     updated: "2026-06-25",
@@ -1084,7 +1084,7 @@ export const BATCH_FOUNDATIONS: Record<string, Article> = {
 
   "intent-signals-from-ai-search": {
     slug: "intent-signals-from-ai-search",
-    metaTitle: "Reading Buyer Intent From AI Search | GEOSEO",
+    metaTitle: "Reading Buyer Intent From AI Search | Citensity",
     metaDescription:
       "AI-search visitors carry strong intent signals - the questions that cited you, the pages they land on, the depth they seek. Here's how to read and act on them.",
     updated: "2026-06-25",
@@ -1151,7 +1151,7 @@ export const BATCH_FOUNDATIONS: Record<string, Article> = {
 
   "geo-for-b2b": {
     slug: "geo-for-b2b",
-    metaTitle: "GEO for B2B: Get Cited in Buying Decisions | GEOSEO",
+    metaTitle: "GEO for B2B: Get Cited in Buying Decisions | Citensity",
     metaDescription:
       "In B2B, the shortlist forms inside an AI conversation before a human visits your site. GEO for B2B is about getting cited for the questions buyers actually ask.",
     updated: "2026-06-25",
@@ -1218,7 +1218,7 @@ export const BATCH_FOUNDATIONS: Record<string, Article> = {
 
   "geo-for-ecommerce": {
     slug: "geo-for-ecommerce",
-    metaTitle: "GEO for Ecommerce: Products in AI Answers | GEOSEO",
+    metaTitle: "GEO for Ecommerce: Products in AI Answers | Citensity",
     metaDescription:
       "Shoppers increasingly ask AI engines for product recommendations. GEO for ecommerce is about getting your products cited - with accurate data engines can trust.",
     updated: "2026-06-25",
@@ -1293,7 +1293,7 @@ export const BATCH_FOUNDATIONS: Record<string, Article> = {
 
   "geo-for-local-business": {
     slug: "geo-for-local-business",
-    metaTitle: "GEO for Local Business | GEOSEO",
+    metaTitle: "GEO for Local Business | Citensity",
     metaDescription:
       "When people ask AI engines for a nearby service, consistent local data and genuine reviews decide who gets recommended. Here's GEO for local business.",
     updated: "2026-06-25",
@@ -1362,7 +1362,7 @@ export const BATCH_FOUNDATIONS: Record<string, Article> = {
 
   "geo-for-agencies": {
     slug: "geo-for-agencies",
-    metaTitle: "GEO for Agencies: A New Service Line | GEOSEO",
+    metaTitle: "GEO for Agencies: A New Service Line | Citensity",
     metaDescription:
       "GEO is a natural new service line for SEO and content agencies. Here's how to package it, deliver it, and measure it as a defensible offering for clients.",
     updated: "2026-06-25",
@@ -1429,7 +1429,7 @@ export const BATCH_FOUNDATIONS: Record<string, Article> = {
 
   "geo-for-startups": {
     slug: "geo-for-startups",
-    metaTitle: "GEO for Startups on a Budget | GEOSEO",
+    metaTitle: "GEO for Startups on a Budget | Citensity",
     metaDescription:
       "Startups can win AI citations without a big budget by being the clearest, most specific answer on focused questions where incumbents are vague. Here's how.",
     updated: "2026-06-25",
@@ -1502,7 +1502,7 @@ export const BATCH_FOUNDATIONS: Record<string, Article> = {
 
   "geo-for-healthcare": {
     slug: "geo-for-healthcare",
-    metaTitle: "GEO for Healthcare and YMYL Topics | GEOSEO",
+    metaTitle: "GEO for Healthcare and YMYL Topics | Citensity",
     metaDescription:
       "Healthcare and other YMYL topics face a higher trust bar in AI answers. GEO here means demonstrable expertise, accuracy, and transparency - never shortcuts.",
     updated: "2026-06-25",
@@ -1571,7 +1571,7 @@ export const BATCH_FOUNDATIONS: Record<string, Article> = {
 
   "geo-for-fintech": {
     slug: "geo-for-fintech",
-    metaTitle: "GEO for Fintech | GEOSEO",
+    metaTitle: "GEO for Fintech | Citensity",
     metaDescription:
       "Fintech sits at the intersection of high-intent buying and YMYL trust. GEO here means accurate, compliant, well-sourced answers that engines trust enough to cite.",
     updated: "2026-06-25",

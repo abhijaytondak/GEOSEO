@@ -23,7 +23,7 @@ export async function sendEmail(payload: EmailPayload): Promise<boolean> {
   const key = process.env.RESEND_API_KEY;
   if (!key) return false;
 
-  const from = payload.from ?? process.env.EMAIL_FROM ?? "GEOSEO <noreply@geoseo.app>";
+  const from = payload.from ?? process.env.EMAIL_FROM ?? "Citensity <noreply@geoseo.app>";
   const to = Array.isArray(payload.to) ? payload.to : [payload.to];
 
   try {
@@ -72,7 +72,7 @@ export function leadAlertHtml(opts: {
   <tr><td align="center">
     <table width="560" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;border:1px solid #e5e7eb;overflow:hidden">
       <tr><td style="background:#0f172a;padding:20px 28px">
-        <p style="margin:0;color:#fff;font-size:16px;font-weight:700">GEOSEO</p>
+        <p style="margin:0;color:#fff;font-size:16px;font-weight:700">Citensity</p>
         <p style="margin:4px 0 0;color:#94a3b8;font-size:12px">New lead alert — ${opts.ruleName}</p>
       </td></tr>
       <tr><td style="padding:28px">
@@ -95,11 +95,11 @@ export function leadAlertHtml(opts: {
           </tr>
         </table>
         <a href="${dash}" style="display:inline-block;background:#0f172a;color:#fff;text-decoration:none;font-size:14px;font-weight:600;padding:10px 20px;border-radius:8px">
-          View lead in GEOSEO →
+          View lead in Citensity →
         </a>
       </td></tr>
       <tr><td style="padding:16px 28px;border-top:1px solid #f1f5f9;background:#f8fafc">
-        <p style="margin:0;font-size:12px;color:#94a3b8">Sent by GEOSEO · Triggered by rule "${escHtml(opts.ruleName)}" · <a href="${dash}/settings/notifications" style="color:#64748b">Manage alerts</a></p>
+        <p style="margin:0;font-size:12px;color:#94a3b8">Sent by Citensity · Triggered by rule "${escHtml(opts.ruleName)}" · <a href="${dash}/settings/notifications" style="color:#64748b">Manage alerts</a></p>
       </td></tr>
     </table>
   </td></tr>

@@ -4,7 +4,7 @@ import type { SiteThemeProfile } from "@geoseo/types";
 /**
  * Maps a confirmed Site Theme Profile onto the design-system CSS variables so
  * public /feeds pages render in the customer's own palette/radius/font — native
- * to their brand, not the generic GEOSEO theme. Shared by /feeds/[slug] and the
+ * to their brand, not the generic Citensity theme. Shared by /feeds/[slug] and the
  * /feeds index (AI Feed hub). Surfaces are derived from the background↔foreground
  * axis so contrast holds on both light and dark customer themes.
  */

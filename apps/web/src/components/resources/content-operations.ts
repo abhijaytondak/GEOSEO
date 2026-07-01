@@ -3,7 +3,7 @@ import type { Article } from "@/components/resources/content-types";
 export const BATCH_OPERATIONS: Record<string, Article> = {
   "digital-pr-for-geo": {
     slug: "digital-pr-for-geo",
-    metaTitle: "Digital PR for GEO: Earning AI Citations Off-Page | GEOSEO",
+    metaTitle: "Digital PR for GEO: Earning AI Citations Off-Page | Citensity",
     metaDescription:
       "AI engines trust claims that are corroborated across the web. Digital PR builds that corroboration — earned mentions, data stories, and expert commentary that make your brand a safe source to cite.",
     updated: "2026-06-30",
@@ -71,7 +71,7 @@ export const BATCH_OPERATIONS: Record<string, Article> = {
 
   "geo-experimentation-and-testing": {
     slug: "geo-experimentation-and-testing",
-    metaTitle: "GEO Experimentation & Testing: Prove What Works | GEOSEO",
+    metaTitle: "GEO Experimentation & Testing: Prove What Works | Citensity",
     metaDescription:
       "GEO is testable. Here's how to run controlled experiments — fixed question sets, before/after citation tracking, and single-variable page changes — to prove which GEO tactics actually earn citations.",
     updated: "2026-06-30",
@@ -131,13 +131,13 @@ export const BATCH_OPERATIONS: Record<string, Article> = {
     related: [
       { label: "How to track AI citations", href: "/resources/how-to-track-ai-citations" },
       { label: "AI share of voice", href: "/resources/ai-share-of-voice" },
-      { label: "GEOSEO Analytics", href: "/platform/analytics" },
+      { label: "Citensity Analytics", href: "/platform/analytics" },
     ],
   },
 
   "site-migrations-without-losing-ai-citations": {
     slug: "site-migrations-without-losing-ai-citations",
-    metaTitle: "Site Migrations Without Losing AI Citations | GEOSEO",
+    metaTitle: "Site Migrations Without Losing AI Citations | Citensity",
     metaDescription:
       "A site migration can wipe out hard-won AI citations if URLs, content, or crawlability break. Here's how to migrate — redirects, preserved content, and re-crawl checks — without losing your cited pages.",
     updated: "2026-06-30",
@@ -204,7 +204,7 @@ export const BATCH_OPERATIONS: Record<string, Article> = {
 
   "reporting-geo-results-to-executives": {
     slug: "reporting-geo-results-to-executives",
-    metaTitle: "Reporting GEO Results to Executives | GEOSEO",
+    metaTitle: "Reporting GEO Results to Executives | Citensity",
     metaDescription:
       "Executives don't care about citation counts — they care about pipeline and risk. Here's how to report GEO results in business terms: share of voice, qualified pipeline, and the cost of being absent from AI answers.",
     updated: "2026-06-30",
@@ -270,7 +270,7 @@ export const BATCH_OPERATIONS: Record<string, Article> = {
 
   "scaling-geo-content-without-thin-pages": {
     slug: "scaling-geo-content-without-thin-pages",
-    metaTitle: "Scaling GEO Content Without Thin Pages | GEOSEO",
+    metaTitle: "Scaling GEO Content Without Thin Pages | Citensity",
     metaDescription:
       "Volume and quality aren't opposites — but scaling GEO content carelessly creates thin pages that get penalized and never cited. Here's how to scale production while keeping every page genuinely citable.",
     updated: "2026-06-30",
@@ -338,7 +338,7 @@ export const BATCH_OPERATIONS: Record<string, Article> = {
 
   "building-a-geo-team": {
     slug: "building-a-geo-team",
-    metaTitle: "Building a GEO Team: Roles & Ownership | GEOSEO",
+    metaTitle: "Building a GEO Team: Roles & Ownership | Citensity",
     metaDescription:
       "GEO spans content, technical SEO, PR, and analytics — so who owns it? Here's how to structure a GEO program: the core roles, where it sits, and how to start lean before you scale a full team.",
     updated: "2026-06-30",
