@@ -277,6 +277,18 @@ export const TOPICS: Topic[] = [
   { slug: "how-ai-engines-handle-languages", cluster: "ai-engines", title: "How AI engines handle languages", keyword: "how ai engines handle languages", intent: "informational" },
   { slug: "geo-for-emerging-markets", cluster: "use-cases", title: "GEO for emerging markets", keyword: "geo for emerging markets", intent: "informational" },
   { slug: "country-specific-geo-strategy", cluster: "tactics", title: "Building a country-specific GEO strategy", keyword: "country-specific geo strategy", intent: "informational" },
+
+  // ── Batch: industry verticals, wave 4 (195 → 205) ───────────────────
+  { slug: "geo-for-logistics", cluster: "use-cases", title: "GEO for logistics and supply chain", keyword: "geo for logistics", intent: "commercial" },
+  { slug: "geo-for-beauty-brands", cluster: "use-cases", title: "GEO for beauty and cosmetics brands", keyword: "geo for beauty brands", intent: "commercial" },
+  { slug: "geo-for-fashion-brands", cluster: "use-cases", title: "GEO for fashion and apparel brands", keyword: "geo for fashion brands", intent: "commercial" },
+  { slug: "geo-for-gaming", cluster: "use-cases", title: "GEO for gaming and game studios", keyword: "geo for gaming", intent: "commercial" },
+  { slug: "geo-for-biotech-pharma", cluster: "use-cases", title: "GEO for biotech and pharma", keyword: "geo for biotech pharma", intent: "commercial" },
+  { slug: "geo-for-energy-and-cleantech", cluster: "use-cases", title: "GEO for energy and cleantech", keyword: "geo for energy cleantech", intent: "commercial" },
+  { slug: "geo-for-agriculture", cluster: "use-cases", title: "GEO for agriculture and agtech", keyword: "geo for agriculture", intent: "commercial" },
+  { slug: "geo-for-franchises", cluster: "use-cases", title: "GEO for franchises and multi-location brands", keyword: "geo for franchises", intent: "commercial" },
+  { slug: "geo-for-coaches", cluster: "use-cases", title: "GEO for coaches and solo experts", keyword: "geo for coaches", intent: "commercial" },
+  { slug: "geo-for-interior-design", cluster: "use-cases", title: "GEO for interior design and home services", keyword: "geo for interior design", intent: "commercial" },
 ];
 
 /** Resolve a topic by slug. */
