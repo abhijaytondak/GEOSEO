@@ -5,6 +5,7 @@ import { AuditForm } from "@/components/marketing/audit-form";
 import type { Article } from "./content-types";
 import { CLUSTERS, getTopic } from "./topics";
 import { PUBLISHED_SLUGS } from "./content";
+import { AUTHOR } from "./author";
 
 /** A related link is safe to show if it's an external/product path, or a published
  *  resource article (filters out links to planned-but-unpublished slugs → no 404s). */
@@ -46,7 +47,15 @@ export function ArticleView({ article }: { article: Article }) {
             </span>
           )}
           <h1 className={cn(DISPLAY, "mt-4 text-3xl leading-[1.1] text-foreground sm:text-4xl md:text-[2.75rem]")}>{topic?.title ?? article.metaTitle}</h1>
-          <p className="mt-3 text-sm text-muted-foreground">Updated {new Date(article.updated).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })} · {article.readMins} min read</p>
+          {/* Byline — a visible, named human author (E-E-A-T); mirrors the Person JSON-LD. */}
+          <p className="mt-3 text-sm text-muted-foreground">
+            By{" "}
+            <Link href={AUTHOR.href} className="font-medium text-foreground transition-colors hover:text-brand">
+              {AUTHOR.name}
+            </Link>
+            , {AUTHOR.role.replace(/,.*$/, "")} · Updated{" "}
+            {new Date(article.updated).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })} · {article.readMins} min read
+          </p>
         </header>
 
         {/* answer-first box (the citable opener) */}
@@ -166,7 +175,14 @@ export function ArticleJsonLd({ article, siteUrl }: { article: Article; siteUrl:
         description: article.metaDescription,
         datePublished: article.updated,
         dateModified: article.updated,
-        author: { "@type": "Organization", name: "Citensity", url: siteUrl },
+        // Named human author (E-E-A-T) — matches the visible byline; org stays publisher.
+        author: {
+          "@type": "Person",
+          name: AUTHOR.name,
+          jobTitle: AUTHOR.role,
+          url: `${siteUrl}${AUTHOR.href}`,
+          ...(AUTHOR.sameAs.length ? { sameAs: AUTHOR.sameAs } : {}),
+        },
         publisher: { "@type": "Organization", name: "Citensity", url: siteUrl },
         mainEntityOfPage: url,
       },
